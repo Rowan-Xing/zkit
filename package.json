@@ -11,6 +11,8 @@
     "release:packages": "changeset publish",
     "example:start": "pnpm --filter @y2kit/example start",
     "example:ios": "pnpm --filter @y2kit/example ios",
+    "example:ios:device": "pnpm --filter @y2kit/example ios:device",
+    "example:ios:simulator": "pnpm --filter @y2kit/example ios:simulator",
     "example:android": "pnpm --filter @y2kit/example android"
   },
   "devDependencies": {

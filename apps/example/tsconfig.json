@@ -1,11 +1,7 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true,
-    "paths": {
-      "y2kit-tools": ["../../packages/tools/src"],
-      "y2kit-ui": ["../../packages/ui/src"]
-    }
+    "strict": true
   },
-  "include": ["App.tsx"]
+  "include": ["App.tsx", "index.js", "metro.config.js", "babel.config.js"]
 }
