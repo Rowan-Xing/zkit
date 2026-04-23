@@ -1,0 +1,20 @@
+{
+  "name": "y2kit-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "build": "pnpm --filter y2kit-tools build && pnpm --filter y2kit-ui build",
+    "typecheck": "pnpm --filter y2kit-tools typecheck && pnpm --filter y2kit-ui typecheck && pnpm --filter @y2kit/example typecheck",
+    "changeset": "changeset",
+    "version:packages": "changeset version",
+    "release:packages": "changeset publish",
+    "example:start": "pnpm --filter @y2kit/example start",
+    "example:ios": "pnpm --filter @y2kit/example ios",
+    "example:android": "pnpm --filter @y2kit/example android"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7",
+    "typescript": "~5.9.3"
+  }
+}

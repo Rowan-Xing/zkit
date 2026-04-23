@@ -1,0 +1,92 @@
+export const ja = {
+  // Picker
+  'picker.title': '選択',
+  'picker.cancel': 'キャンセル',
+  'picker.confirm': '確認',
+
+  // DatePicker
+  'datePicker.title': '日付を選択',
+  'datePicker.year': '年',
+  'datePicker.month': '月',
+  'datePicker.day': '日',
+
+  // AddressCascader
+  'addressCascader.title': '住所を選択',
+
+  // BetweenTime
+  'betweenTime.title': '期間を選択',
+  'betweenTime.clear': 'クリア',
+  'betweenTime.startTime': '開始',
+  'betweenTime.endTime': '終了',
+  'betweenTime.to': '〜',
+  'betweenTime.cancel': 'キャンセル',
+  'betweenTime.confirm': '確認',
+  'betweenTime.unit.year': '年',
+  'betweenTime.unit.month': '月',
+  'betweenTime.unit.day': '日',
+  'betweenTime.unit.hour': '時',
+  'betweenTime.unit.minute': '分',
+  'betweenTime.unit.second': '秒',
+  'betweenTime.quick.today': '今日',
+  'betweenTime.quick.thisWeek': '今週',
+  'betweenTime.quick.thisMonth': '今月',
+  'betweenTime.quick.thisYear': '今年',
+  'betweenTime.quick.thisQuarter': '今四半期',
+  'betweenTime.quick.recentDays': '過去{n}日間',
+
+  // ImageCropper
+  'imageCropper.reset': 'リセット',
+  'imageCropper.loadFailed': '画像の読み込みに失敗しました。もう一度お試しください。',
+  'imageCropper.processFailed': '画像の切り抜きに失敗しました。もう一度お試しください。',
+
+  // SliderCaptcha
+  'sliderCaptcha.title': 'スライドで認証',
+  'sliderCaptcha.verifyFailed': '認証失敗',
+  'sliderCaptcha.verifySuccess': '認証成功',
+
+  // OTA Update
+  'ota.retryPreparing.title': '更新を再準備中',
+  'ota.retryPreparing.subtitle': '前回の失敗状態を整理し、更新を再確認しています',
+  'ota.downloading.title': '更新をDL中',
+  'ota.downloading.subtitle': '最新版を取得中です',
+  'ota.downloading.progressLabel': '進捗',
+  'ota.downloading.elapsed': '経過 {time}',
+  'ota.installing.title': 'インストール中',
+  'ota.installing.subtitle': 'ファイル書込中、経過 {time}',
+  'ota.ready.title': '更新準備完了',
+  'ota.ready.subtitle': '再起動で最新版を適用',
+  'ota.ready.hint': '下のボタンで適用',
+  'ota.error.title': '更新失敗',
+  'ota.error.subtitle': '問題が発生しました。再試行を',
+  'ota.warning': 'アプリを閉じないでください',
+  'ota.button.retry': '再試行',
+  'ota.button.dismiss': '後で',
+  'ota.button.reload': '再起動',
+  'ota.time.minutesSeconds': '{min}分{sec}秒',
+  'ota.time.seconds': '{sec}秒',
+
+  // Debug
+  'debug.errorBoundary.title': '問題が発生しました',
+  'debug.errorBoundary.retry': '再試行',
+  'debug.errorBoundary.debugInfo': 'デバッグ情報',
+  'debug.errorBoundary.unknownError': '不明なエラー',
+  'debug.floatingDebugger.title': 'デバッグパネル',
+  'debug.floatingDebugger.logsTab': 'ログ',
+  'debug.floatingDebugger.networkTab': '通信',
+  'debug.floatingDebugger.searchPlaceholder': 'ログを検索...',
+  'debug.floatingDebugger.clear': 'クリア',
+  'debug.floatingDebugger.loading': '読み込み中...',
+  'debug.floatingDebugger.noLogs': 'ログはまだありません',
+  'debug.floatingDebugger.noSearchResult': '一致するログが見つかりません',
+  'debug.floatingDebugger.networkLoading': '通信パネルを読み込み中...',
+  'debug.floatingDebugger.networkUnavailable': '通信パネルは利用できません',
+  'debug.floatingDebugger.sortAsc': '時間昇順',
+  'debug.floatingDebugger.sortDesc': '時間降順',
+  'debug.floatingDebugger.expand': '展開',
+  'debug.floatingDebugger.collapse': '折りたたむ',
+  'debug.floatingDebugger.copySingleSuccess': 'クリップボードにコピーしました',
+  'debug.floatingDebugger.copyVisibleSuccess': '表示中のログをコピーしました',
+  'debug.floatingDebugger.copyFailed': 'コピーに失敗しました',
+  'debug.floatingDebugger.copySingleA11y': 'このログをコピー',
+  'debug.floatingDebugger.copyVisibleA11y': '表示中のログをコピー',
+};

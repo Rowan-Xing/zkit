@@ -1,0 +1,24 @@
+{
+  "name": "@y2kit/example",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo/AppEntry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "web": "expo start --web",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "expo": "~54.0.31",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "y2kit-tools": "workspace:*",
+    "y2kit-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.17",
+    "typescript": "~5.9.3"
+  }
+}
