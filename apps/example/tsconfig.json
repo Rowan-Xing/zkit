@@ -3,5 +3,5 @@
   "compilerOptions": {
     "strict": true
   },
-  "include": ["App.tsx", "index.js", "src/**/*", "metro.config.js", "babel.config.js"]
+  "include": ["App.tsx", "index.js", "metro.config.js", "babel.config.js"]
 }

@@ -10,6 +10,7 @@ module.exports = {
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     icon,
+    plugins: ['expo-dev-client'],
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.anonymous.y2kit-example',
