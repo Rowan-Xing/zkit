@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { PickerIOS as NativePickerIOS } from '@react-native-picker/picker';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -10,20 +9,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { getMaxFontScale, sp, wp } from 'y2kit-tools';
+import {
+  Y2KitWheelPicker,
+  syncY2KitWheelPickerCurrentSelection,
+  type Y2KitWheelPickerChangeEvent,
+} from './Y2KitWheelPickerNativeComponent';
 
 export const WHEEL_VISIBLE_ITEMS = 5;
-const NativePickerIOSWithRowHeight = NativePickerIOS as typeof NativePickerIOS &
-  React.ComponentType<React.ComponentProps<typeof NativePickerIOS> & { rowHeight?: number }>;
-
-type IOSNativePickerCommands = {
-  syncCurrentSelection?: (viewRef: unknown) => void;
-};
-
-const IOS_NATIVE_PICKER_COMMANDS: IOSNativePickerCommands | null =
-  Platform.OS === 'ios'
-    ? ((require('@react-native-picker/picker/js/RNCPickerNativeComponent') as { Commands?: IOSNativePickerCommands })
-        .Commands ?? null)
-    : null;
 
 // 点击“确认”时，如果 iOS 原生 wheel 还在减速，
 // 这里给原生命令一个很短的回调窗口，把当前中心项同步回来。
@@ -370,8 +362,7 @@ export const WheelColumn = React.memo(
       return new Promise<number>((resolve) => {
         iosSyncResolverRef.current = resolve;
 
-        if (IOS_NATIVE_PICKER_COMMANDS?.syncCurrentSelection && iosPickerRef.current != null) {
-          IOS_NATIVE_PICKER_COMMANDS.syncCurrentSelection(iosPickerRef.current);
+        if (iosPickerRef.current != null && syncY2KitWheelPickerCurrentSelection(iosPickerRef.current)) {
           iosSyncTimerRef.current = setTimeout(() => {
             resolveIOSSyncRequest(iosSelectedIndexRef.current);
           }, IOS_CONFIRM_SYNC_TIMEOUT_MS);
@@ -415,9 +406,9 @@ export const WheelColumn = React.memo(
     // iOS 原生 picker 在滚轮经过每一项时都会触发 `onValueChange`。
     // 这里先把原生当前值同步到本地，再延迟一个极短的 settle 窗口后通知上层。
     // 这样既能保留原生滚轮手感，也不会让级联列在滚动过程中频繁重算。
-    const handleIOSValueChange = React.useCallback(
-      (_itemValue: unknown, itemIndex: number) => {
-        const nextIndex = syncIOSSelectedIndex(itemIndex);
+    const handleIOSChange = React.useCallback(
+      (event: { nativeEvent: Y2KitWheelPickerChangeEvent }) => {
+        const nextIndex = syncIOSSelectedIndex(event.nativeEvent.newIndex);
         resolveIOSSyncRequest(nextIndex);
         scheduleIOSSettle(nextIndex);
       },
@@ -567,19 +558,22 @@ export const WheelColumn = React.memo(
     if (Platform.OS === 'ios') {
       return (
         <View style={[styles.column, { width }]} pointerEvents={disabled || data.length <= 1 ? 'none' : 'auto'}>
-          <NativePickerIOSWithRowHeight
+          <Y2KitWheelPicker
             ref={iosPickerRef as React.Ref<any>}
-            selectedValue={data[iosSelectedIndex]?.key}
-            onValueChange={handleIOSValueChange}
+            items={data.map((item, index) => ({
+              label: item.label,
+              value: item.key,
+              testID: `wheel-item-${String(item.key)}-${index}`,
+            }))}
+            selectedIndex={iosSelectedIndex}
+            onChange={handleIOSChange}
             numberOfLines={1}
             rowHeight={IOS_NATIVE_PICKER_ROW_HEIGHT}
             style={styles.iosPicker}
-            itemStyle={styles.iosPickerItem}
-          >
-            {data.map((item, index) => (
-            <NativePickerIOSWithRowHeight.Item key={`${String(item.key)}-${index}`} label={item.label} value={item.key} />
-            ))}
-          </NativePickerIOSWithRowHeight>
+            fontSize={IOS_NATIVE_PICKER_FONT_SIZE}
+            fontWeight="500"
+            color="#1A1A1A"
+          />
         </View>
       );
     }
@@ -638,11 +632,6 @@ const styles = StyleSheet.create({
   iosPicker: {
     width: '100%',
     height: IOS_NATIVE_PICKER_HEIGHT,
-  },
-  iosPickerItem: {
-    height: IOS_NATIVE_PICKER_ROW_HEIGHT,
-    fontSize: IOS_NATIVE_PICKER_FONT_SIZE,
-    fontWeight: '500',
   },
   content: {
     width: '100%',

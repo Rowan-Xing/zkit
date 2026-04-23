@@ -9,6 +9,9 @@
   "files": [
     "dist",
     "src",
+    "ios",
+    "react-native.config.js",
+    "y2kit-ui.podspec",
     "README.md"
   ],
   "publishConfig": {
@@ -29,7 +32,6 @@
   "peerDependencies": {
     "@expo/vector-icons": "*",
     "@lodev09/react-native-true-sheet": "*",
-    "@react-native-picker/picker": "*",
     "expo-clipboard": "*",
     "expo-image": "*",
     "expo-linear-gradient": "*",
@@ -50,7 +52,6 @@
   "devDependencies": {
     "@expo/vector-icons": "^15.1.1",
     "@lodev09/react-native-true-sheet": "^3.9.8",
-    "@react-native-picker/picker": "2.11.1",
     "@types/react": "~19.1.17",
     "dayjs": "^1.11.13",
     "expo-clipboard": "^8.0.8",
