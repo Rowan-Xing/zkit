@@ -343,7 +343,7 @@ export function AddressPickerDemo() {
       }}
     >
       {({ label }) => (
-        <Button skin="thin">{label || '请选择地区'}</Button>
+        <Button variant="soft">{label || '请选择地区'}</Button>
       )}
     </Picker>
   );

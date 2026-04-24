@@ -1310,8 +1310,8 @@ const OTAUpdateOverlay = React.memo(({
                   <View style={s.spacer12} />
                   <Button
                     block
-                    skin="text"
-                    fontColor="#999"
+                    variant="ghost"
+                    textColor="#999"
                     disabled={isRetrying}
                     onPress={onDismiss}
                   >

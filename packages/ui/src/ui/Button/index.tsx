@@ -12,6 +12,7 @@ import {
   StyleSheet,
   processColor,
   useColorScheme,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, {
@@ -21,20 +22,14 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { wp } from 'y2kit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { Text } from '../Text';
 
-type BorderOrRadiusToken = string | number;
-type BorderOrRadius = BorderOrRadiusToken | Array<BorderOrRadiusToken>;
-
-/** @deprecated Use ButtonVariant instead. */
-export type ButtonSkin = 'thin' | 'outlined' | 'text' | 'normal' | 'dashed';
 export type ButtonVariant = 'solid' | 'soft' | 'outline' | 'ghost' | 'link';
 export type ButtonTone = 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info';
-export type ButtonShape = 'default' | 'pill' | 'square';
-export type ButtonSizePreset = 'sm' | 'md' | 'lg';
+export type ButtonShape = 'rounded' | 'pill' | 'square';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 export type ButtonPressEffect =
   | 'auto'
   | 'none'
@@ -43,6 +38,34 @@ export type ButtonPressEffect =
   | 'darken'
   | 'scale-darken'
   | 'scale-opacity';
+export type ButtonBorderStyle = 'solid' | 'dashed';
+export type ButtonGradientDirection =
+  | 'to right'
+  | 'to left'
+  | 'to bottom'
+  | 'to top'
+  | 'to bottom right'
+  | 'to bottom left'
+  | 'to top right'
+  | 'to top left'
+  | `${number}deg`;
+export type ButtonGradientPoint = { x: number; y: number };
+export type ButtonGradient = {
+  colors: string[];
+  direction?: ButtonGradientDirection;
+  start?: ButtonGradientPoint;
+  end?: ButtonGradientPoint;
+};
+export type ButtonShadowSize = 'none' | 'sm' | 'md' | 'lg';
+export type ButtonShadowConfig = {
+  color?: string;
+  opacity?: number;
+  radius?: number;
+  offsetX?: number;
+  offsetY?: number;
+  elevation?: number;
+};
+export type ButtonShadow = ButtonShadowSize | ButtonShadowConfig;
 
 type ButtonSizeConfig = {
   minHeight: number;
@@ -56,6 +79,16 @@ type ButtonSizeConfig = {
   loadingSize: number;
 };
 
+type ButtonSizeConfigToken = ButtonSizeConfig;
+
+type ButtonMetrics = {
+  metricScale: number;
+  sizeConfig: ButtonSizeConfig;
+  outlineBorderWidth: number;
+  linkMinPaddingY: number;
+  loadingTextShift: number;
+};
+
 type ResolvedTonePalette = {
   baseColor: string;
   solidTextColor: string;
@@ -66,41 +99,18 @@ type NativePressableProps = Omit<
   'style' | 'children' | 'disabled'
 >;
 
+export type ButtonRef = React.ComponentRef<typeof Pressable>;
+
 export interface ButtonProps extends NativePressableProps {
   variant?: ButtonVariant;
   tone?: ButtonTone;
   shape?: ButtonShape;
-  sizePreset?: ButtonSizePreset;
+  size?: ButtonSize;
   pressEffect?: ButtonPressEffect;
 
-  /**
-   * @deprecated Use `variant` instead.
-   * - normal -> solid
-   * - thin -> soft
-   * - outlined -> outline
-   * - dashed -> outline + dashed border
-   * - text -> ghost
-   */
-  skin?: ButtonSkin;
-
-  borderWidth?: BorderOrRadius;
-
-  /**
-   * @deprecated Use `radius` or `shape` instead.
-   * 兼容旧版 API：支持四角配置。
-   */
-  round?: BorderOrRadius;
-
-  /**
-   * 新版统一圆角。
-   */
+  borderWidth?: number;
+  borderStyle?: ButtonBorderStyle;
   radius?: number;
-
-  /**
-   * @deprecated Use `shape="pill"` instead.
-   * 兼容旧版 API：胶囊按钮。
-   */
-  rounded?: boolean;
 
   width?: DimensionValue;
   height?: DimensionValue;
@@ -114,17 +124,7 @@ export interface ButtonProps extends NativePressableProps {
   icon?: React.ReactNode;
   iconSize?: number;
   iconPosition?: 'start' | 'end';
-
-  /**
-   * 新版语义化“仅图标按钮”。
-   */
   iconOnly?: boolean;
-
-  /**
-   * @deprecated Use `iconOnly` instead.
-   * 兼容旧版 API。
-   */
-  btnIcon?: boolean;
 
   loading?: boolean;
   loadingSize?: number;
@@ -132,38 +132,20 @@ export interface ButtonProps extends NativePressableProps {
 
   /**
    * 颜色优先级：
-   * 1) 显式 bgColor/fontColor 等覆盖
+   * 1) 显式 backgroundColor/textColor 等覆盖
    * 2) color
    * 3) tone
    * 4) theme
    */
   color?: string;
-  bgColor?: string;
-  darkBgColor?: string;
-  fontColor?: string;
-  darkFontColor?: string;
-
-  /**
-   * @deprecated Use `darkFontColor` instead.
-   * 兼容旧版拼写。
-   */
-  darkFontColorColor?: string;
-
-  disabledBgColor?: string;
-  disabledDarkBgColor?: string;
-  disabledFontColor?: string;
-  disabledDarkFontColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  disabledBackgroundColor?: string;
+  disabledTextColor?: string;
   disabledBorderColor?: string;
-  disabledDarkBorderColor?: string;
 
-  linear?: string[];
-  shadow?: string | number | Array<string | number>;
-
-  /**
-   * @deprecated Use `pressEffect="none"` instead.
-   * 兼容旧版 API；等价于 pressEffect="none"。
-   */
-  disableHover?: boolean;
+  gradient?: ButtonGradient;
+  shadow?: ButtonShadow;
 
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -185,13 +167,11 @@ type PressEffectFlags = {
   opacity: boolean;
 };
 
-type LinearPoint = { x: number; y: number };
-
 type LinearGradientProps = {
   pointerEvents?: 'none';
   colors: string[];
-  start?: LinearPoint;
-  end?: LinearPoint;
+  start?: ButtonGradientPoint;
+  end?: ButtonGradientPoint;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -200,9 +180,10 @@ const LOADING_TIMING = { duration: 200, easing: Easing.out(Easing.cubic) } as co
 const DISABLED_OPACITY = 0.55;
 const PRESSED_OPACITY = 0.84;
 const PRESSED_SCALE = 0.98;
-const OUTLINE_BORDER_WIDTH = wp(1.5);
-const LINK_MIN_PADDING_Y = wp(2);
-const LOADING_TEXT_SHIFT = wp(2);
+const BASE_SCREEN_WIDTH = 375;
+const MIN_TOUCH_TARGET = 44;
+const LINK_TOUCH_SLOP_X = 8;
+const LINK_TOUCH_SLOP_Y = 6;
 
 const SEMANTIC_COLORS: Record<string, string> = {
   warn: '#F59E0B',
@@ -213,41 +194,76 @@ const SEMANTIC_COLORS: Record<string, string> = {
   info: '#3B82F6',
 };
 
-const SIZE_PRESETS: Record<ButtonSizePreset, ButtonSizeConfig> = {
+const SIZE_TOKENS: Record<ButtonSize, ButtonSizeConfigToken> = {
   sm: {
-    minHeight: wp(36),
-    paddingHorizontal: wp(12),
-    paddingVertical: wp(7),
-    fontSize: wp(14),
-    gap: wp(6),
-    radius: wp(12),
-    iconOnlySide: wp(36),
-    iconSize: wp(16),
-    loadingSize: wp(16),
+    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    fontSize: 14,
+    gap: 6,
+    radius: 12,
+    iconOnlySide: 36,
+    iconSize: 16,
+    loadingSize: 16,
   },
   md: {
-    minHeight: wp(40),
-    paddingHorizontal: wp(16),
-    paddingVertical: wp(9),
-    fontSize: wp(16),
-    gap: wp(8),
-    radius: wp(14),
-    iconOnlySide: wp(46),
-    iconSize: wp(18),
-    loadingSize: wp(20),
+    minHeight: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    fontSize: 16,
+    gap: 8,
+    radius: 14,
+    iconOnlySide: 46,
+    iconSize: 18,
+    loadingSize: 20,
   },
   lg: {
-    minHeight: wp(48),
-    paddingHorizontal: wp(20),
-    paddingVertical: wp(11),
-    fontSize: wp(17),
-    gap: wp(10),
-    radius: wp(16),
-    iconOnlySide: wp(52),
-    iconSize: wp(20),
-    loadingSize: wp(22),
+    minHeight: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    fontSize: 17,
+    gap: 10,
+    radius: 16,
+    iconOnlySide: 52,
+    iconSize: 20,
+    loadingSize: 22,
   },
 };
+
+function resolveMetricScale(windowWidth: number) {
+  if (!Number.isFinite(windowWidth) || windowWidth <= 0) return 1;
+  return windowWidth / BASE_SCREEN_WIDTH;
+}
+
+function scaleMetric(size: number, scale: number) {
+  return size * scale;
+}
+
+function resolveButtonMetrics(
+  size: ButtonSize | undefined,
+  windowWidth: number
+): ButtonMetrics {
+  const scale = resolveMetricScale(windowWidth);
+  const token = SIZE_TOKENS[size ?? 'md'] ?? SIZE_TOKENS.md;
+
+  return {
+    metricScale: scale,
+    sizeConfig: {
+      minHeight: scaleMetric(token.minHeight, scale),
+      paddingHorizontal: scaleMetric(token.paddingHorizontal, scale),
+      paddingVertical: scaleMetric(token.paddingVertical, scale),
+      fontSize: scaleMetric(token.fontSize, scale),
+      gap: scaleMetric(token.gap, scale),
+      radius: scaleMetric(token.radius, scale),
+      iconOnlySide: scaleMetric(token.iconOnlySide, scale),
+      iconSize: scaleMetric(token.iconSize, scale),
+      loadingSize: scaleMetric(token.loadingSize, scale),
+    },
+    outlineBorderWidth: scaleMetric(1.5, scale),
+    linkMinPaddingY: scaleMetric(2, scale),
+    loadingTextShift: scaleMetric(2, scale),
+  };
+}
 
 function normalizeNumber(input: unknown) {
   if (typeof input === 'number') return Number.isFinite(input) ? input : undefined;
@@ -276,14 +292,6 @@ function resolveColorToken(token: string | undefined, fallback: string) {
   if (!token) return fallback;
   const raw = String(token).trim();
   return SEMANTIC_COLORS[raw] ?? raw;
-}
-
-function resolveVariantFromSkin(skin: ButtonSkin | undefined): ButtonVariant | undefined {
-  if (!skin) return undefined;
-  if (skin === 'normal') return 'solid';
-  if (skin === 'thin') return 'soft';
-  if (skin === 'outlined' || skin === 'dashed') return 'outline';
-  return 'ghost';
 }
 
 function isPrimitiveTextChild(children: React.ReactNode): children is string | number {
@@ -335,86 +343,38 @@ function resolveTonePalette(
   };
 }
 
-function normalizeBoxEdgeArray(
-  input: BorderOrRadius | undefined
-): [number, number, number, number] | undefined {
-  if (input == null) return undefined;
-  if (!Array.isArray(input)) {
-    const n = normalizeNumber(input);
-    if (n == null) return undefined;
-    return [n, n, n, n];
-  }
-  const items = input.map((x) => normalizeNumber(x)).filter((x): x is number => x != null);
-  if (items.length === 0) return undefined;
-  if (items.length === 1) return [items[0], items[0], items[0], items[0]];
-  if (items.length === 2) return [items[0], items[1], items[0], items[1]];
-  if (items.length === 3) return [items[0], items[1], items[2], items[1]];
-  return [items[0], items[1], items[2], items[3]];
-}
-
-function resolveBorderWidths(borderWidth: BorderOrRadius | undefined) {
-  const edges = normalizeBoxEdgeArray(borderWidth);
-  if (!edges) return undefined;
-  const [left, top, right, bottom] = edges;
-  return {
-    borderLeftWidth: left,
-    borderTopWidth: top,
-    borderRightWidth: right,
-    borderBottomWidth: bottom,
-  } satisfies ViewStyle;
-}
-
-function resolveCornerRadii(round: BorderOrRadius | undefined) {
-  const corners = normalizeBoxEdgeArray(round);
-  if (!corners) return undefined;
-  const [topLeft, topRight, bottomRight, bottomLeft] = corners;
-  return {
-    borderTopLeftRadius: topLeft,
-    borderTopRightRadius: topRight,
-    borderBottomRightRadius: bottomRight,
-    borderBottomLeftRadius: bottomLeft,
-  } satisfies ViewStyle;
-}
-
 function resolveShadowStyle(
   shadow: ButtonProps['shadow'],
   scheme: ColorSchemeName,
-  variant: ButtonVariant
+  variant: ButtonVariant,
+  metricScale: number
 ): ViewStyle | undefined {
   if (shadow === 'none') return { elevation: 0, shadowOpacity: 0 };
+  if (variant === 'ghost' || variant === 'link') return undefined;
 
-  const implicitEnabled = shadow === '' && variant !== 'ghost' && variant !== 'link';
-  const raw =
-    shadow === ''
-      ? implicitEnabled
-        ? 1
-        : undefined
-      : typeof shadow === 'string' || typeof shadow === 'number'
-        ? shadow
-        : undefined;
-  const level = normalizeNumber(raw);
+  const preset = typeof shadow === 'string' ? shadow : undefined;
+  const presetLevel = preset === 'sm' ? 1 : preset === 'md' ? 2 : preset === 'lg' ? 3 : 0;
 
-  if (level == null) {
-    if (Array.isArray(shadow) && shadow.length >= 4) {
-      const x = normalizeNumber(shadow[0]) ?? 0;
-      const y = normalizeNumber(shadow[1]) ?? wp(1);
-      const blur = Math.max(0, normalizeNumber(shadow[2]) ?? wp(6));
-      const color = String(shadow[3] ?? '#000000');
-      return {
-        shadowColor: color,
-        shadowOffset: { width: x, height: y },
-        shadowRadius: blur,
-        shadowOpacity: 0.18,
-        elevation: Math.max(0, Math.round(blur * 0.6)),
-      };
-    }
-    return undefined;
+  if (typeof shadow === 'object' && shadow != null) {
+    const radius = Math.max(0, shadow.radius ?? scaleMetric(8, metricScale));
+    return {
+      shadowColor: shadow.color ?? '#000000',
+      shadowOffset: {
+        width: shadow.offsetX ?? 0,
+        height: shadow.offsetY ?? scaleMetric(2, metricScale),
+      },
+      shadowRadius: radius,
+      shadowOpacity: shadow.opacity ?? (scheme === 'dark' ? 0.25 : 0.16),
+      elevation: shadow.elevation ?? Math.max(0, Math.round(radius * 0.6)),
+    };
   }
 
-  const blur = Math.max(0, level) * wp(6);
+  if (presetLevel <= 0) return undefined;
+
+  const blur = presetLevel * scaleMetric(6, metricScale);
   return {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: wp(2) },
+    shadowOffset: { width: 0, height: scaleMetric(2, metricScale) },
     shadowRadius: blur,
     shadowOpacity: scheme === 'dark' ? 0.25 : 0.16,
     elevation: Math.max(0, Math.round(blur * 0.6)),
@@ -423,11 +383,11 @@ function resolveShadowStyle(
 
 type LinearConfig = {
   colors: string[];
-  start?: LinearPoint;
-  end?: LinearPoint;
+  start?: ButtonGradientPoint;
+  end?: ButtonGradientPoint;
 };
 
-const LINEAR_DIRECTIONS: Record<string, Pick<LinearConfig, 'start' | 'end'>> = {
+const GRADIENT_DIRECTIONS: Record<string, Pick<LinearConfig, 'start' | 'end'>> = {
   'to right': { start: { x: 0, y: 0.5 }, end: { x: 1, y: 0.5 } },
   'to left': { start: { x: 1, y: 0.5 }, end: { x: 0, y: 0.5 } },
   'to bottom': { start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } },
@@ -448,20 +408,20 @@ function degToVector(deg: number) {
   return { x: x / len, y: y / len };
 }
 
-function parseLinear(linear: string[] | undefined): LinearConfig | undefined {
-  if (!linear || linear.length < 2) return undefined;
-  const raw = linear.map((x) => String(x));
-
-  const first = raw[0]?.trim() ?? '';
-  const direction = first.toLowerCase();
-  const hasDirection = direction.includes('deg') || direction.startsWith('to ');
-  const colors = (hasDirection ? raw.slice(1) : raw).filter(Boolean);
+function parseGradient(gradient: ButtonGradient | undefined): LinearConfig | undefined {
+  if (!gradient || !Array.isArray(gradient.colors) || gradient.colors.length < 2) return undefined;
+  const colors = gradient.colors.map((x) => String(x)).filter(Boolean);
   if (colors.length < 2) return undefined;
 
-  if (!hasDirection) return { colors };
+  if (gradient.start || gradient.end) {
+    return { colors, start: gradient.start, end: gradient.end };
+  }
+
+  const direction = gradient.direction?.toLowerCase();
+  if (!direction) return { colors };
 
   if (direction.startsWith('to ')) {
-    return { colors, ...LINEAR_DIRECTIONS[direction] };
+    return { colors, ...GRADIENT_DIRECTIONS[direction] };
   }
 
   const n = parseFloat(direction.replace('deg', '').trim());
@@ -539,25 +499,21 @@ function resolveButtonSideLength(
 }
 
 function resolveRadiusStyle({
-  rounded,
   shape,
   sizeStyle,
   iconOnly,
   minHeight,
   radius,
-  cornerRadii,
   sizeConfig,
 }: {
-  rounded: boolean;
   shape: ButtonShape;
   sizeStyle: ViewStyle;
   iconOnly: boolean;
   minHeight?: number;
   radius?: number;
-  cornerRadii?: ViewStyle;
   sizeConfig: ButtonSizeConfig;
 }): ViewStyle {
-  if (rounded || shape === 'pill') {
+  if (shape === 'pill') {
     const r = resolveButtonSideLength(sizeStyle, iconOnly, minHeight, sizeConfig) / 2;
     return {
       borderRadius: r,
@@ -572,10 +528,6 @@ function resolveRadiusStyle({
     return { borderRadius: 0 };
   }
 
-  if (cornerRadii) {
-    return { ...cornerRadii };
-  }
-
   if (typeof radius === 'number' && Number.isFinite(radius)) {
     return { borderRadius: radius };
   }
@@ -587,7 +539,7 @@ function resolveVisualColors({
   variant,
   visualDisabled,
   hasGradientBackground,
-  linearCfg,
+  gradientCfg,
   bgOverride,
   fontOverride,
   disabledBgOverride,
@@ -600,7 +552,7 @@ function resolveVisualColors({
   variant: ButtonVariant;
   visualDisabled: boolean;
   hasGradientBackground: boolean;
-  linearCfg?: LinearConfig;
+  gradientCfg?: LinearConfig;
   bgOverride?: string;
   fontOverride?: string;
   disabledBgOverride?: string;
@@ -612,7 +564,7 @@ function resolveVisualColors({
 }): ButtonVisualColors {
   const finalBg = bgOverride ?? primary;
   const disabledTextColor = disabledFontOverride ?? theme.colors.disabled;
-  const fallbackLinearBg = resolveColorToken(linearCfg?.colors[0], finalBg);
+  const fallbackGradientBg = resolveColorToken(gradientCfg?.colors[0], finalBg);
 
   if (hasGradientBackground) {
     return {
@@ -652,8 +604,8 @@ function resolveVisualColors({
   return {
     backgroundColor: visualDisabled
       ? (disabledBgOverride ?? theme.colors.secondary)
-      : linearCfg
-        ? fallbackLinearBg
+      : gradientCfg
+        ? fallbackGradientBg
         : finalBg,
     borderColor: 'transparent',
     textColor: visualDisabled ? disabledTextColor : (fontOverride ?? tonePalette.solidTextColor),
@@ -666,12 +618,14 @@ function resolveContentPaddingStyle({
   paddingHorizontal,
   paddingVertical,
   sizeConfig,
+  linkMinPaddingY,
 }: {
   iconOnly: boolean;
   variant: ButtonVariant;
   paddingHorizontal?: number;
   paddingVertical?: number;
   sizeConfig: ButtonSizeConfig;
+  linkMinPaddingY: number;
 }): ViewStyle {
   if (iconOnly) return {};
 
@@ -679,22 +633,20 @@ function resolveContentPaddingStyle({
   const py = paddingVertical ?? sizeConfig.paddingVertical;
 
   if (variant === 'link') {
-    return { paddingHorizontal: 0, paddingVertical: Math.max(LINK_MIN_PADDING_Y, py * 0.25) };
+    return { paddingHorizontal: 0, paddingVertical: Math.max(linkMinPaddingY, py * 0.25) };
   }
 
   return { paddingHorizontal: px, paddingVertical: py };
 }
 
 function resolvePressEffect({
-  disableHover,
   interactionDisabled,
   pressEffect,
 }: {
-  disableHover: boolean;
   interactionDisabled: boolean;
   pressEffect: ButtonPressEffect;
 }): ButtonPressEffect {
-  if (disableHover || interactionDisabled) return 'none';
+  if (interactionDisabled) return 'none';
   if (pressEffect !== 'auto') return pressEffect;
   return 'scale-opacity';
 }
@@ -732,25 +684,26 @@ function resolvePressOverlay({
 
 function resolveBorderStyle({
   variant,
-  dashedBorder,
+  borderStyle,
   borderWidth,
   visualColors,
   theme,
+  outlineBorderWidth,
 }: {
   variant: ButtonVariant;
-  dashedBorder: boolean;
-  borderWidth?: ViewStyle;
+  borderStyle: ButtonBorderStyle;
+  borderWidth?: number;
   visualColors: ButtonVisualColors;
   theme: ReturnType<typeof useTheme>;
+  outlineBorderWidth: number;
 }): ViewStyle {
-  const isOutlineLike = variant === 'outline' || dashedBorder;
-  const baseBorderWidth = borderWidth ?? (isOutlineLike ? { borderWidth: OUTLINE_BORDER_WIDTH } : undefined);
-
-  if (!baseBorderWidth) return {};
+  const isOutlineLike = variant === 'outline' || borderStyle === 'dashed';
+  const resolvedBorderWidth = borderWidth ?? (isOutlineLike ? outlineBorderWidth : undefined);
+  if (resolvedBorderWidth == null) return {};
 
   return {
-    ...baseBorderWidth,
-    borderStyle: dashedBorder ? 'dashed' : 'solid',
+    borderWidth: resolvedBorderWidth,
+    borderStyle,
     borderColor:
       visualColors.borderColor !== 'transparent' ? visualColors.borderColor : theme.colors.border,
   };
@@ -803,17 +756,49 @@ function resolveLoadingSize({
   return Math.max(sizeConfig.loadingSize, Math.round(side * 0.45));
 }
 
-export function Button({
+function resolveDefaultHitSlop({
+  variant,
+  iconOnly,
+  sizeStyle,
+  minHeight,
+  sizeConfig,
+}: {
+  variant: ButtonVariant;
+  iconOnly: boolean;
+  sizeStyle: ViewStyle;
+  minHeight?: number;
+  sizeConfig: ButtonSizeConfig;
+}): ButtonProps['hitSlop'] | undefined {
+  if (variant === 'link') {
+    return {
+      top: LINK_TOUCH_SLOP_Y,
+      bottom: LINK_TOUCH_SLOP_Y,
+      left: LINK_TOUCH_SLOP_X,
+      right: LINK_TOUCH_SLOP_X,
+    };
+  }
+
+  const side = resolveButtonSideLength(sizeStyle, iconOnly, minHeight, sizeConfig);
+  const slop = Math.max(0, (MIN_TOUCH_TARGET - side) / 2);
+  if (slop <= 0) return undefined;
+
+  return {
+    top: slop,
+    bottom: slop,
+    left: iconOnly ? slop : 0,
+    right: iconOnly ? slop : 0,
+  };
+}
+
+function ButtonImpl({
   variant,
   tone = 'primary',
-  shape = 'default',
-  sizePreset = 'md',
+  shape = 'rounded',
+  size = 'md',
   pressEffect = 'auto',
-  skin,
-  borderWidth,
-  round,
   radius,
-  rounded = false,
+  borderWidth,
+  borderStyle = 'solid',
   width,
   height,
   block = false,
@@ -821,8 +806,7 @@ export function Button({
   icon,
   iconSize,
   iconPosition = 'start',
-  iconOnly,
-  btnIcon = false,
+  iconOnly = false,
   loading = false,
   loadingSize,
   fontSize,
@@ -831,20 +815,13 @@ export function Button({
   paddingVertical,
   gap,
   color,
-  bgColor,
-  darkBgColor,
-  fontColor,
-  darkFontColor,
-  darkFontColorColor,
-  disabledBgColor,
-  disabledDarkBgColor,
-  disabledFontColor,
-  disabledDarkFontColor,
+  backgroundColor,
+  textColor,
+  disabledBackgroundColor,
+  disabledTextColor,
   disabledBorderColor,
-  disabledDarkBorderColor,
-  linear,
+  gradient,
   shadow = 'none',
-  disableHover = false,
   children,
   style,
   contentStyle,
@@ -853,17 +830,27 @@ export function Button({
   onPressIn,
   onPressOut,
   testID,
+  hitSlop,
   accessibilityState,
   accessibilityLabel,
   ...pressableProps
-}: ButtonProps) {
+}: ButtonProps, ref: React.ForwardedRef<ButtonRef>) {
   const theme = useTheme();
   const scheme = useColorScheme();
-  const sizeConfig = SIZE_PRESETS[sizePreset] ?? SIZE_PRESETS.md;
+  const { width: windowWidth } = useWindowDimensions();
+  const {
+    metricScale,
+    sizeConfig,
+    outlineBorderWidth,
+    linkMinPaddingY,
+    loadingTextShift,
+  } = React.useMemo(
+    () => resolveButtonMetrics(size, windowWidth),
+    [size, windowWidth]
+  );
 
-  const resolvedVariant = variant ?? resolveVariantFromSkin(skin) ?? 'solid';
-  const dashedBorder = skin === 'dashed';
-  const resolvedIconOnly = iconOnly ?? btnIcon;
+  const resolvedVariant = variant ?? 'solid';
+  const resolvedIconOnly = iconOnly;
 
   const resolvedInteractionDisabled = disabled || loading;
   const resolvedVisualDisabled = disabled;
@@ -874,29 +861,24 @@ export function Button({
     [color, resolvedTonePalette.baseColor]
   );
 
-  const resolvedBgOverride = scheme === 'dark' ? darkBgColor : bgColor;
-  const resolvedFontOverride =
-    scheme === 'dark' ? (darkFontColor ?? darkFontColorColor) : fontColor;
-  const resolvedDisabledBgOverride = scheme === 'dark' ? disabledDarkBgColor : disabledBgColor;
-  const resolvedDisabledFontOverride =
-    scheme === 'dark' ? disabledDarkFontColor : disabledFontColor;
-  const resolvedDisabledBorderOverride =
-    scheme === 'dark' ? disabledDarkBorderColor : disabledBorderColor;
+  const resolvedBgOverride = backgroundColor;
+  const resolvedFontOverride = textColor;
+  const resolvedDisabledBgOverride = disabledBackgroundColor;
+  const resolvedDisabledFontOverride = disabledTextColor;
+  const resolvedDisabledBorderOverride = disabledBorderColor;
 
-  const linearCfg = React.useMemo(() => parseLinear(linear), [linear]);
+  const gradientCfg = React.useMemo(() => parseGradient(gradient), [gradient]);
   const LinearGradientComponent = React.useMemo<
     React.ComponentType<LinearGradientProps> | undefined
   >(
-    () => (linearCfg ? (pickLinearGradientComponent() ?? undefined) : undefined),
-    [linearCfg]
+    () => (gradientCfg ? (pickLinearGradientComponent() ?? undefined) : undefined),
+    [gradientCfg]
   );
-  const hasGradientBackground = Boolean(linearCfg && LinearGradientComponent);
+  const hasGradientBackground = Boolean(gradientCfg && LinearGradientComponent);
 
-  const resolvedBorderWidth = React.useMemo(() => resolveBorderWidths(borderWidth), [borderWidth]);
-  const resolvedCornerRadii = React.useMemo(() => resolveCornerRadii(round), [round]);
   const resolvedShadow = React.useMemo(
-    () => resolveShadowStyle(shadow, scheme, resolvedVariant),
-    [resolvedVariant, scheme, shadow]
+    () => resolveShadowStyle(shadow, scheme, resolvedVariant, metricScale),
+    [metricScale, resolvedVariant, scheme, shadow]
   );
 
   const defaultGap = sizeConfig.gap;
@@ -916,22 +898,18 @@ export function Button({
   const resolvedRadiusStyle = React.useMemo(
     () =>
       resolveRadiusStyle({
-        rounded,
         shape,
         sizeStyle: resolvedButtonSizeStyle,
         iconOnly: resolvedIconOnly,
         minHeight,
         radius,
-        cornerRadii: resolvedCornerRadii,
         sizeConfig,
       }),
     [
       minHeight,
       radius,
       resolvedButtonSizeStyle,
-      resolvedCornerRadii,
       resolvedIconOnly,
-      rounded,
       shape,
       sizeConfig,
     ]
@@ -943,7 +921,7 @@ export function Button({
         variant: resolvedVariant,
         visualDisabled: resolvedVisualDisabled,
         hasGradientBackground,
-        linearCfg,
+        gradientCfg,
         bgOverride: resolvedBgOverride,
         fontOverride: resolvedFontOverride,
         disabledBgOverride: resolvedDisabledBgOverride,
@@ -955,7 +933,7 @@ export function Button({
       }),
     [
       hasGradientBackground,
-      linearCfg,
+      gradientCfg,
       resolvedBgOverride,
       resolvedDisabledBgOverride,
       resolvedDisabledBorderOverride,
@@ -977,8 +955,9 @@ export function Button({
         paddingHorizontal,
         paddingVertical,
         sizeConfig,
+        linkMinPaddingY,
       }),
-    [paddingHorizontal, paddingVertical, resolvedIconOnly, resolvedVariant, sizeConfig]
+    [linkMinPaddingY, paddingHorizontal, paddingVertical, resolvedIconOnly, resolvedVariant, sizeConfig]
   );
 
   const resolvedText = React.useMemo(() => {
@@ -1023,7 +1002,7 @@ export function Button({
     [iconSize, minHeight, resolvedButtonSizeStyle, resolvedIconOnly, sizeConfig]
   );
 
-  const resolvedIconNode = React.useMemo(() => (icon == null ? null : icon), [icon]);
+  const resolvedIconNode = icon ?? null;
   const resolvedIconOnlyNode = resolvedIconNode ?? resolvedText;
 
   const inferredAccessibilityLabel =
@@ -1040,11 +1019,10 @@ export function Button({
   const resolvedPressEffect = React.useMemo(
     () =>
       resolvePressEffect({
-        disableHover,
         interactionDisabled: resolvedInteractionDisabled,
         pressEffect,
       }),
-    [disableHover, pressEffect, resolvedInteractionDisabled]
+    [pressEffect, resolvedInteractionDisabled]
   );
 
   const pressEffectFlags = React.useMemo(
@@ -1153,12 +1131,13 @@ export function Button({
     () =>
       resolveBorderStyle({
         variant: resolvedVariant,
-        dashedBorder,
-        borderWidth: resolvedBorderWidth,
+        borderStyle,
+        borderWidth,
         visualColors: resolvedVisualColors,
         theme,
+        outlineBorderWidth,
       }),
-    [dashedBorder, resolvedBorderWidth, resolvedVariant, resolvedVisualColors, theme]
+    [borderStyle, borderWidth, outlineBorderWidth, resolvedVariant, resolvedVisualColors, theme]
   );
 
   const resolvedIconBaseBoxStyle = React.useMemo(
@@ -1227,18 +1206,31 @@ export function Button({
       const scale = interpolate(loadingSv.value, [0, 1], [1, 0.98]);
       return { opacity, transform: [{ scale }] };
     }
-    const translateX = interpolate(loadingSv.value, [0, 1], [0, LOADING_TEXT_SHIFT]);
+    const translateX = interpolate(loadingSv.value, [0, 1], [0, loadingTextShift]);
     return { transform: [{ translateX }] };
-  }, [loadingSv, resolvedIconOnly]);
+  }, [loadingSv, loadingTextShift, resolvedIconOnly]);
 
   const shouldClipRoot =
     shadow === 'none' || resolvedVariant === 'ghost' || resolvedVariant === 'link';
   const GradientComponent = hasGradientBackground ? LinearGradientComponent : undefined;
+  const defaultHitSlop = React.useMemo(
+    () =>
+      resolveDefaultHitSlop({
+        variant: resolvedVariant,
+        iconOnly: resolvedIconOnly,
+        sizeStyle: resolvedButtonSizeStyle,
+        minHeight,
+        sizeConfig,
+      }),
+    [minHeight, resolvedButtonSizeStyle, resolvedIconOnly, resolvedVariant, sizeConfig]
+  );
 
   return (
     <AnimatedPressable
       {...pressableProps}
+      ref={ref}
       testID={testID}
+      hitSlop={hitSlop !== undefined ? hitSlop : defaultHitSlop}
       accessibilityRole="button"
       accessibilityLabel={resolvedAccessibilityLabel}
       accessibilityState={{
@@ -1273,12 +1265,12 @@ export function Button({
           contentStyle,
         ]}
       >
-        {GradientComponent && linearCfg ? (
+        {GradientComponent && gradientCfg ? (
           <GradientComponent
             pointerEvents="none"
-            colors={linearCfg.colors}
-            start={linearCfg.start}
-            end={linearCfg.end}
+            colors={gradientCfg.colors}
+            start={gradientCfg.start}
+            end={gradientCfg.end}
             style={[StyleSheet.absoluteFill, resolvedRadiusStyle]}
           />
         ) : null}
@@ -1344,6 +1336,12 @@ export function Button({
   );
 }
 
+const ButtonWithRef = React.forwardRef<ButtonRef, ButtonProps>(ButtonImpl);
+ButtonWithRef.displayName = 'Button';
+
+export const Button = React.memo(ButtonWithRef);
+Button.displayName = 'Button';
+
 const styles = StyleSheet.create({
   root: {},
   clip: {
@@ -1374,7 +1372,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   textBase: {
-    letterSpacing: wp(0.2),
+    letterSpacing: 0,
     fontWeight: '600',
     flexShrink: 1,
     textAlign: 'center',

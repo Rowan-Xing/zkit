@@ -1264,24 +1264,24 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
         <View style={styles.footer}>
           <View style={styles.footerBtnWrapper}>
             <Button
-              skin="thin"
+              variant="soft"
               onPress={handleCancel}
               disabled={disabled}
               block
               minHeight={wp(44)}
-              round={wp(14)}
+              radius={wp(14)}
               fontSize={sp(16)}
             >
               {t('picker.cancel')}
             </Button>
-                </View>
-                <View style={styles.footerBtnWrapper}>
-                  <Button
-                    onPress={handleConfirm}
-                    disabled={disabled}
-                    block
+          </View>
+          <View style={styles.footerBtnWrapper}>
+            <Button
+              onPress={handleConfirm}
+              disabled={disabled}
+              block
               minHeight={wp(44)}
-              round={wp(14)}
+              radius={wp(14)}
               fontSize={sp(16)}
             >
               {t('picker.confirm')}

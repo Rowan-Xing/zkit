@@ -1,5 +1,20 @@
 export { Button } from './ui/Button/index';
-export type { ButtonProps } from './ui/Button/index';
+export type {
+  ButtonBorderStyle,
+  ButtonGradient,
+  ButtonGradientDirection,
+  ButtonGradientPoint,
+  ButtonPressEffect,
+  ButtonProps,
+  ButtonRef,
+  ButtonShape,
+  ButtonShadow,
+  ButtonShadowConfig,
+  ButtonShadowSize,
+  ButtonSize,
+  ButtonTone,
+  ButtonVariant,
+} from './ui/Button/index';
 export { LoadingSpinner } from './ui/LoadingSpinner/index';
 export type { LoadingSpinnerProps } from './ui/LoadingSpinner/index';
 export { Checkbox, CheckboxGroup, CheckboxIndicator } from './ui/Checkbox/index';
