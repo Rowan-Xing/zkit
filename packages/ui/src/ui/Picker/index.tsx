@@ -27,15 +27,17 @@ const ITEM_HEIGHT = WHEEL_ITEM_HEIGHT;
 const VISIBLE_ITEMS = WHEEL_VISIBLE_ITEMS;
 const MAX_COLUMNS = 3;
 
-type Primitive = string | number;
+export type PickerPrimitiveValue = string | number;
+
+type Primitive = PickerPrimitiveValue;
 
 export type PickerTreeNode = {
-  [key: string]: any;
+  [key: string]: unknown;
   disabled?: boolean;
   children?: PickerTreeNode[];
 };
 
-export type PickerModelValue = Primitive | Primitive[];
+export type PickerModelValue = PickerPrimitiveValue | PickerPrimitiveValue[];
 
 /**
  * 点击“确认”后对外回传的最终结果。
@@ -47,29 +49,29 @@ export type PickerModelValue = Primitive | Primitive[];
  * 2. `values`
  *    - 永远是数组形式，便于外部统一处理多列场景
  * 3. `label`
- *    - 用 `modelStrSeparator` 拼好的展示文本
+ *    - 用 `separator` 拼好的展示文本
  * 4. `labels`
  *    - 每一列单独的展示文本数组
  * 5. `items`
  *    - 每一列最终选中的原始节点
  */
-type PickerConfirmPayload = {
+export type PickerConfirmPayload = {
   value: PickerModelValue;
-  values: Primitive[];
+  values: PickerPrimitiveValue[];
   label: string;
   labels: string[];
   items: PickerTreeNode[];
 };
 
-type PickerChangePayload = PickerConfirmPayload;
+export type PickerChangePayload = PickerConfirmPayload;
 
 /**
  * `Picker` 既支持“单列普通选择”，也支持最多 3 列的级联选择。
  *
  * 约定：
  * 1. `list` 是树形结构，当前节点的 `children` 代表下一列候选项
- * 2. `rangKey` 决定“提交值”从哪个字段取
- * 3. `rangText` 决定“展示文案”从哪个字段取
+ * 2. `valueKey` 决定“提交值”从哪个字段取
+ * 3. `labelKey` 决定“展示文案”从哪个字段取
  * 4. 单列时默认回传单值，多列时默认回传数组
  */
 export type PickerProps = {
@@ -82,8 +84,8 @@ export type PickerProps = {
    *
    * 注意：
    * 1. 当前实现最多只会消费 3 列
-   * 2. 节点里实际取值字段由 `rangKey` 决定
-   * 3. 节点里展示文本字段由 `rangText` 决定
+   * 2. 节点里实际取值字段由 `valueKey` 决定
+   * 3. 节点里展示文本字段由 `labelKey` 决定
    * 4. 节点带 `disabled: true` 时会被视为不可选
    */
   list: PickerTreeNode[];
@@ -213,18 +215,18 @@ export type PickerProps = {
    *
    * 默认是 `id`。
    * 例如业务节点是 `{ code: 'CN', name: '中国' }`，
-   * 那么可以传 `rangKey="code"`。
+   * 那么可以传 `valueKey="code"`。
    */
-  rangKey?: string;
+  valueKey?: string;
 
   /**
    * 从节点上取“展示文案”的字段名。
    *
    * 默认是 `title`。
    * 例如业务节点是 `{ id: 1, name: '男' }`，
-   * 那么可以传 `rangText="name"`。
+   * 那么可以传 `labelKey="name"`。
    */
-  rangText?: string;
+  labelKey?: string;
 
   /**
    * 多列文案拼接分隔符。
@@ -238,7 +240,7 @@ export type PickerProps = {
    * 2. `onLabelChange`
    * 3. `onConfirm` / `onChange` 里的 `label`
    */
-  modelStrSeparator?: string;
+  separator?: string;
 
   /**
    * 自定义列头渲染。
@@ -360,8 +362,39 @@ function toArrayValue(v: PickerModelValue | undefined): Primitive[] {
 }
 
 // 根据当前是否为多列模式，决定向外回传单值还是数组。
-function toOutputValue(values: Primitive[], asArray: boolean) {
-  return asArray ? values : (values[0] as Primitive);
+function toOutputValue(values: Primitive[], asArray: boolean): PickerModelValue {
+  if (asArray || values.length !== 1) return values;
+  return values[0] as Primitive;
+}
+
+function silentlyCatchPromise(value: unknown) {
+  const maybePromise = value as { catch?: (onRejected: () => void) => unknown } | null | undefined;
+  if (typeof maybePromise?.catch === 'function') {
+    maybePromise.catch(() => {});
+  }
+}
+
+function transparentizeColor(color: string) {
+  const input = color.trim();
+  const fullHex = /^#([0-9a-f]{6})$/i.exec(input);
+  if (fullHex) {
+    const n = Number.parseInt(fullHex[1]!, 16);
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    return `rgba(${r},${g},${b},0)`;
+  }
+
+  const shortHex = /^#([0-9a-f]{3})$/i.exec(input);
+  if (shortHex) {
+    const chars = shortHex[1]!;
+    const r = Number.parseInt(`${chars[0]}${chars[0]}`, 16);
+    const g = Number.parseInt(`${chars[1]}${chars[1]}`, 16);
+    const b = Number.parseInt(`${chars[2]}${chars[2]}`, 16);
+    return `rgba(${r},${g},${b},0)`;
+  }
+
+  return 'transparent';
 }
 
 // 从节点里取业务值，优先要求是 string / number，方便后续稳定比较。
@@ -382,7 +415,7 @@ function pickText(node: PickerTreeNode, key: string): string {
 // 如果当前项被禁用，则优先向后、再向前找到最近的可选项。
 // 这样可以保证滚轮和最终确认值都落在可用节点上。
 function findNearestEnabledIndex(list: PickerTreeNode[], startIndex: number) {
-  if (!list.length) return 0;
+  if (!list.length) return -1;
   const idx = clampNumber(startIndex, 0, list.length - 1);
   if (!list[idx]?.disabled) return idx;
   for (let i = idx + 1; i < list.length; i += 1) {
@@ -391,7 +424,7 @@ function findNearestEnabledIndex(list: PickerTreeNode[], startIndex: number) {
   for (let i = idx - 1; i >= 0; i -= 1) {
     if (!list[i]?.disabled) return i;
   }
-  return idx;
+  return -1;
 }
 
 // 根据传入值重新推导整套级联数据：
@@ -402,8 +435,8 @@ function findNearestEnabledIndex(list: PickerTreeNode[], startIndex: number) {
 function resolveCascade(
   root: PickerTreeNode[],
   desiredValues: Primitive[],
-  rangKey: string,
-  rangText: string,
+  valueKey: string,
+  labelKey: string,
   maxColumns: number
 ) {
   const columns: PickerTreeNode[][] = [];
@@ -420,17 +453,18 @@ function resolveCascade(
     const desired = desiredValues[col];
     let idx = 0;
     if (desired !== undefined) {
-      const found = currentList.findIndex((it) => pickKey(it, rangKey) === desired);
+      const found = currentList.findIndex((it) => pickKey(it, valueKey) === desired);
       idx = found >= 0 ? found : 0;
     }
     idx = findNearestEnabledIndex(currentList, idx);
+    if (idx < 0) break;
     indices.push(idx);
 
     const picked = currentList[idx];
     if (!picked) break;
-    const keyVal = pickKey(picked, rangKey);
+    const keyVal = pickKey(picked, valueKey);
     values.push(keyVal ?? String(idx));
-    labels.push(pickText(picked, rangText));
+    labels.push(pickText(picked, labelKey));
     items.push(picked);
 
     currentList = Array.isArray(picked.children) ? picked.children : [];
@@ -450,24 +484,28 @@ function composeTrigger(
   ctx?: { label: string; value: PickerModelValue }
 ) {
   if (typeof children === 'function') {
-    const node = (children as any)(ctx);
+    const render = children as (ctx?: { label: string; value: PickerModelValue }) => React.ReactNode;
+    const node = render(ctx);
     return composeTrigger(node, onPress, disabled, ctx);
   }
   if (React.isValidElement(children)) {
-    const anyChild = children as any;
-    const prevOnPress = anyChild?.props?.onPress;
+    const child = children as React.ReactElement<{
+      onPress?: (...args: unknown[]) => void;
+      disabled?: boolean;
+    }>;
+    const prevOnPress = child.props.onPress;
     if (typeof prevOnPress === 'function') {
-      return React.cloneElement(children as any, {
-        onPress: (...args: any[]) => {
+      return React.cloneElement(child, {
+        onPress: (...args: unknown[]) => {
           prevOnPress(...args);
           onPress();
         },
-        disabled: disabled || anyChild?.props?.disabled,
+        disabled: disabled || child.props.disabled,
       });
     }
-    return React.cloneElement(children as any, {
+    return React.cloneElement(child, {
       onPress,
-      disabled: disabled || anyChild?.props?.disabled,
+      disabled: disabled || child.props.disabled,
     });
   }
   return (
@@ -478,18 +516,19 @@ function composeTrigger(
 }
 
 // 把业务数据映射成滚轮列组件需要的标准结构。
-function toWheelOptions(nodes: PickerTreeNode[], rangKey: string, rangText: string): WheelOption[] {
+function toWheelOptions(nodes: PickerTreeNode[], valueKey: string, labelKey: string): WheelOption[] {
   return nodes.map((node, index) => ({
-    key: pickKey(node, rangKey) ?? pickKey(node, 'id') ?? pickKey(node, 'code') ?? pickKey(node, 'key') ?? index,
-    label: pickText(node, rangText),
+    key: pickKey(node, valueKey) ?? pickKey(node, 'id') ?? pickKey(node, 'code') ?? pickKey(node, 'key') ?? index,
+    label: pickText(node, labelKey),
+    disabled: !!node.disabled,
   }));
 }
 
 type MemoizedWheelColumnProps = {
   col: PickerTreeNode[];
   colIdx: number;
-  rangKey: string;
-  rangText: string;
+  valueKey: string;
+  labelKey: string;
   selectedIndex: number;
   onSelectedIndexChange: (colIdx: number, idx: number) => void;
   width: number;
@@ -501,15 +540,15 @@ type MemoizedWheelColumnProps = {
 const MemoizedWheelColumn = React.memo(function MemoizedWheelColumn({
   col,
   colIdx,
-  rangKey,
-  rangText,
+  valueKey,
+  labelKey,
   selectedIndex,
   onSelectedIndexChange,
   width,
   disabled,
   wheelsRef,
 }: MemoizedWheelColumnProps) {
-  const data = React.useMemo(() => toWheelOptions(col, rangKey, rangText), [col, rangKey, rangText]);
+  const data = React.useMemo(() => toWheelOptions(col, valueKey, labelKey), [col, valueKey, labelKey]);
   const handleChange = React.useCallback((idx: number) => onSelectedIndexChange(colIdx, idx), [colIdx, onSelectedIndexChange]);
   return (
     <WheelColumn
@@ -598,9 +637,9 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   defaultLabel,
   onLabelChange,
   title,
-  rangKey = 'id',
-  rangText = 'title',
-  modelStrSeparator = '-',
+  valueKey = 'id',
+  labelKey = 'title',
+  separator = '-',
   renderColumnHeader,
   lazyContent = true,
   drawerSize,
@@ -675,9 +714,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // 这时重复调一次 dismiss 只需要“静默忽略”，不值得把异常抛到业务层。
   const dismissSheet = React.useCallback(() => {
     const p = sheetRef.current?.dismiss();
-    if (p && typeof (p as any).catch === 'function') {
-      (p as any).catch(() => {});
-    }
+    silentlyCatchPromise(p);
   }, []);
 
   // 当业务要求打开时，先把 TrueSheet 宿主挂上树。
@@ -714,9 +751,9 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const resolveFromValue = React.useCallback(
     (v: PickerModelValue | undefined) => {
       const desired = toArrayValue(v);
-      return resolveCascade(list, desired, rangKey, rangText, MAX_COLUMNS);
+      return resolveCascade(list, desired, valueKey, labelKey, MAX_COLUMNS);
     },
-    [list, rangKey, rangText]
+    [list, valueKey, labelKey]
   );
 
   // 单列时默认回传单值，多列时默认回传数组。
@@ -805,9 +842,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
         if (!visibleRef.current) return;
         if (isPresentedRef.current) return;
         const p = sheetRef.current?.present();
-        if (p && typeof (p as any).catch === 'function') {
-          (p as any).catch(() => {});
-        }
+        silentlyCatchPromise(p);
       });
       return () => cancelAnimationFrame(rafId);
     }
@@ -819,8 +854,8 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // 根据已提交 value 推导展示文案。
   const committedLabel = React.useMemo(() => {
     const r = resolveFromValue(value);
-    return r.labels.filter(Boolean).join(modelStrSeparator);
-  }, [modelStrSeparator, resolveFromValue, value]);
+    return r.labels.filter(Boolean).join(separator);
+  }, [separator, resolveFromValue, value]);
 
   // 外部传了 label 时优先用外部值，否则用内部缓存或根据 value 现算。
   const effectiveLabel = React.useMemo(() => {
@@ -875,6 +910,12 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // 列数最多 3 列，列宽按当前屏宽平分。
   const columnsCount = React.useMemo(() => Math.max(1, Math.min(MAX_COLUMNS, draftColumns.length || 1)), [draftColumns.length]);
   const columnWidth = React.useMemo(() => (screenW - wp(32)) / Math.max(1, columnsCount), [columnsCount, screenW]);
+  const hasCompleteSelection = React.useMemo(
+    () => draftColumns.length > 0 && draftItems.length === draftColumns.length && draftValues.length === draftColumns.length,
+    [draftColumns.length, draftItems.length, draftValues.length]
+  );
+  const confirmDisabled = disabled || !hasCompleteSelection;
+  const transparentSurface = React.useMemo(() => transparentizeColor(theme.colors.surface), [theme.colors.surface]);
 
   const wheelsRef = React.useRef<Array<WheelColumnHandle | null>>([]);
 
@@ -890,7 +931,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const emitDraftChange = React.useCallback(
     (nextValues: Primitive[], nextLabels: string[], nextItems: PickerTreeNode[]) => {
       const outValue = toOutputValue(nextValues, outputAsArray);
-      const outLabel = nextLabels.filter(Boolean).join(modelStrSeparator);
+      const outLabel = nextLabels.filter(Boolean).join(separator);
       const payload: PickerChangePayload = {
         value: outValue,
         values: nextValues,
@@ -900,7 +941,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
       };
       onChange?.(payload);
     },
-    [modelStrSeparator, onChange, outputAsArray]
+    [separator, onChange, outputAsArray]
   );
 
   // 把所有滚轮“结算”到最近一项，然后重新计算出一套稳定的草稿态。
@@ -932,15 +973,16 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
       if (!currentList.length) break;
 
       const safeIdx = findNearestEnabledIndex(currentList, settledIndices[col] ?? draftIndices[col] ?? 0);
+      if (safeIdx < 0) break;
       const picked = currentList[safeIdx];
       if (!picked) break;
 
-      const pickedKey = pickKey(picked, rangKey);
+      const pickedKey = pickKey(picked, valueKey);
       desiredValues[col] = pickedKey ?? String(safeIdx);
       currentList = Array.isArray(picked.children) ? picked.children : [];
     }
 
-    const r = resolveCascade(list, desiredValues, rangKey, rangText, MAX_COLUMNS);
+    const r = resolveCascade(list, desiredValues, valueKey, labelKey, MAX_COLUMNS);
     setDraft({
       draftValues: r.values,
       draftLabels: r.labels,
@@ -956,7 +998,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     });
 
     return r;
-  }, [draftIndices, list, rangKey, rangText]);
+  }, [draftIndices, list, valueKey, labelKey]);
 
   // 任意一列变化后的级联处理逻辑。
   //
@@ -975,6 +1017,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
       const col = draftColumns[columnIndex] ?? [];
       if (!col.length) return;
       const safeIdx = findNearestEnabledIndex(col, nextIndex);
+      if (safeIdx < 0) return;
       if (safeIdx !== nextIndex) {
         wheelsRef.current[columnIndex]?.scrollToIndex(safeIdx, true);
       }
@@ -982,11 +1025,11 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
       if (!picked) return;
 
       const nextDesired = [...draftValues];
-      const pickedKey = pickKey(picked, rangKey);
+      const pickedKey = pickKey(picked, valueKey);
       if (pickedKey !== undefined) nextDesired[columnIndex] = pickedKey;
       nextDesired.length = columnIndex + 1;
 
-      const r = resolveCascade(list, nextDesired, rangKey, rangText, MAX_COLUMNS);
+      const r = resolveCascade(list, nextDesired, valueKey, labelKey, MAX_COLUMNS);
       setDraft({
         draftValues: r.values,
         draftLabels: r.labels,
@@ -1003,7 +1046,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
 
       emitDraftChange(r.values, r.labels, r.items);
     },
-    [draftColumns, draftValues, emitDraftChange, list, rangKey, rangText]
+    [draftColumns, draftValues, emitDraftChange, list, valueKey, labelKey]
   );
 
   // 取消的语义是“放弃本次修改”：
@@ -1022,8 +1065,9 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // 4. 最后关闭弹窗
   const handleConfirm = React.useCallback(async () => {
     const synced = await syncDraftFromWheels();
+    if (synced.items.length !== synced.columns.length || synced.values.length !== synced.columns.length) return;
     const outValue = toOutputValue(synced.values, outputAsArray);
-    const outLabel = synced.labels.filter(Boolean).join(modelStrSeparator);
+    const outLabel = synced.labels.filter(Boolean).join(separator);
     const payload: PickerConfirmPayload = {
       value: outValue,
       values: synced.values,
@@ -1036,7 +1080,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     setModelValue(outValue);
     onConfirm?.(payload);
     close();
-  }, [close, labelProp, modelStrSeparator, onConfirm, onLabelChange, outputAsArray, setModelValue, syncDraftFromWheels]);
+  }, [close, labelProp, separator, onConfirm, onLabelChange, outputAsArray, setModelValue, syncDraftFromWheels]);
 
   // TrueSheet 原生弹窗真正展示完成后的回调。
   //
@@ -1214,7 +1258,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
                   这里的高亮条只在 Android 自绘 wheel 上保留。 */}
               {Platform.OS !== 'ios' && (
                 <View
-                  style={[styles.highlightBar, { backgroundColor: '#F2F2F2' }]}
+                  style={[styles.highlightBar, { backgroundColor: theme.colors.secondary }]}
                   pointerEvents="none"
                 />
               )}
@@ -1224,8 +1268,8 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
                     key={`col-${colIdx}-${columnsCount}`}
                     col={col}
                     colIdx={colIdx}
-                    rangKey={rangKey}
-                    rangText={rangText}
+                    valueKey={valueKey}
+                    labelKey={labelKey}
                     selectedIndex={Math.max(0, draftIndices[colIdx] ?? 0)}
                     onSelectedIndexChange={handleWheelIndexChange}
                     width={columnWidth}
@@ -1241,7 +1285,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
               {Platform.OS !== 'ios' && (
                 <View style={styles.topMask} pointerEvents="none">
                   <LinearGradient
-                    colors={['#FFFFFF', 'rgba(255,255,255,0)']}
+                    colors={[theme.colors.surface, transparentSurface]}
                     style={StyleSheet.absoluteFill}
                   />
                 </View>
@@ -1249,7 +1293,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
               {Platform.OS !== 'ios' && (
                 <View style={styles.bottomMask} pointerEvents="none">
                   <LinearGradient
-                    colors={['rgba(255,255,255,0)', '#FFFFFF']}
+                    colors={[transparentSurface, theme.colors.surface]}
                     style={StyleSheet.absoluteFill}
                   />
                 </View>
@@ -1278,7 +1322,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
           <View style={styles.footerBtnWrapper}>
             <Button
               onPress={handleConfirm}
-              disabled={disabled}
+              disabled={confirmDisabled}
               block
               minHeight={wp(44)}
               radius={wp(14)}
@@ -1344,7 +1388,7 @@ const styles = StyleSheet.create({
   sheetInner: {
     width: '100%',
     paddingHorizontal: wp(16),
-    paddingTop: wp(12)
+    paddingTop: wp(12),
   },
   header: {
     height: wp(30),
@@ -1366,11 +1410,6 @@ const styles = StyleSheet.create({
   },
   columnLabelItem: {
     alignItems: 'center',
-  },
-  columnLabelText: {
-    fontSize: sp(14),
-    fontWeight: '600',
-    color: '#666666',
   },
   pickerWrapper: {
     height: ITEM_HEIGHT * VISIBLE_ITEMS,

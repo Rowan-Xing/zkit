@@ -5,7 +5,14 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { sp } from 'y2kit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { Text } from '../Text';
-import { Picker, type PickerHandle, type PickerModelValue, type PickerTreeNode } from '../Picker';
+import {
+  Picker,
+  type PickerChangePayload,
+  type PickerConfirmPayload,
+  type PickerHandle,
+  type PickerModelValue,
+  type PickerTreeNode,
+} from '../Picker';
 
 export type DatePickerHandle = PickerHandle;
 
@@ -237,16 +244,16 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   );
 
   const handleConfirm = React.useCallback(
-    (payload: any) => {
-      const ymd = normalizePickerValueToYmd(payload?.value, bounds);
+    (payload: PickerConfirmPayload) => {
+      const ymd = normalizePickerValueToYmd(payload.value, bounds);
       const out = toStandardValueFromYmd(ymd);
       const date = dayjs(out, 'YYYY-MM-DD', true);
       onConfirm?.({
         value: out,
-        values: Array.isArray(payload?.values) ? payload.values.map(String) : [],
-        label: String(payload?.label ?? ''),
-        labels: Array.isArray(payload?.labels) ? payload.labels.map(String) : [],
-        items: Array.isArray(payload?.items) ? payload.items : [],
+        values: payload.values.map(String),
+        label: payload.label,
+        labels: payload.labels.map(String),
+        items: payload.items,
         date,
       });
     },
@@ -254,16 +261,16 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   );
 
   const handleChange = React.useCallback(
-    (payload: any) => {
-      const ymd = normalizePickerValueToYmd(payload?.value, bounds);
+    (payload: PickerChangePayload) => {
+      const ymd = normalizePickerValueToYmd(payload.value, bounds);
       const out = toStandardValueFromYmd(ymd);
       const date = dayjs(out, 'YYYY-MM-DD', true);
       onChange?.({
         value: out,
-        values: Array.isArray(payload?.values) ? payload.values.map(String) : [],
-        label: String(payload?.label ?? ''),
-        labels: Array.isArray(payload?.labels) ? payload.labels.map(String) : [],
-        items: Array.isArray(payload?.items) ? payload.items : [],
+        values: payload.values.map(String),
+        label: payload.label,
+        labels: payload.labels.map(String),
+        items: payload.items,
         date,
       });
     },
@@ -285,9 +292,9 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
       defaultLabel={defaultLabel}
       onLabelChange={onLabelChange}
       title={title ?? t('datePicker.title')}
-      rangKey="value"
-      rangText="text"
-      modelStrSeparator={separator}
+      valueKey="value"
+      labelKey="text"
+      separator={separator}
       renderColumnHeader={(colIdx) => (
         <Text style={styles.columnLabel}>
           {[t('datePicker.year'), t('datePicker.month'), t('datePicker.day')][colIdx]}

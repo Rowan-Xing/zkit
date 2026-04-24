@@ -98,11 +98,11 @@ if (result) {
 | value | PickerModelValue | - | 当前值 |
 | defaultValue | PickerModelValue | - | 默认值 |
 | title | string | - | 标题 |
-| rangKey | string | - | 值字段名，默认 'id' |
-| rangText | string | - | 文本字段名，默认 'title' |
+| valueKey | string | - | 值字段名，默认 'id' |
+| labelKey | string | - | 文本字段名，默认 'title' |
 | disabled | boolean | - | 是否禁用 |
 
-返回 `Promise<PickerResult | null>`，取消时返回 `null`。
+返回 `Promise<PickerResult>`，取消时返回 `null`。
 
 ### pickerService.pickDate(options)
 
@@ -116,7 +116,7 @@ if (result) {
 | separator | string | - | 分隔符，默认 '-' |
 | disabled | boolean | - | 是否禁用 |
 
-返回 `Promise<DatePickerResult | null>`。
+返回 `Promise<DatePickerResult>`，取消时返回 `null`。
 
 ### pickerService.pickAddress(options)
 
@@ -129,7 +129,7 @@ if (result) {
 | separator | string | - | 分隔符，默认 '-' |
 | disabled | boolean | - | 是否禁用 |
 
-返回 `Promise<AddressResult | null>`。
+返回 `Promise<AddressPickerResult>`，取消时返回 `null`。
 
 ### pickerService.pickBetweenTime(options)
 
@@ -145,7 +145,7 @@ if (result) {
 | quickDate | string[] | - | 快捷选项：'d'今天/'w'本周/'m'本月/'y'本年/'q'本季度/数字表示最近N天 |
 | disabled | boolean | - | 是否禁用 |
 
-返回 `Promise<BetweenTimeResult | null>`。
+返回 `Promise<BetweenTimePickerResult>`，取消时返回 `null`。
 
 ### pickerService.close()
 

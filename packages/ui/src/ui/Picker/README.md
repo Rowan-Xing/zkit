@@ -140,7 +140,7 @@ export function Demo() {
 
 ```typescript
 type PickerTreeNode = {
-  [key: string]: any;      // 支持任意字段
+  [key: string]: unknown;  // 支持任意字段
   disabled?: boolean;      // 是否禁用该选项
   children?: PickerTreeNode[]; // 子级选项（用于级联）
 };
@@ -151,8 +151,8 @@ type PickerTreeNode = {
 值类型定义：
 
 ```typescript
-type Primitive = string | number;
-type PickerModelValue = Primitive | Primitive[];
+type PickerPrimitiveValue = string | number;
+type PickerModelValue = PickerPrimitiveValue | PickerPrimitiveValue[];
 ```
 
 - 单列选择时，值为 `string | number`
@@ -165,7 +165,7 @@ type PickerModelValue = Primitive | Primitive[];
 ```typescript
 type PickerConfirmPayload = {
   value: PickerModelValue;    // 当前选中值
-  values: Primitive[];        // 各列选中值数组
+  values: PickerPrimitiveValue[]; // 各列选中值数组
   label: string;              // 拼接后的标签文本
   labels: string[];           // 各列标签数组
   items: PickerTreeNode[];    // 各列选中的节点对象
@@ -220,13 +220,13 @@ type PickerChangePayload = PickerConfirmPayload;
 - `title?: string`
   - 默认值：`'请选择'`
   - 说明：弹窗标题。
-- `rangKey?: string`
+- `valueKey?: string`
   - 默认值：`'id'`
   - 说明：选项值的字段名。从 `PickerTreeNode` 中取值时使用此字段。
-- `rangText?: string`
+- `labelKey?: string`
   - 默认值：`'title'`
   - 说明：选项显示文本的字段名。从 `PickerTreeNode` 中取文本时使用此字段。
-- `modelStrSeparator?: string`
+- `separator?: string`
   - 默认值：`'-'`
   - 说明：多列标签拼接时的分隔符。例如 `'浙江省-杭州市'`。
 - `renderColumnHeader?: (columnIndex: number, columnCount: number) => React.ReactNode`
@@ -324,9 +324,9 @@ export function AddressPickerDemo() {
       label={label}
       onLabelChange={setLabel}
       title="选择地区"
-      rangKey="id"
-      rangText="title"
-      modelStrSeparator=" / "
+      valueKey="id"
+      labelKey="title"
+      separator=" / "
       renderColumnHeader={(idx) => (
         <Text style={{ fontWeight: '600' }}>
           {['省份', '城市', '区县'][idx]}

@@ -204,6 +204,7 @@ function getSnapDuration(fromOffset: number, toOffset: number) {
 export type WheelOption = {
   key: string | number;
   label: string;
+  disabled?: boolean;
 };
 
 export type WheelColumnHandle = {
@@ -543,7 +544,11 @@ export const WheelColumn = React.memo(
               numberOfLines={1}
               style={[
                 styles.itemText,
-                index === clampedSelectedIndex ? styles.itemTextSelected : styles.itemTextUnselected,
+                item.disabled
+                  ? styles.itemTextDisabled
+                  : index === clampedSelectedIndex
+                    ? styles.itemTextSelected
+                    : styles.itemTextUnselected,
               ]}
             >
               {item.label}
@@ -563,6 +568,7 @@ export const WheelColumn = React.memo(
             items={data.map((item, index) => ({
               label: item.label,
               value: item.key,
+              textColor: item.disabled ? '#A3A3A3' : undefined,
               testID: `wheel-item-${String(item.key)}-${index}`,
             }))}
             selectedIndex={iosSelectedIndex}
@@ -659,5 +665,9 @@ const styles = StyleSheet.create({
   itemTextUnselected: {
     color: '#666666',
     opacity: 0.9,
+  },
+  itemTextDisabled: {
+    color: '#A3A3A3',
+    opacity: 0.62,
   },
 });

@@ -388,7 +388,7 @@ function Playground() {
               onValueChange={setWorkflow}
               label={workflowLabel}
               onLabelChange={(next) => setWorkflowLabel(next.replace(/-/g, ' / '))}
-              modelStrSeparator=" / "
+              separator=" / "
               title="Workflow"
             >
               {({ label }) => <FieldTrigger iconName="git-branch" label="Workflow" value={label || workflowLabel} />}

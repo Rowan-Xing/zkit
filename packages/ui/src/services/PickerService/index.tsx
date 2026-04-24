@@ -11,7 +11,13 @@
  */
 
 import * as React from 'react';
-import { Picker, type PickerProps, type PickerTreeNode, type PickerModelValue } from '../../ui/Picker';
+import {
+  Picker,
+  type PickerConfirmPayload,
+  type PickerModelValue,
+  type PickerProps,
+  type PickerTreeNode,
+} from '../../ui/Picker';
 import { DatePicker, type DatePickerProps, type DatePickerValue } from '../../ui/DatePicker';
 import { AddressCascader, type AddressCascaderProps, type AddressCascaderValue } from '../../ui/AddressCascader';
 import { BetweenTime, type BetweenTimeProps } from '../../ui/BetweenTime';
@@ -19,11 +25,11 @@ import { BetweenTime, type BetweenTimeProps } from '../../ui/BetweenTime';
 // ============ Types ============
 
 /** 通用选择器返回结果 */
-type PickerResult = {
+export type PickerResult = {
   /** 选中值 */
   value: PickerModelValue;
   /** 选中值数组（多列时） */
-  values: (string | number)[];
+  values: PickerConfirmPayload['values'];
   /** 选中项文本 */
   label: string;
   /** 选中项文本数组（多列时） */
@@ -33,7 +39,7 @@ type PickerResult = {
 } | null;
 
 /** 日期选择器返回结果 */
-type DatePickerResult = {
+export type DatePickerResult = {
   /** 选中日期值 */
   value: DatePickerValue;
   /** 格式化后的日期文本 */
@@ -41,7 +47,7 @@ type DatePickerResult = {
 } | null;
 
 /** 地址选择器返回结果 */
-type AddressResult = {
+export type AddressPickerResult = {
   /** 选中地址码数组 */
   value: AddressCascaderValue;
   /** 选中地址码数组 */
@@ -55,7 +61,7 @@ type AddressResult = {
 } | null;
 
 /** 时间区间选择器返回结果 */
-type BetweenTimeResult = {
+export type BetweenTimePickerResult = {
   /** 时间区间 [开始, 结束] */
   value: string[];
 } | null;
@@ -83,12 +89,39 @@ export type PickBetweenTimeOptions = Omit<
 
 type PickerType = 'picker' | 'date' | 'address' | 'betweenTime';
 
-type PickerRequest = {
-  id: string;
-  type: PickerType;
-  options: any;
-  resolve: ((result: any) => void) | null;
+type PickerRequestMap = {
+  picker: {
+    options: PickOptions;
+    result: PickerResult;
+  };
+  date: {
+    options: PickDateOptions;
+    result: DatePickerResult;
+  };
+  address: {
+    options: PickAddressOptions;
+    result: AddressPickerResult;
+  };
+  betweenTime: {
+    options: PickBetweenTimeOptions;
+    result: BetweenTimePickerResult;
+  };
 };
+
+type PickerRequestResult = PickerRequestMap[PickerType]['result'];
+
+type PickerRequest<T extends PickerType = PickerType> = {
+  [K in T]: {
+    id: string;
+    type: K;
+    options: PickerRequestMap[K]['options'];
+    resolve: ((result: PickerRequestResult) => void) | null;
+  };
+}[T];
+
+type DatePickerConfirmPayload = Parameters<NonNullable<DatePickerProps['onConfirm']>>[0];
+type AddressCascaderConfirmPayload = Parameters<NonNullable<AddressCascaderProps['onConfirm']>>[0];
+type BetweenTimeConfirmPayload = Parameters<NonNullable<BetweenTimeProps['onConfirm']>>[0];
 
 type PickerState = {
   activeRequest: PickerRequest | null;
@@ -107,24 +140,29 @@ class PickerServiceClass {
   private sequence = 0;
 
   /** @internal 设置状态更新器 */
-  setStateUpdater(updater: React.Dispatch<React.SetStateAction<PickerState>>) {
+  setStateUpdater(updater: React.Dispatch<React.SetStateAction<PickerState>> | null) {
     this.setState = updater;
   }
 
   /** @internal 显示选择器 */
-  private show<T>(type: PickerType, options: any): Promise<T> {
+  private show<T extends PickerType>(
+    type: T,
+    options: PickerRequestMap[T]['options']
+  ): Promise<PickerRequestMap[T]['result']> {
     return new Promise((resolve) => {
       if (!this.setState) {
         console.warn('[PickerService] Provider not mounted');
-        resolve(null as T);
+        resolve(null as PickerRequestMap[T]['result']);
         return;
       }
-      const request: PickerRequest = {
+      const request = {
         id: `picker-request-${Date.now()}-${++this.sequence}`,
         type,
         options,
-        resolve,
-      };
+        resolve: (result: PickerRequestResult) => {
+          resolve(result as PickerRequestMap[T]['result']);
+        },
+      } as PickerRequest;
       this.setState((prev) => {
         if (!prev.activeRequest) {
           return { ...prev, activeRequest: request, open: true };
@@ -139,22 +177,22 @@ class PickerServiceClass {
 
   /** 打开通用选择器 */
   pick(options: PickOptions): Promise<PickerResult> {
-    return this.show<PickerResult>('picker', options);
+    return this.show('picker', options);
   }
 
   /** 打开日期选择器 */
   pickDate(options: PickDateOptions = {}): Promise<DatePickerResult> {
-    return this.show<DatePickerResult>('date', options);
+    return this.show('date', options);
   }
 
   /** 打开地址选择器 */
-  pickAddress(options: PickAddressOptions = {}): Promise<AddressResult> {
-    return this.show<AddressResult>('address', options);
+  pickAddress(options: PickAddressOptions = {}): Promise<AddressPickerResult> {
+    return this.show('address', options);
   }
 
   /** 打开时间区间选择器 */
-  pickBetweenTime(options: PickBetweenTimeOptions = {}): Promise<BetweenTimeResult> {
-    return this.show<BetweenTimeResult>('betweenTime', options);
+  pickBetweenTime(options: PickBetweenTimeOptions = {}): Promise<BetweenTimePickerResult> {
+    return this.show('betweenTime', options);
   }
 
   /** 关闭当前选择器 */
@@ -184,20 +222,30 @@ const initialState: PickerState = {
 export function PickerServiceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<PickerState>(initialState);
   const activeRequestRef = React.useRef<PickerRequest | null>(null);
+  const queuedRequestsRef = React.useRef<PickerRequest[]>([]);
   const settledRequestIdsRef = React.useRef(new Set<string>());
   activeRequestRef.current = state.activeRequest;
-
-  React.useEffect(() => {
-    pickerService.setStateUpdater(setState);
-  }, []);
+  queuedRequestsRef.current = state.queuedRequests;
 
   /** 同一个请求只允许 settle 一次，关闭动画结束前仍保留 activeRequest 做串行调度。 */
-  const settleRequest = React.useCallback((request: PickerRequest | null, result: any) => {
+  const settleRequest = React.useCallback((request: PickerRequest | null, result: PickerRequestResult) => {
     if (!request) return;
     if (settledRequestIdsRef.current.has(request.id)) return;
     settledRequestIdsRef.current.add(request.id);
     request.resolve?.(result);
   }, []);
+
+  React.useEffect(() => {
+    pickerService.setStateUpdater(setState);
+
+    return () => {
+      settleRequest(activeRequestRef.current, null);
+      for (const request of queuedRequestsRef.current) {
+        settleRequest(request, null);
+      }
+      pickerService.setStateUpdater(null);
+    };
+  }, [settleRequest]);
 
   /** 业务层要求关闭时，先 settle 当前 promise，但不立刻销毁实例。 */
   const handleOpenChange = React.useCallback((open: boolean) => {
@@ -251,7 +299,7 @@ export function PickerServiceProvider({ children }: { children: React.ReactNode 
 
   /** 确认时 resolve 结果 */
   const handlePickerConfirm = React.useCallback(
-    (payload: any) => {
+    (payload: PickerConfirmPayload) => {
       settleRequest(activeRequestRef.current, {
         value: payload.value,
         values: payload.values,
@@ -264,7 +312,7 @@ export function PickerServiceProvider({ children }: { children: React.ReactNode 
   );
 
   const handleDateConfirm = React.useCallback(
-    (payload: any) => {
+    (payload: DatePickerConfirmPayload) => {
       settleRequest(activeRequestRef.current, {
         value: payload.value,
         label: payload.label,
@@ -274,7 +322,7 @@ export function PickerServiceProvider({ children }: { children: React.ReactNode 
   );
 
   const handleAddressConfirm = React.useCallback(
-    (payload: any) => {
+    (payload: AddressCascaderConfirmPayload) => {
       settleRequest(activeRequestRef.current, {
         value: payload.value,
         values: payload.values,
@@ -287,7 +335,7 @@ export function PickerServiceProvider({ children }: { children: React.ReactNode 
   );
 
   const handleBetweenTimeConfirm = React.useCallback(
-    (payload: any) => {
+    (payload: BetweenTimeConfirmPayload) => {
       settleRequest(activeRequestRef.current, {
         value: payload.value,
       });

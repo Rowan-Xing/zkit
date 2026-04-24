@@ -48,7 +48,14 @@ export type {
 export { BetweenTime } from './ui/BetweenTime/index';
 export type { BetweenTimeProps } from './ui/BetweenTime/index';
 export { Picker } from './ui/Picker/index';
-export type { PickerModelValue, PickerProps, PickerTreeNode } from './ui/Picker/index';
+export type {
+  PickerChangePayload,
+  PickerConfirmPayload,
+  PickerModelValue,
+  PickerPrimitiveValue,
+  PickerProps,
+  PickerTreeNode,
+} from './ui/Picker/index';
 export { AddressCascader } from './ui/AddressCascader/index';
 export type {
   AddressCascaderChangePayload,
@@ -103,10 +110,14 @@ export { ComponentLibProvider } from './ComponentLibProvider';
 export type { ComponentLibProviderProps } from './ComponentLibProvider';
 export { pickerService, PickerServiceProvider } from './services/PickerService/index';
 export type {
+  AddressPickerResult,
+  BetweenTimePickerResult,
+  DatePickerResult,
   PickOptions,
   PickDateOptions,
   PickAddressOptions,
   PickBetweenTimeOptions,
+  PickerResult,
 } from './services/PickerService/index';
 export { cardToast, CardToastProvider } from './services/CardToastService/index';
 export type { ToastOptions, ToastType } from './services/CardToastService/index';

@@ -1,7 +1,14 @@
 import * as React from 'react';
 import { areaList } from '@vant/area-data';
 import { useI18n } from '../../i18n/useI18n';
-import { Picker, type PickerHandle, type PickerModelValue, type PickerTreeNode } from '../Picker';
+import {
+  Picker,
+  type PickerChangePayload,
+  type PickerConfirmPayload,
+  type PickerHandle,
+  type PickerModelValue,
+  type PickerTreeNode,
+} from '../Picker';
 
 export type AddressCascaderHandle = PickerHandle;
 
@@ -118,26 +125,26 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   );
 
   const handleConfirm = React.useCallback(
-    (payload: any) => {
+    (payload: PickerConfirmPayload) => {
       onConfirm?.({
-        value: normalizeToStringArray(payload?.value),
-        values: Array.isArray(payload?.values) ? payload.values.map(String) : [],
-        label: String(payload?.label ?? ''),
-        labels: Array.isArray(payload?.labels) ? payload.labels.map(String) : [],
-        items: Array.isArray(payload?.items) ? payload.items : [],
+        value: normalizeToStringArray(payload.value),
+        values: payload.values.map(String),
+        label: payload.label,
+        labels: payload.labels.map(String),
+        items: payload.items,
       });
     },
     [onConfirm]
   );
 
   const handleChange = React.useCallback(
-    (payload: any) => {
+    (payload: PickerChangePayload) => {
       onChange?.({
-        value: normalizeToStringArray(payload?.value),
-        values: Array.isArray(payload?.values) ? payload.values.map(String) : [],
-        label: String(payload?.label ?? ''),
-        labels: Array.isArray(payload?.labels) ? payload.labels.map(String) : [],
-        items: Array.isArray(payload?.items) ? payload.items : [],
+        value: normalizeToStringArray(payload.value),
+        values: payload.values.map(String),
+        label: payload.label,
+        labels: payload.labels.map(String),
+        items: payload.items,
       });
     },
     [onChange]
@@ -160,9 +167,9 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
       defaultLabel={defaultLabel}
       onLabelChange={onLabelChange}
       title={title ?? t('addressCascader.title')}
-      rangKey="value"
-      rangText="text"
-      modelStrSeparator={separator}
+      valueKey="value"
+      labelKey="text"
+      separator={separator}
       lazyContent={lazyContent}
       drawerSize={drawerSize}
       disabled={disabled}
