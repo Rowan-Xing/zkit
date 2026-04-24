@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  TextStyle,
+  View,
+  ViewStyle,
+} from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -14,180 +21,326 @@ import { wp } from 'y2kit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../Text';
 
-type AccordionType = 'single' | 'multiple';
+export type AccordionType = 'single' | 'multiple';
+export type AccordionValue = string | number;
 
-type AccordionContextValue = {
+type AccordionStoreListener = () => void;
+
+const DEFAULT_DURATION = 220;
+const DEFAULT_EASING = Easing.out(Easing.cubic);
+const PRESS_TIMING = { duration: 120, easing: Easing.out(Easing.cubic) } as const;
+
+function sameValue(a: AccordionValue, b: AccordionValue) {
+  return Object.is(a, b) || a === b;
+}
+
+function hasValue<T extends AccordionValue>(values: readonly T[], value: T) {
+  return values.some((item) => sameValue(item, value));
+}
+
+function uniqueValues<T extends AccordionValue>(values: readonly T[]) {
+  const next: T[] = [];
+  for (const value of values) {
+    if (!hasValue(next, value)) next.push(value);
+  }
+  return next;
+}
+
+function areValuesEqual<T extends AccordionValue>(a: readonly T[], b: readonly T[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (!sameValue(a[i], b[i])) return false;
+  }
+  return true;
+}
+
+function normalizePropValues<T extends AccordionValue>(
+  type: AccordionType,
+  value: T | readonly T[] | null | undefined
+) {
+  if (type === 'multiple') {
+    return Array.isArray(value) ? uniqueValues(value) : [];
+  }
+  if (value == null || Array.isArray(value)) return [];
+  return [value];
+}
+
+function resolveDuration(duration: number | undefined) {
+  if (duration == null) return DEFAULT_DURATION;
+  if (!Number.isFinite(duration)) return DEFAULT_DURATION;
+  return Math.max(0, duration);
+}
+
+function getNextValues<T extends AccordionValue>(
+  current: readonly T[],
+  value: T,
+  type: AccordionType,
+  collapsible: boolean
+) {
+  const open = hasValue(current, value);
+  if (type === 'single') {
+    if (open) return collapsible ? [] : current.slice();
+    return [value];
+  }
+
+  if (open) return current.filter((item) => !sameValue(item, value));
+  return [...current, value];
+}
+
+function hasRenderableNode(node: React.ReactNode) {
+  return node !== null && node !== undefined && node !== false;
+}
+
+function resolveSlot<T extends AccordionValue>(
+  slot: React.ReactNode | ((state: AccordionItemState<T>) => React.ReactNode) | undefined,
+  state: AccordionItemState<T>
+) {
+  return typeof slot === 'function' ? slot(state) : slot;
+}
+
+class AccordionStore<T extends AccordionValue> {
+  private values: T[];
+  private listeners = new Set<AccordionStoreListener>();
+
+  constructor(initialValues: readonly T[]) {
+    this.values = uniqueValues(initialValues);
+  }
+
+  subscribe = (listener: AccordionStoreListener) => {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  };
+
+  getValues = () => this.values;
+
+  isOpen = (value: T) => hasValue(this.values, value);
+
+  setValues = (values: readonly T[]) => {
+    const next = uniqueValues(values);
+    if (areValuesEqual(this.values, next)) return false;
+
+    this.values = next;
+    this.emit();
+    return true;
+  };
+
+  private emit() {
+    for (const listener of this.listeners) listener();
+  }
+}
+
+type AccordionContextValue<T extends AccordionValue> = {
+  store: AccordionStore<T>;
   type: AccordionType;
   collapsible: boolean;
-  isItemOpen: (value: string) => boolean;
-  toggleItem: (value: string) => void;
-  duration: number;
-  easing: EasingFunction;
-};
-
-const AccordionContext = React.createContext<AccordionContextValue | null>(null);
-
-type AccordionItemContextValue = {
-  value: string;
-  expanded: boolean;
   disabled: boolean;
+  duration: number;
+  easing: EasingFunction;
+  toggleItem: (value: T) => void;
+};
+
+const AccordionContext = React.createContext<AccordionContextValue<AccordionValue> | null>(null);
+
+export type AccordionItemState<T extends AccordionValue = AccordionValue> = {
+  open: boolean;
+  disabled: boolean;
+  value: T;
   toggle: () => void;
+};
+
+type AccordionItemContextValue<T extends AccordionValue> = AccordionItemState<T> & {
   duration: number;
   easing: EasingFunction;
 };
 
-const AccordionItemContext = React.createContext<AccordionItemContextValue | null>(null);
+const AccordionItemContext = React.createContext<AccordionItemContextValue<AccordionValue> | null>(null);
 
-function useAccordionContext() {
+function useAccordionContext<T extends AccordionValue = AccordionValue>() {
   const ctx = React.useContext(AccordionContext);
   if (!ctx) {
     throw new Error('[y2kit-ui] Accordion components must be wrapped in <Accordion />');
   }
-  return ctx;
+  return ctx as unknown as AccordionContextValue<T>;
 }
 
-function useAccordionItemContext() {
+function useAccordionItemContext<T extends AccordionValue = AccordionValue>() {
   const ctx = React.useContext(AccordionItemContext);
   if (!ctx) {
-    throw new Error('[y2kit-ui] AccordionTrigger/Content must be wrapped in <AccordionItem />');
+    throw new Error('[y2kit-ui] AccordionTrigger/Content/Indicator must be wrapped in <AccordionItem />');
   }
-  return ctx;
+  return ctx as AccordionItemContextValue<T>;
 }
 
-function arrayFromSingleOrArray(value: string | string[] | undefined) {
-  if (value == null) return [];
-  return Array.isArray(value) ? value : [value];
-}
+type AccordionBaseProps = Omit<React.ComponentPropsWithoutRef<typeof View>, 'children' | 'style'> & {
+  disabled?: boolean;
+  duration?: number;
+  easing?: EasingFunction;
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+};
 
-function toValueShape(type: AccordionType, values: string[]) {
-  if (type === 'multiple') return values;
-  return values[0] ?? undefined;
-}
+export type AccordionSingleProps<T extends AccordionValue = AccordionValue> = AccordionBaseProps & {
+  type?: 'single';
+  collapsible?: boolean;
+  value?: T | null;
+  defaultValue?: T | null;
+  onChange?: (value: T | null) => void;
+};
 
-export type AccordionProps =
-  | {
-      type?: 'single';
-      collapsible?: boolean;
-      value?: string;
-      defaultValue?: string;
-      onValueChange?: (value: string | undefined) => void;
-      duration?: number;
-      easing?: EasingFunction;
-      style?: StyleProp<ViewStyle>;
-      children: React.ReactNode;
-      testID?: string;
-    }
-  | {
-      type: 'multiple';
-      collapsible?: true;
-      value?: string[];
-      defaultValue?: string[];
-      onValueChange?: (value: string[]) => void;
-      duration?: number;
-      easing?: EasingFunction;
-      style?: StyleProp<ViewStyle>;
-      children: React.ReactNode;
-      testID?: string;
-    };
+export type AccordionMultipleProps<T extends AccordionValue = AccordionValue> = AccordionBaseProps & {
+  type: 'multiple';
+  value?: readonly T[];
+  defaultValue?: readonly T[];
+  onChange?: (value: T[]) => void;
+};
 
-// Accordion 负责管理展开项的状态，并通过 Reanimated 的 Layout 动画让展开/收起更顺滑。
-// - single：同一时间最多展开 1 项
-// - multiple：同一时间可展开多项
-export function Accordion(props: AccordionProps) {
+export type AccordionProps<T extends AccordionValue = AccordionValue> =
+  | AccordionSingleProps<T>
+  | AccordionMultipleProps<T>;
+
+export function Accordion<T extends AccordionValue = AccordionValue>(props: AccordionProps<T>) {
   const {
-    type = 'single',
-    collapsible = false,
-    duration = 240,
-    easing = Easing.out(Easing.cubic),
+    disabled = false,
+    duration,
+    easing = DEFAULT_EASING,
     style,
     children,
-    testID,
-  } = props as AccordionProps & { type: AccordionType };
+    ...viewProps
+  } = props;
 
-  const isControlled = 'value' in props && props.value !== undefined;
-  const [uncontrolled, setUncontrolled] = React.useState<string[]>(() => arrayFromSingleOrArray((props as any).defaultValue));
-
-  const values = React.useMemo(() => {
-    if (!isControlled) return uncontrolled;
-    return arrayFromSingleOrArray((props as any).value);
-  }, [isControlled, props, uncontrolled]);
-
-  const setValues = React.useCallback(
-    (next: string[]) => {
-      if (!isControlled) setUncontrolled(next);
-      const shaped = toValueShape(type, next);
-      (props as any).onValueChange?.(shaped);
-    },
-    [isControlled, props, type]
+  const type: AccordionType = props.type ?? 'single';
+  const collapsible = type === 'single' ? Boolean((props as AccordionSingleProps<T>).collapsible) : true;
+  const resolvedDuration = resolveDuration(duration);
+  const isControlled = props.value !== undefined;
+  const controlledValues = React.useMemo(
+    () => (isControlled ? normalizePropValues(type, props.value as T | readonly T[] | null | undefined) : []),
+    [isControlled, props.value, type]
   );
 
-  const isItemOpen = React.useCallback((v: string) => values.includes(v), [values]);
+  const storeRef = React.useRef<AccordionStore<T> | null>(null);
+  if (!storeRef.current) {
+    const initialValue = isControlled ? props.value : props.defaultValue;
+    storeRef.current = new AccordionStore<T>(
+      normalizePropValues(type, initialValue as T | readonly T[] | null | undefined)
+    );
+  }
+  const store = storeRef.current;
+  const onChange = props.onChange;
+
+  React.useLayoutEffect(() => {
+    if (!isControlled) return;
+    store.setValues(controlledValues);
+  }, [controlledValues, isControlled, store]);
+
+  React.useLayoutEffect(() => {
+    if (isControlled || type !== 'single') return;
+    const current = store.getValues();
+    if (current.length > 1) store.setValues(current.slice(0, 1));
+  }, [isControlled, store, type]);
+
+  const emitChange = React.useCallback(
+    (next: readonly T[]) => {
+      if (type === 'multiple') {
+        (onChange as ((value: T[]) => void) | undefined)?.(next.slice());
+        return;
+      }
+      (onChange as ((value: T | null) => void) | undefined)?.(next[0] ?? null);
+    },
+    [onChange, type]
+  );
 
   const toggleItem = React.useCallback(
-    (v: string) => {
-      const opened = values.includes(v);
-      if (type === 'single') {
-        if (opened) {
-          if (collapsible) setValues([]);
-          return;
-        }
-        setValues([v]);
-        return;
-      }
+    (value: T) => {
+      if (disabled) return;
+      const current = store.getValues();
+      const next = getNextValues(current, value, type, collapsible);
+      if (areValuesEqual(current, next)) return;
 
-      if (opened) {
-        setValues(values.filter((x) => x !== v));
-        return;
-      }
-      setValues([...values, v]);
+      if (!isControlled) store.setValues(next);
+      emitChange(next);
     },
-    [collapsible, setValues, type, values]
+    [collapsible, disabled, emitChange, isControlled, store, type]
   );
 
-  const ctx = React.useMemo<AccordionContextValue>(
-    () => ({ type, collapsible: Boolean(collapsible), isItemOpen, toggleItem, duration, easing }),
-    [collapsible, duration, easing, isItemOpen, toggleItem, type]
+  const ctx = React.useMemo<AccordionContextValue<T>>(
+    () => ({
+      store,
+      type,
+      collapsible,
+      disabled,
+      duration: resolvedDuration,
+      easing,
+      toggleItem,
+    }),
+    [collapsible, disabled, easing, resolvedDuration, store, toggleItem, type]
   );
 
   return (
-    <AccordionContext.Provider value={ctx}>
-      <View testID={testID} style={style}>
+    <AccordionContext.Provider value={ctx as unknown as AccordionContextValue<AccordionValue>}>
+      <View {...viewProps} style={style}>
         {children}
       </View>
     </AccordionContext.Provider>
   );
 }
 
-export type AccordionItemProps = {
-  value: string;
+export type AccordionItemProps<T extends AccordionValue = AccordionValue> = Omit<
+  React.ComponentPropsWithoutRef<typeof View>,
+  'children' | 'style'
+> & {
+  value: T;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
-  testID?: string;
 };
 
-// AccordionItem 是一个独立的折叠单元。
-// Layout 动画挂在 item 容器上：内容出现/消失时会触发高度变化，并由 UI 线程做过渡。
-export function AccordionItem({ value, disabled = false, style, children, testID }: AccordionItemProps) {
-  const accordion = useAccordionContext();
-  const expanded = accordion.isItemOpen(value);
+export function AccordionItem<T extends AccordionValue = AccordionValue>({
+  value,
+  disabled = false,
+  style,
+  children,
+  ...viewProps
+}: AccordionItemProps<T>) {
+  const theme = useTheme();
+  const accordion = useAccordionContext<T>();
+  const getOpenSnapshot = React.useCallback(() => accordion.store.isOpen(value), [accordion.store, value]);
+  const open = React.useSyncExternalStore(
+    accordion.store.subscribe,
+    getOpenSnapshot,
+    getOpenSnapshot
+  );
+  const resolvedDisabled = accordion.disabled || disabled;
 
   const toggle = React.useCallback(() => {
-    if (disabled) return;
+    if (resolvedDisabled) return;
     accordion.toggleItem(value);
-  }, [accordion, disabled, value]);
+  }, [accordion, resolvedDisabled, value]);
 
-  const itemCtx = React.useMemo<AccordionItemContextValue>(
-    () => ({ value, expanded, disabled, toggle, duration: accordion.duration, easing: accordion.easing }),
-    [accordion.duration, accordion.easing, disabled, expanded, toggle, value]
+  const itemCtx = React.useMemo<AccordionItemContextValue<T>>(
+    () => ({
+      open,
+      disabled: resolvedDisabled,
+      value,
+      toggle,
+      duration: accordion.duration,
+      easing: accordion.easing,
+    }),
+    [accordion.duration, accordion.easing, open, resolvedDisabled, toggle, value]
   );
 
   return (
-    <AccordionItemContext.Provider value={itemCtx}>
+    <AccordionItemContext.Provider value={itemCtx as AccordionItemContextValue<AccordionValue>}>
       <Animated.View
-        testID={testID}
+        {...viewProps}
+        accessibilityState={{ ...viewProps.accessibilityState, disabled: resolvedDisabled, expanded: open }}
         layout={LinearTransition.duration(accordion.duration).easing(accordion.easing)}
-        style={[styles.item, style]}
+        style={[
+          styles.item,
+          { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+          style,
+        ]}
       >
         {children}
       </Animated.View>
@@ -195,109 +348,144 @@ export function AccordionItem({ value, disabled = false, style, children, testID
   );
 }
 
-export type AccordionTriggerRenderState = {
-  expanded: boolean;
-  disabled: boolean;
-  value: string;
-};
+export type AccordionTriggerRenderState<T extends AccordionValue = AccordionValue> = AccordionItemState<T>;
 
-export type AccordionTriggerProps = Omit<React.ComponentPropsWithoutRef<typeof Pressable>, 'children'> & {
-  children: React.ReactNode | ((state: AccordionTriggerRenderState) => React.ReactNode);
+type NativeTriggerProps = Omit<
+  React.ComponentPropsWithoutRef<typeof Pressable>,
+  'children' | 'disabled' | 'style'
+>;
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export type AccordionTriggerProps<T extends AccordionValue = AccordionValue> = NativeTriggerProps & {
+  children?: React.ReactNode | ((state: AccordionTriggerRenderState<T>) => React.ReactNode);
+  title?: React.ReactNode | ((state: AccordionTriggerRenderState<T>) => React.ReactNode);
+  left?: React.ReactNode | ((state: AccordionTriggerRenderState<T>) => React.ReactNode);
+  right?: React.ReactNode | ((state: AccordionTriggerRenderState<T>) => React.ReactNode);
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
-  left?: React.ReactNode | ((state: AccordionTriggerRenderState) => React.ReactNode);
-  right?: React.ReactNode | ((state: AccordionTriggerRenderState) => React.ReactNode);
-  title?: string;
-  asChild?: boolean;
+  contentStyle?: StyleProp<ViewStyle>;
+  titleStyle?: StyleProp<TextStyle>;
 };
 
-// AccordionTrigger 是可点击区域：
-// - 默认渲染一个“左侧内容 + 右侧指示器”的行
-// - 支持 render prop 读取 expanded/disabled/value，方便做自定义 UI
-export function AccordionTrigger({
+export function AccordionTrigger<T extends AccordionValue = AccordionValue>({
   children,
+  title,
   left,
   right,
-  title,
-  asChild = false,
+  disabled: disabledProp = false,
   style,
+  contentStyle,
+  titleStyle,
   onPress,
-  disabled: disabledProp,
+  onPressIn,
+  onPressOut,
+  accessibilityRole,
+  accessibilityState,
   ...pressableProps
-}: AccordionTriggerProps) {
+}: AccordionTriggerProps<T>) {
   const theme = useTheme();
-  const item = useAccordionItemContext();
+  const item = useAccordionItemContext<T>();
+  const disabled = item.disabled || disabledProp;
+  const pressSv = useSharedValue(0);
 
-  const state: AccordionTriggerRenderState = React.useMemo(
-    () => ({ expanded: item.expanded, disabled: item.disabled || Boolean(disabledProp), value: item.value }),
-    [disabledProp, item.disabled, item.expanded, item.value]
+  const state = React.useMemo<AccordionTriggerRenderState<T>>(
+    () => ({
+      open: item.open,
+      disabled,
+      value: item.value,
+      toggle: item.toggle,
+    }),
+    [disabled, item.open, item.toggle, item.value]
   );
 
-  const resolvedLeft =
-    typeof left === 'function'
-      ? left(state)
-      : left !== undefined
-        ? left
-        : title != null
-          ? <Text style={styles.title}>{title}</Text>
-          : null;
+  const leftNode = resolveSlot(left, state);
+  const rightNode = right === undefined ? <AccordionIndicator /> : resolveSlot(right, state);
+  const childNode = resolveSlot(children, state);
+  const titleNode = resolveSlot(title, state);
+  const mainNode = hasRenderableNode(childNode) ? childNode : titleNode;
 
-  const resolvedRight =
-    typeof right === 'function' ? right(state) : right !== undefined ? right : <AccordionIndicator />;
+  const animatedContentStyle = useAnimatedStyle(() => {
+    return {
+      opacity: disabled ? 0.55 : 1 - pressSv.value * 0.1,
+      transform: [{ scale: 1 - pressSv.value * 0.006 }],
+    };
+  }, [disabled]);
 
-  const resolvedCenter = React.useMemo(() => {
-    if (typeof children === 'function') return children(state);
-    if (children != null) return children;
-    return null;
-  }, [children, state]);
+  const renderedMain =
+    typeof mainNode === 'string' || typeof mainNode === 'number' ? (
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.title,
+          { color: disabled ? theme.colors.disabled : theme.colors.onSurface },
+          titleStyle,
+        ]}
+      >
+        {mainNode}
+      </Text>
+    ) : (
+      mainNode
+    );
 
   return (
-    <Pressable
+    <AnimatedPressable
       {...pressableProps}
-      accessibilityRole="button"
-      accessibilityState={{ expanded: Boolean(state.expanded), disabled: Boolean(state.disabled) }}
-      disabled={state.disabled}
-      onPress={(e) => {
-        item.toggle();
-        onPress?.(e);
+      accessibilityRole={accessibilityRole ?? 'button'}
+      accessibilityState={{
+        ...accessibilityState,
+        expanded: item.open,
+        disabled,
       }}
-      style={({ pressed }) => [
+      disabled={disabled}
+      onPress={(event) => {
+        item.toggle();
+        onPress?.(event);
+      }}
+      onPressIn={(event) => {
+        if (!disabled) pressSv.value = withTiming(1, PRESS_TIMING);
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        pressSv.value = withTiming(0, PRESS_TIMING);
+        onPressOut?.(event);
+      }}
+      style={[
         styles.trigger,
+        item.open ? styles.triggerOpen : null,
         { borderBottomColor: theme.colors.border },
-        pressed && !state.disabled ? styles.pressed : null,
         style,
       ]}
     >
-      {asChild ? (
-        resolvedCenter
-      ) : (
-        <View style={styles.triggerRow}>
-          <View style={styles.left}>{resolvedLeft}</View>
-          <View style={styles.center}>{resolvedCenter}</View>
-          <View style={styles.right}>{resolvedRight}</View>
-        </View>
-      )}
-    </Pressable>
+      <Animated.View style={[styles.triggerContent, animatedContentStyle, contentStyle]}>
+        {hasRenderableNode(leftNode) ? <View style={styles.left}>{leftNode}</View> : null}
+        <View style={styles.main}>{renderedMain}</View>
+        {hasRenderableNode(rightNode) ? <View style={styles.right}>{rightNode}</View> : null}
+      </Animated.View>
+    </AnimatedPressable>
   );
 }
 
-export type AccordionContentProps = {
+export type AccordionContentProps = Omit<
+  React.ComponentPropsWithoutRef<typeof View>,
+  'children' | 'style'
+> & {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  testID?: string;
 };
 
-// AccordionContent 会在展开时挂载，并使用 entering/exiting + Layout 组合动画：
-// - entering/exiting 提供更“跟手”的淡入淡出
-// - Layout 负责高度变化的过渡（避免手动测量高度）
-export function AccordionContent({ children, style, testID }: AccordionContentProps) {
+export function AccordionContent({ children, style, ...viewProps }: AccordionContentProps) {
   const item = useAccordionItemContext();
-  if (!item.expanded) return null;
+  if (!item.open) return null;
+
+  const fadeInDuration = Math.min(180, item.duration);
+  const fadeOutDuration = Math.min(140, item.duration);
 
   return (
     <Animated.View
-      testID={testID}
-      entering={FadeIn.duration(Math.min(180, item.duration))}
-      exiting={FadeOut.duration(Math.min(140, item.duration))}
+      {...viewProps}
+      entering={FadeIn.duration(fadeInDuration).easing(item.easing)}
+      exiting={FadeOut.duration(fadeOutDuration).easing(item.easing)}
       layout={LinearTransition.duration(item.duration).easing(item.easing)}
       style={[styles.content, style]}
     >
@@ -309,36 +497,60 @@ export function AccordionContent({ children, style, testID }: AccordionContentPr
 export type AccordionIndicatorProps = {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  color?: string;
+  size?: number;
+  strokeWidth?: number;
   fromDeg?: number;
   toDeg?: number;
 };
 
-// AccordionIndicator 是一个“展开指示器”，默认用一个轻量的 chevron（纯 View 绘制，避免引入额外图标依赖）。
-// 它会随着 expanded 状态在 UI 线程旋转，保证动画顺滑。
-export function AccordionIndicator({ children, style, fromDeg = 0, toDeg = 180 }: AccordionIndicatorProps) {
+export function AccordionIndicator({
+  children,
+  style,
+  color,
+  size,
+  strokeWidth,
+  fromDeg = -90,
+  toDeg = 0,
+}: AccordionIndicatorProps) {
   const theme = useTheme();
   const item = useAccordionItemContext();
-  const progress = useSharedValue(item.expanded ? 1 : 0);
+  const progress = useSharedValue(item.open ? 1 : 0);
 
   React.useEffect(() => {
-    progress.value = withTiming(item.expanded ? 1 : 0, {
+    progress.value = withTiming(item.open ? 1 : 0, {
       duration: item.duration,
       easing: item.easing,
     });
-  }, [item.duration, item.easing, item.expanded, progress]);
+  }, [item.duration, item.easing, item.open, progress]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const deg = fromDeg + (toDeg - fromDeg) * progress.value;
     return { transform: [{ rotateZ: `${deg}deg` }] };
   }, [fromDeg, toDeg]);
 
+  const resolvedSize = size ?? wp(22);
+  const resolvedStrokeWidth = strokeWidth ?? wp(2);
+  const chevronSize = Math.max(6, Math.round(resolvedSize * 0.34));
+  const resolvedColor = color ?? (item.disabled ? theme.colors.disabled : theme.colors.muted);
+
   return (
-    <Animated.View style={[styles.indicator, animatedStyle, style]}>
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.indicator, { width: resolvedSize, height: resolvedSize }, animatedStyle, style]}
+    >
       {children ?? (
         <View
           style={[
             styles.chevron,
-            { borderRightColor: theme.colors.muted, borderBottomColor: theme.colors.muted },
+            {
+              width: chevronSize,
+              height: chevronSize,
+              borderRightWidth: resolvedStrokeWidth,
+              borderBottomWidth: resolvedStrokeWidth,
+              borderRightColor: resolvedColor,
+              borderBottomColor: resolvedColor,
+            },
           ]}
         />
       )}
@@ -349,23 +561,27 @@ export function AccordionIndicator({ children, style, fromDeg = 0, toDeg = 180 }
 const styles = StyleSheet.create({
   item: {
     borderRadius: wp(12),
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
   trigger: {
     paddingHorizontal: wp(14),
     paddingVertical: wp(12),
+  },
+  triggerOpen: {
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  triggerRow: {
-    flexDirection: 'row',
+  triggerContent: {
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: wp(10),
   },
   left: {
     flexShrink: 0,
   },
-  center: {
+  main: {
     flex: 1,
-    paddingHorizontal: wp(10),
+    minWidth: 0,
   },
   right: {
     flexShrink: 0,
@@ -373,26 +589,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: wp(16),
     fontWeight: '600',
-  },
-  pressed: {
-    opacity: 0.85,
+    includeFontPadding: false,
   },
   content: {
-    paddingHorizontal: wp(14),
     paddingBottom: wp(14),
+    paddingHorizontal: wp(14),
     paddingTop: wp(2),
   },
   indicator: {
-    width: wp(24),
-    height: wp(24),
     alignItems: 'center',
     justifyContent: 'center',
   },
   chevron: {
-    width: wp(8),
-    height: wp(8),
-    borderRightWidth: wp(2),
-    borderBottomWidth: wp(2),
-    transform: [{ rotate: '-45deg' }],
+    transform: [{ rotate: '45deg' }],
   },
 });

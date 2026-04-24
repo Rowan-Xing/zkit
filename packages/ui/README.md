@@ -110,20 +110,22 @@ function Demo() {
 ### Accordion 用法
 
 ```tsx
+import * as React from 'react';
 import {
   Accordion,
   AccordionContent,
-  AccordionIndicator,
   AccordionItem,
   AccordionTrigger,
   Text,
 } from 'y2kit-ui';
 
 export function DemoAccordion() {
+  const [openItem, setOpenItem] = React.useState<string | null>('item-1');
+
   return (
-    <Accordion type="single" collapsible defaultValue="item-1">
+    <Accordion value={openItem} onChange={setOpenItem} collapsible>
       <AccordionItem value="item-1">
-        <AccordionTrigger title="第一项" right={() => <AccordionIndicator />} />
+        <AccordionTrigger title="第一项" />
         <AccordionContent>
           <Text>内容 1</Text>
         </AccordionContent>
@@ -139,6 +141,8 @@ export function DemoAccordion() {
   );
 }
 ```
+
+`Accordion` 使用 `value/defaultValue/onChange` 状态模型。`type="single"` 时空值为 `null`，`type="multiple"` 时值为数组。
 
 ### 目录与导出
 

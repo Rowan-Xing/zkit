@@ -17,7 +17,6 @@ import { wp } from 'y2kit-tools';
 import {
   Accordion,
   AccordionContent,
-  AccordionIndicator,
   AccordionItem,
   AccordionTrigger,
   AddressCascader,
@@ -344,9 +343,7 @@ function Playground() {
         <Section title="Accordion">
           <Accordion type="single" collapsible defaultValue="state" style={styles.accordion}>
             <AccordionItem value="state" style={styles.accordionItem}>
-              <AccordionTrigger title="Controlled and uncontrolled state" right={() => <AccordionIndicator />}>
-                {null}
-              </AccordionTrigger>
+              <AccordionTrigger title="Controlled and uncontrolled state" />
               <AccordionContent>
                 <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
                   Buttons, switches, checkbox groups, radios, and pickers are wired to local state in this app.
@@ -354,9 +351,7 @@ function Playground() {
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="services" style={styles.accordionItem}>
-              <AccordionTrigger title="Provider-backed services" right={() => <AccordionIndicator />}>
-                {null}
-              </AccordionTrigger>
+              <AccordionTrigger title="Provider-backed services" />
               <AccordionContent>
                 <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
                   Toast, dialog, loading, picker, permission purpose, image preview, and captcha demos share the

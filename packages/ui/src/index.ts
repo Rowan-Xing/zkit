@@ -40,10 +40,15 @@ export {
 export type {
   AccordionContentProps,
   AccordionIndicatorProps,
+  AccordionItemState,
   AccordionItemProps,
+  AccordionMultipleProps,
   AccordionProps,
+  AccordionSingleProps,
   AccordionTriggerProps,
   AccordionTriggerRenderState,
+  AccordionType,
+  AccordionValue,
 } from './ui/Accordion/index';
 export { BetweenTime } from './ui/BetweenTime/index';
 export type { BetweenTimeProps } from './ui/BetweenTime/index';
