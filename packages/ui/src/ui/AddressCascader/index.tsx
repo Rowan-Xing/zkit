@@ -998,6 +998,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     minHeight: wp(56),
+    paddingHorizontal: wp(10),
     paddingVertical: wp(7),
   },
   optionMain: {
