@@ -315,11 +315,11 @@ function Playground() {
                 value={checkedItems}
                 onValueChange={setCheckedItems}
                 direction="column"
-                style={styles.choiceColumn}
+                gap={10}
               >
-                <Checkbox itemValue="motion" label="Motion tokens" />
-                <Checkbox itemValue="forms" label="Form controls" />
-                <Checkbox itemValue="overlays" label="Overlay services" />
+                <Checkbox value="motion" label="Motion tokens" />
+                <Checkbox value="forms" label="Form controls" />
+                <Checkbox value="overlays" label="Overlay services" />
               </CheckboxGroup>
             </View>
 
@@ -671,9 +671,6 @@ const styles = StyleSheet.create({
   },
   selectionBlock: {
     gap: 12,
-  },
-  choiceColumn: {
-    gap: 10,
   },
   accordion: {
     gap: 10,

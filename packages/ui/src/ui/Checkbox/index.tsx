@@ -30,18 +30,18 @@ export type CheckedState = boolean | 'indeterminate';
 export type CheckboxValue = string | number;
 
 export type CheckboxSlotProps = {
-  // 当前是否选中（indeterminate 时为 false）
+  // 当前是否明确选中（indeterminate 时为 false）
   checked: boolean;
   // 当前是否半选
   indeterminate: boolean;
-  itemValue?: CheckboxValue;
+  value?: CheckboxValue;
   disabled: boolean;
   // 手动触发切换（等价于点击 Checkbox）
   toggle: () => void;
 };
 
 type CheckboxContextValue = {
-  // 选中态动画进度：0=未选中，1=选中（UI 线程）
+  // 激活态动画进度：0=未选中，1=选中/半选背景（UI 线程）
   checkedSv: SharedValue<number>;
   // 半选态动画进度：0=非半选，1=半选（UI 线程）
   indeterminateSv: SharedValue<number>;
@@ -55,11 +55,13 @@ const CheckboxContext = React.createContext<CheckboxContextValue | null>(null);
 
 type CheckboxGroupStoreListener = () => void;
 
+const noopSubscribe = () => () => {};
+
 class CheckboxGroupStore<T extends CheckboxValue> {
   private _values: Set<T>;
   private listeners = new Set<CheckboxGroupStoreListener>();
 
-  constructor(initialValues: T[]) {
+  constructor(initialValues: readonly T[]) {
     this._values = new Set(initialValues);
   }
 
@@ -71,11 +73,16 @@ class CheckboxGroupStore<T extends CheckboxValue> {
     };
   };
 
-  getValues = () => Array.from(this._values);
-
   has = (value: T) => this._values.has(value);
 
-  setValues = (values: T[]) => {
+  getToggledValues = (value: T) => {
+    const next = new Set(this._values);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    return Array.from(next);
+  };
+
+  setValues = (values: readonly T[]) => {
     const next = new Set(values);
     if (next.size === this._values.size) {
       let same = true;
@@ -85,19 +92,12 @@ class CheckboxGroupStore<T extends CheckboxValue> {
           break;
         }
       }
-      if (same) return;
+      if (same) return false;
     }
 
     this._values = next;
     this.emit();
-  };
-
-  toggle = (value: T) => {
-    const next = new Set(this._values);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    this._values = next;
-    this.emit();
+    return true;
   };
 
   private emit() {
@@ -108,6 +108,7 @@ class CheckboxGroupStore<T extends CheckboxValue> {
 type CheckboxGroupContextValue<T extends CheckboxValue> = {
   store: CheckboxGroupStore<T>;
   disabled: boolean;
+  isControlled: boolean;
   toggleValue: (value: T) => void;
 };
 
@@ -130,15 +131,25 @@ function toTimingConfig(duration: number) {
   return { duration, easing: Easing.out(Easing.cubic) } as const;
 }
 
+function parseNumberLike(input: number | string | undefined) {
+  if (typeof input === 'number') return input;
+  if (typeof input !== 'string') return undefined;
+  const trimmed = input.trim();
+  if (!trimmed) return undefined;
+  const n = trimmed.endsWith('px') ? parseFloat(trimmed.slice(0, -2)) : parseFloat(trimmed);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export type CheckboxProps = Omit<
   React.ComponentPropsWithoutRef<typeof Pressable>,
-  'style' | 'children' | 'onPressIn' | 'onPressOut'
+  'style' | 'children' | 'onPressIn' | 'onPressOut' | 'onChange'
 > & {
   // 配合 CheckboxGroup 使用的唯一值（同组内不可重复）
-  itemValue?: CheckboxValue;
-  value?: CheckedState;
-  defaultValue?: CheckedState;
-  onValueChange?: (checked: CheckedState) => void;
+  value?: CheckboxValue;
+  checked?: CheckedState;
+  defaultChecked?: CheckedState;
+  onCheckedChange?: (checked: CheckedState) => void;
+  onChange?: (checked: boolean) => void;
   disabled?: boolean;
   // 快捷 label（不需要自定义内容时直接用）
   label?: string;
@@ -178,10 +189,11 @@ function nextCheckedState(current: CheckedState): CheckedState {
 }
 
 export function Checkbox({
-  itemValue,
-  value: valueProp,
-  defaultValue = false,
-  onValueChange,
+  value,
+  checked: checkedProp,
+  defaultChecked = false,
+  onCheckedChange,
+  onChange,
   disabled = false,
   label,
   children,
@@ -206,24 +218,22 @@ export function Checkbox({
   const group = React.useContext(CheckboxGroupContext);
   const resolvedDisabled = disabled || Boolean(group?.disabled);
 
-  const isControlled = valueProp !== undefined;
-  const [uncontrolledChecked, setUncontrolledChecked] = React.useState<CheckedState>(() => {
-    if (indeterminate) return 'indeterminate';
-    return defaultValue;
-  });
+  const isControlled = checkedProp !== undefined;
+  const [uncontrolledChecked, setUncontrolledChecked] = React.useState<CheckedState>(() => defaultChecked);
 
   // group 模式下：Checkbox 不再维护自己的 checked，而是由 group 的 value 集合决定
-  const isGroupItem = group != null && itemValue != null && !isControlled && indeterminate !== true;
+  const isGroupItem = group != null && value !== undefined && !isControlled && indeterminate !== true;
   const groupChecked = React.useSyncExternalStore(
-    group?.store.subscribe ?? (() => () => {}),
-    () => (group && itemValue != null ? group.store.has(itemValue) : false),
-    () => (group && itemValue != null ? group.store.has(itemValue) : false)
+    group?.store.subscribe ?? noopSubscribe,
+    () => (group && value !== undefined ? group.store.has(value) : false),
+    () => (group && value !== undefined ? group.store.has(value) : false)
   );
 
-  const checked: CheckedState = isGroupItem ? groupChecked : isControlled ? valueProp! : uncontrolledChecked;
+  const checked: CheckedState = isGroupItem ? groupChecked : isControlled ? checkedProp! : uncontrolledChecked;
   const resolvedChecked: CheckedState = indeterminate ? 'indeterminate' : checked;
   const isIndeterminate = resolvedChecked === 'indeterminate';
-  const isChecked = resolvedChecked !== false;
+  const isChecked = resolvedChecked === true;
+  const isActive = resolvedChecked !== false;
 
   const resolvedSize = size ?? wp(20);
   const resolvedBorderWidth = borderWidth ?? wp(1.5);
@@ -235,18 +245,18 @@ export function Checkbox({
   const timing = React.useMemo(() => toTimingConfig(duration), [duration]);
 
   // 动画全部基于 sharedValue，UI 线程执行：
-  // - checkedSv：控制背景/边框与 icon 的出现
+  // - checkedSv：控制背景/边框激活态与 icon 的出现
   // - indeterminateSv：控制横杠出现，并抑制 icon
   // - pressSv：按压反馈（opacity）
-  const checkedSv = useSharedValue(isChecked ? 1 : 0);
+  const checkedSv = useSharedValue(isActive ? 1 : 0);
   const indeterminateSv = useSharedValue(isIndeterminate ? 1 : 0);
   const pressSv = useSharedValue(0);
 
   // 同步“外部状态 -> UI 线程动画”
   React.useEffect(() => {
-    checkedSv.value = withTiming(isChecked ? 1 : 0, timing);
+    checkedSv.value = withTiming(isActive ? 1 : 0, timing);
     indeterminateSv.value = withTiming(isIndeterminate ? 1 : 0, timing);
-  }, [checkedSv, indeterminateSv, isChecked, isIndeterminate, timing]);
+  }, [checkedSv, indeterminateSv, isActive, isIndeterminate, timing]);
 
   const rootAnimatedStyle = useAnimatedStyle(() => {
     const pressedOpacity = interpolate(pressSv.value, [0, 1], [1, 0.85]);
@@ -264,21 +274,24 @@ export function Checkbox({
     };
   }, [resolvedPrimary, resolvedUncheck, theme.colors.surface]);
 
-  const setChecked = React.useCallback(
+  const emitCheckedChange = React.useCallback(
     (next: CheckedState) => {
       if (!isControlled) setUncontrolledChecked(next);
-      onValueChange?.(next);
+      onCheckedChange?.(next);
+      if (next !== 'indeterminate') onChange?.(next);
     },
-    [isControlled, onValueChange]
+    [isControlled, onChange, onCheckedChange]
   );
 
   const toggle = React.useCallback(() => {
     if (resolvedDisabled) return;
-    if (isGroupItem && group && itemValue != null) {
-      // group 内点按：先做乐观 UI 更新（UI 线程），再更新 store 并通知外部
-      checkedSv.value = withTiming(groupChecked ? 0 : 1, timing);
-      indeterminateSv.value = withTiming(0, timing);
-      group.toggleValue(itemValue);
+    if (isGroupItem && group && value !== undefined) {
+      // 非受控 group 可乐观更新；受控 group 必须等待 props，避免父级拒绝更新时 UI 漂移。
+      if (!group.isControlled) {
+        checkedSv.value = withTiming(groupChecked ? 0 : 1, timing);
+        indeterminateSv.value = withTiming(0, timing);
+      }
+      group.toggleValue(value);
       return;
     }
     const next = nextCheckedState(resolvedChecked);
@@ -288,18 +301,18 @@ export function Checkbox({
       checkedSv.value = withTiming(next !== false ? 1 : 0, timing);
       indeterminateSv.value = withTiming(next === 'indeterminate' ? 1 : 0, timing);
     }
-    setChecked(next);
+    emitCheckedChange(next);
   }, [
     checkedSv,
+    emitCheckedChange,
     group,
     groupChecked,
     indeterminateSv,
     isGroupItem,
-    itemValue,
     resolvedChecked,
     resolvedDisabled,
-    setChecked,
     timing,
+    value,
   ]);
 
   const renderedLabel = React.useMemo(() => {
@@ -307,7 +320,7 @@ export function Checkbox({
       return children({
         checked: isChecked,
         indeterminate: isIndeterminate,
-        itemValue,
+        value,
         disabled: resolvedDisabled,
         toggle,
       });
@@ -336,7 +349,7 @@ export function Checkbox({
     theme.colors.disabled,
     theme.colors.onSurface,
     toggle,
-    itemValue,
+    value,
   ]);
 
   const resolvedIcon = React.useMemo<React.ReactNode>(() => {
@@ -362,7 +375,7 @@ export function Checkbox({
       testID={testID}
       accessibilityRole="checkbox"
       accessibilityState={{
-        checked: resolvedChecked === 'indeterminate' ? 'mixed' : Boolean(resolvedChecked),
+        checked: isIndeterminate ? 'mixed' : isChecked,
         disabled: Boolean(resolvedDisabled),
       }}
       disabled={resolvedDisabled}
@@ -460,6 +473,8 @@ export type CheckboxGroupProps<T extends CheckboxValue = CheckboxValue> = Omit<
   onValueChange?: (value: T[]) => void;
   disabled?: boolean;
   direction?: 'row' | 'column';
+  align?: 'left' | 'center' | 'right';
+  gap?: number | string | [number | string, number | string];
   children: React.ReactNode;
 };
 
@@ -469,6 +484,8 @@ export function CheckboxGroup<T extends CheckboxValue = CheckboxValue>({
   onValueChange,
   disabled = false,
   direction = 'row',
+  align = 'left',
+  gap = 0,
   style,
   children,
   ...viewProps
@@ -476,37 +493,55 @@ export function CheckboxGroup<T extends CheckboxValue = CheckboxValue>({
   const isControlled = value !== undefined;
   const storeRef = React.useRef<CheckboxGroupStore<T> | null>(null);
   if (!storeRef.current) {
-    storeRef.current = new CheckboxGroupStore<T>(defaultValue ?? []);
+    storeRef.current = new CheckboxGroupStore<T>(value ?? defaultValue ?? []);
   }
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!isControlled) return;
     storeRef.current!.setValues(value as T[]);
   }, [isControlled, value]);
 
   const toggleValue = React.useCallback(
     (v: T) => {
-      storeRef.current!.toggle(v);
-      const next = storeRef.current!.getValues();
+      const next = storeRef.current!.getToggledValues(v);
+      if (!isControlled) storeRef.current!.setValues(next);
       onValueChange?.(next);
     },
-    [onValueChange]
+    [isControlled, onValueChange]
   );
 
   const ctx = React.useMemo<CheckboxGroupContextValue<T>>(
     () => ({
       store: storeRef.current!,
       disabled,
+      isControlled,
       toggleValue,
     }),
-    [disabled, toggleValue]
+    [disabled, isControlled, toggleValue]
   );
 
   const flexDirection = direction === 'column' ? 'column' : 'row';
+  const alignKey = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+
+  const gapStyle = React.useMemo(() => {
+    const raw = gap;
+    if (Array.isArray(raw)) {
+      const col = parseNumberLike(raw[0]) ?? 0;
+      const row = parseNumberLike(raw[1]) ?? 0;
+      return { columnGap: col, rowGap: row } as ViewStyle;
+    }
+    const n = parseNumberLike(raw) ?? 0;
+    return { columnGap: n, rowGap: n } as ViewStyle;
+  }, [gap]);
+
+  const layoutStyle: ViewStyle =
+    flexDirection === 'row'
+      ? { flexDirection, alignItems: 'center', justifyContent: alignKey }
+      : { flexDirection, alignItems: alignKey, justifyContent: 'flex-start' };
 
   return (
     <CheckboxGroupContext.Provider value={ctx as any}>
-      <View {...viewProps} style={[{ flexDirection }, style]}>
+      <View {...viewProps} style={[layoutStyle, gapStyle, style]}>
         {children}
       </View>
     </CheckboxGroupContext.Provider>

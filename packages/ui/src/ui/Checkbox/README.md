@@ -34,8 +34,8 @@ export function Demo() {
 }
 ```
 
-`onCheckedChange` 会收到三态：`false | true | 'indeterminate'`。  
-`onChange` 只会收到二态：`false | true`（当值为 `indeterminate` 时不会触发）。
+`onCheckedChange` 使用三态类型：`false | true | 'indeterminate'`。  
+用户点击半选态时会切换到 `true`；`onChange` 只会收到二态：`false | true`。
 
 ## CheckboxGroup（选中集合）
 
@@ -52,7 +52,7 @@ export function Demo() {
   const [values, setValues] = React.useState(['2']);
 
   return (
-    <CheckboxGroup value={values} onValueChange={setValues} direction="column">
+    <CheckboxGroup value={values} onValueChange={setValues} direction="column" gap={12}>
       {list.map((it) => (
         <Checkbox key={it.id} value={it.id} label={it.label} />
       ))}
@@ -120,11 +120,11 @@ Checkbox 继承 React Native `Pressable` 的所有 props，并额外提供以下
 
 - `onCheckedChange?: (checked: boolean | 'indeterminate') => void`
   - 默认：`undefined`
-  - 说明：三态回调；切换到 `indeterminate` 也会触发。
+  - 说明：三态回调；用于需要区分 `indeterminate` 的场景。
 
 - `onChange?: (checked: boolean) => void`
   - 默认：`undefined`
-  - 说明：二态回调；当下一状态为 `indeterminate` 时不会触发。
+  - 说明：二态回调；适合普通勾选场景。
 
 - `disabled?: boolean`
   - 默认：`false`
@@ -235,10 +235,6 @@ CheckboxGroup 继承 React Native `View` 的所有 props，并额外提供以下
   - 默认：`undefined`
   - 说明：选中集合变化回调（推荐使用）。
 
-- `onChange?: (value: Array<string | number>) => void`
-  - 默认：`undefined`
-  - 说明：同 `onValueChange`（保留别名）。
-
 - `disabled?: boolean`
   - 默认：`false`
   - 说明：组禁用；组内所有 Checkbox 会被禁用。
@@ -246,3 +242,11 @@ CheckboxGroup 继承 React Native `View` 的所有 props，并额外提供以下
 - `direction?: 'row' | 'column'`
   - 默认：`'row'`
   - 说明：组内布局方向。
+
+- `align?: 'left' | 'center' | 'right'`
+  - 默认：`'left'`
+  - 说明：组内容对齐方式。
+
+- `gap?: number | string | [number | string, number | string]`
+  - 默认：`0`
+  - 说明：组内间距；数组时分别表示 `columnGap` 与 `rowGap`。
