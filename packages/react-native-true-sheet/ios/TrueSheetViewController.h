@@ -1,0 +1,94 @@
+//
+//  Created by Jovanni Lo (@lodev09)
+//  Copyright (c) 2024-present. All rights reserved.
+//
+//  This source code is licensed under the MIT license found in the
+//  LICENSE file in the root directory of this source tree.
+//
+
+#import <UIKit/UIKit.h>
+#import <react/renderer/components/TrueSheetSpec/Props.h>
+#import "core/TrueSheetDetentCalculator.h"
+#import "core/TrueSheetGrabberView.h"
+
+#if __has_include(<RNScreens/RNSDismissibleModalProtocol.h>)
+#import <RNScreens/RNSDismissibleModalProtocol.h>
+#define RNS_DISMISSIBLE_MODAL_PROTOCOL_AVAILABLE 1
+#else
+#define RNS_DISMISSIBLE_MODAL_PROTOCOL_AVAILABLE 0
+#endif
+
+NS_ASSUME_NONNULL_BEGIN
+
+@protocol TrueSheetViewControllerDelegate <NSObject>
+
+- (void)viewControllerWillPresentAtIndex:(NSInteger)index position:(CGFloat)position detent:(CGFloat)detent;
+- (void)viewControllerDidPresentAtIndex:(NSInteger)index position:(CGFloat)position detent:(CGFloat)detent;
+- (void)viewControllerWillDismiss;
+- (void)viewControllerDidDismiss;
+- (void)viewControllerDidChangeDetent:(NSInteger)index position:(CGFloat)position detent:(CGFloat)detent;
+- (void)viewControllerDidDrag:(UIGestureRecognizerState)state
+                        index:(NSInteger)index
+                     position:(CGFloat)position
+                       detent:(CGFloat)detent;
+- (void)viewControllerDidChangePosition:(CGFloat)index
+                               position:(CGFloat)position
+                                 detent:(CGFloat)detent
+                               realtime:(BOOL)realtime;
+- (void)viewControllerDidChangeSize:(CGSize)size;
+- (void)viewControllerWillFocus;
+- (void)viewControllerDidFocus;
+- (void)viewControllerWillBlur;
+- (void)viewControllerDidBlur;
+
+@end
+
+@interface TrueSheetViewController : UIViewController <UISheetPresentationControllerDelegate,
+                                       TrueSheetDetentCalculatorDelegate
+#if RNS_DISMISSIBLE_MODAL_PROTOCOL_AVAILABLE
+                                       ,
+                                       RNSDismissibleModalProtocol
+#endif
+                                       >
+
+@property (nonatomic, weak, nullable) id<TrueSheetViewControllerDelegate> delegate;
+@property (nonatomic, strong) NSArray<NSNumber *> *detents;
+@property (nonatomic, strong, nullable) NSNumber *maxContentHeight;
+@property (nonatomic, strong, nullable) NSNumber *maxContentWidth;
+@property (nonatomic, strong, nullable) NSNumber *contentHeight;
+@property (nonatomic, strong, nullable) NSNumber *headerHeight;
+@property (nonatomic, strong, nullable) UIColor *backgroundColor;
+@property (nonatomic, strong, nullable) NSNumber *cornerRadius;
+@property (nonatomic, assign) BOOL grabber;
+@property (nonatomic, strong, nullable) GrabberOptions *grabberOptions;
+@property (nonatomic, assign) BOOL draggable;
+@property (nonatomic, assign) BOOL dimmed;
+@property (nonatomic, strong, nullable) NSNumber *dimmedDetentIndex;
+@property (nonatomic, assign) facebook::react::TrueSheetViewBackgroundBlur backgroundBlur;
+@property (nonatomic, strong, nullable) NSNumber *blurIntensity;
+@property (nonatomic, assign) BOOL blurInteraction;
+@property (nonatomic, assign) BOOL pageSizing;
+@property (nonatomic, assign) facebook::react::TrueSheetViewAnchor anchor;
+@property (nonatomic, assign) facebook::react::TrueSheetViewInsetAdjustment insetAdjustment;
+@property (nonatomic, assign) BOOL scrollingExpandsSheet;
+@property (nonatomic, assign) BOOL dismissible;
+@property (nonatomic, assign) BOOL isPresented;
+@property (nonatomic, assign) NSInteger activeDetentIndex;
+@property (nonatomic, readonly) BOOL isTopmostPresentedController;
+
+@property (nonatomic, readonly) CGFloat screenHeight;
+
+- (void)applyActiveDetent;
+- (void)setupActiveDetentWithIndex:(NSInteger)index;
+- (void)resizeToDetentIndex:(NSInteger)index;
+- (void)setupSheetSizing;
+- (void)setupSheetProps;
+- (void)setupSheetDetents;
+- (void)setupSheetDetentsForSizeChange;
+- (void)setupSheetDetentsForDetentsChange;
+- (void)setupDraggable;
+- (void)setupAnchorViewInView:(UIView *)parentView;
+
+@end
+
+NS_ASSUME_NONNULL_END

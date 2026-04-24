@@ -1,0 +1,150 @@
+{
+  "name": "@lodev09/react-native-true-sheet",
+  "version": "3.10.0",
+  "description": "Vendored TrueSheet native bottom sheet for y2kit.",
+  "source": "./src/index.ts",
+  "main": "./lib/module/index.js",
+  "types": "./lib/typescript/src/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./lib/typescript/src/index.d.ts",
+      "default": "./lib/module/index.js"
+    },
+    "./mock": "./lib/module/mocks/index.js",
+    "./navigation/mock": "./lib/module/mocks/navigation.js",
+    "./reanimated/mock": "./lib/module/mocks/reanimated.js",
+    "./reanimated": {
+      "source": "./src/reanimated/index.ts",
+      "types": "./lib/typescript/src/reanimated/index.d.ts",
+      "default": "./lib/module/reanimated/index.js"
+    },
+    "./navigation": {
+      "source": "./src/navigation/index.ts",
+      "types": "./lib/typescript/src/navigation/index.d.ts",
+      "default": "./lib/module/navigation/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "android",
+    "ios",
+    "common",
+    "*.podspec",
+    "react-native.config.js",
+    "!ios/build",
+    "!android/build",
+    "!android/gradle",
+    "!android/gradlew",
+    "!android/gradlew.bat",
+    "!android/local.properties",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/.*"
+  ],
+  "scripts": {},
+  "keywords": [
+    "react-native",
+    "ios",
+    "android",
+    "bottom-sheet",
+    "native-sheet",
+    "sheet",
+    "fabric",
+    "turbo-module"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lodev09/react-native-true-sheet.git"
+  },
+  "author": "Jovanni Lo <lodev09@gmail.com> (https://github.com/lodev09)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lodev09/react-native-true-sheet/issues"
+  },
+  "homepage": "https://sheet.lodev09.com",
+  "peerDependencies": {
+    "@gorhom/bottom-sheet": ">=5",
+    "@react-navigation/native": ">=7",
+    "react": "*",
+    "react-native": "*",
+    "react-native-reanimated": ">=4",
+    "react-native-worklets": "*"
+  },
+  "peerDependenciesMeta": {
+    "@gorhom/bottom-sheet": {
+      "optional": true
+    },
+    "@react-navigation/native": {
+      "optional": true
+    },
+    "react-native-reanimated": {
+      "optional": true
+    },
+    "react-native-worklets": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.17"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      [
+        "module",
+        {
+          "esm": true
+        }
+      ],
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  },
+  "create-react-native-library": {
+    "languages": "kotlin-objc",
+    "type": "fabric-view",
+    "tools": [
+      "eslint",
+      "lefthook",
+      "release-it",
+      "jest"
+    ],
+    "version": "0.55.0"
+  },
+  "codegenConfig": {
+    "name": "TrueSheetSpec",
+    "type": "all",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.lodev09.truesheet"
+    },
+    "ios": {
+      "components": {
+        "TrueSheetView": {
+          "className": "TrueSheetView"
+        },
+        "TrueSheetContainerView": {
+          "className": "TrueSheetContainerView"
+        },
+        "TrueSheetContentView": {
+          "className": "TrueSheetContentView"
+        },
+        "TrueSheetHeaderView": {
+          "className": "TrueSheetHeaderView"
+        },
+        "TrueSheetFooterView": {
+          "className": "TrueSheetFooterView"
+        }
+      }
+    }
+  },
+  "private": true
+}

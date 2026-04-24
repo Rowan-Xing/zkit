@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
-    "@lodev09/react-native-true-sheet": "^3.10.0",
+    "@lodev09/react-native-true-sheet": "workspace:*",
     "@vant/area-data": "^2.1.0",
     "dayjs": "^1.11.13",
     "expo": "~54.0.31",

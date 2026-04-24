@@ -1,0 +1,171 @@
+package com.lodev09.truesheet.core
+
+import android.view.ViewGroup
+import com.lodev09.truesheet.TrueSheetView
+
+/**
+ * Manages TrueSheet stacking behavior.
+ * Tracks presented sheets and handles visibility when sheets stack on top of each other.
+ */
+object TrueSheetStackManager {
+
+  private val presentedSheetStack = mutableListOf<TrueSheetView>()
+
+  /**
+   * Gets the parent sheet at the given index, if any.
+   * Only returns a parent if it's in the same container.
+   * Must be called within synchronized block.
+   */
+  private fun getParentSheetAt(index: Int, rootContainer: ViewGroup?): TrueSheetView? {
+    if (index <= 0) return null
+    return presentedSheetStack[index - 1].takeIf { it.rootContainerView == rootContainer }
+  }
+
+  /**
+   * Returns the topmost presented and visible sheet.
+   * Must be called within synchronized block.
+   */
+  private fun findTopmostSheet(): TrueSheetView? =
+    presentedSheetStack.lastOrNull {
+      it.viewController.isPresented && it.viewController.isSheetVisible
+    }
+
+  /**
+   * Registers a sheet in the stack and returns its parent sheet if any.
+   * Only returns a parent if it's in the same container (e.g., same Screen).
+   */
+  @JvmStatic
+  fun registerSheet(sheetView: TrueSheetView): TrueSheetView? {
+    synchronized(presentedSheetStack) {
+      val parentSheet = findTopmostSheet()?.takeIf { it.rootContainerView == sheetView.rootContainerView }
+
+      if (!presentedSheetStack.contains(sheetView)) {
+        presentedSheetStack.add(sheetView)
+      }
+
+      return parentSheet
+    }
+  }
+
+  /**
+   * Unregisters a sheet from the stack and resets parent translation if needed.
+   */
+  @JvmStatic
+  fun unregisterSheet(sheetView: TrueSheetView, hadParent: Boolean) {
+    synchronized(presentedSheetStack) {
+      presentedSheetStack.remove(sheetView)
+      if (hadParent) {
+        presentedSheetStack.lastOrNull()?.resetTranslation()
+      }
+    }
+  }
+
+  /**
+   * Updates parent sheet translation based on the child sheet's position.
+   * Only affects parent sheets in the same container.
+   */
+  @JvmStatic
+  fun updateParentTranslation(sheetView: TrueSheetView) {
+    synchronized(presentedSheetStack) {
+      val index = presentedSheetStack.indexOf(sheetView)
+      val parentSheet = getParentSheetAt(index, sheetView.rootContainerView) ?: return
+
+      // Post to ensure layout is complete before reading position
+      sheetView.viewController.post {
+        val childMinSheetTop = sheetView.viewController.detentCalculator.getSheetTopForDetentIndex(0)
+        val childCurrentSheetTop = sheetView.viewController.detentCalculator.getSheetTopForDetentIndex(
+          sheetView.viewController.currentDetentIndex
+        )
+        // Cap to minimum detent position
+        val childSheetTop = maxOf(childMinSheetTop, childCurrentSheetTop)
+        parentSheet.updateTranslationForChild(childSheetTop)
+      }
+    }
+  }
+
+  /**
+   * Returns all sheets presented on top of the given sheet (children/descendants)
+   * that are in the same container. Returns them in reverse order (top-most first) for proper dismissal.
+   */
+  @JvmStatic
+  fun getSheetsAbove(sheetView: TrueSheetView): List<TrueSheetView> {
+    synchronized(presentedSheetStack) {
+      val index = presentedSheetStack.indexOf(sheetView)
+      if (index < 0 || index >= presentedSheetStack.size - 1) return emptyList()
+      val rootContainer = sheetView.rootContainerView
+      return presentedSheetStack.subList(index + 1, presentedSheetStack.size)
+        .filter { it.rootContainerView == rootContainer }
+        .reversed()
+    }
+  }
+
+  @JvmStatic
+  fun removeSheet(sheetView: TrueSheetView) {
+    synchronized(presentedSheetStack) {
+      presentedSheetStack.remove(sheetView)
+    }
+  }
+
+  @JvmStatic
+  fun clear() {
+    synchronized(presentedSheetStack) {
+      presentedSheetStack.clear()
+    }
+  }
+
+  /**
+   * Gets the parent sheet of the given sheet, if any.
+   * Only returns a parent if it's in the same container.
+   */
+  @JvmStatic
+  fun getParentSheet(sheetView: TrueSheetView): TrueSheetView? {
+    synchronized(presentedSheetStack) {
+      val index = presentedSheetStack.indexOf(sheetView)
+      return getParentSheetAt(index, sheetView.rootContainerView)
+    }
+  }
+
+  /**
+   * Returns true if the given sheet is the topmost presented sheet in its container.
+   */
+  @JvmStatic
+  fun isTopmostSheet(sheetView: TrueSheetView): Boolean {
+    synchronized(presentedSheetStack) {
+      val rootContainer = sheetView.rootContainerView
+      return presentedSheetStack.lastOrNull { it.rootContainerView == rootContainer } == sheetView
+    }
+  }
+
+  /**
+   * Returns the topmost presented sheet, or null if none.
+   */
+  @JvmStatic
+  fun getTopmostSheet(): TrueSheetView? {
+    synchronized(presentedSheetStack) {
+      return findTopmostSheet()
+    }
+  }
+
+  /**
+   * Returns the root presented sheet for dismissAll.
+   * Starts from the topmost sheet and walks up to find the root of its stack.
+   * Stops at modal boundary (parent hidden by modal) or when there's no parent.
+   */
+  @JvmStatic
+  fun getRootSheet(): TrueSheetView? {
+    synchronized(presentedSheetStack) {
+      val topmost = presentedSheetStack.lastOrNull { it.viewController.isPresented } ?: return null
+
+      var current: TrueSheetView = topmost
+      while (true) {
+        val parent = current.viewController.parentSheetView ?: return current
+
+        if (parent.viewController.wasHiddenByScreen) {
+          return current
+        }
+
+        current = parent
+      }
+    }
+  }
+}
