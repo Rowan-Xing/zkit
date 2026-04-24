@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
-  InteractionManager,
+  Animated,
+  Easing,
   Modal,
   Platform,
   Pressable,
@@ -9,13 +10,8 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import dayjs, { type Dayjs } from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -232,11 +228,6 @@ function resolveInitialPair(modelValue: string[] | undefined, bounds: DateBounds
   }
 
   return { start: s, end: e };
-}
-
-function buildModelStr(start: Dayjs | undefined, end: Dayjs | undefined, format: string, toText: string) {
-  if (!start || !end) return '';
-  return `${start.format(format)} ${toText} ${end.format(format)}`;
 }
 
 function ensureFormatSyncValueIsStandard(value: string) {
@@ -459,54 +450,36 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   const [innerOpen, setInnerOpen] = React.useState(defaultOpen);
   const isOpenControlled = openProp !== undefined;
   const visible = isOpenControlled ? !!openProp : innerOpen;
-
+  const [sheetMounted, setSheetMounted] = React.useState(visible);
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
-  const [quickRowHeight, setQuickRowHeight] = React.useState(0);
-  const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isClosingRef = React.useRef(false);
-
-  const active = useSharedValue(0);
-  const translateY = useSharedValue(0);
-
-  const sheetHeight = React.useMemo(() => {
-    if (drawerSize != null) {
-      const n = typeof drawerSize === 'number' ? drawerSize : Number.parseFloat(drawerSize);
-      if (Number.isFinite(n) && n > 0) return Math.min(screenH * 0.9, n);
-    }
-    const header = wp(44);
-    const rangeRow = wp(4) + wp(40) + wp(10);
-    const pickerBlock = wp(4) + wp(18) + WHEEL_AREA_HEIGHT;
-    const footer = wp(16) + wp(44);
-    const paddings = wp(14) + wp(16) + safeBottom;
-    const computed = header + quickRowHeight + rangeRow + pickerBlock + footer + paddings;
-    return Math.min(screenH * 0.92, computed);
-  }, [drawerSize, quickRowHeight, safeBottom, screenH]);
+  const sheetRef = React.useRef<TrueSheet>(null);
+  const isPresentedRef = React.useRef(false);
+  const visibleRef = React.useRef(visible);
 
   React.useEffect(() => {
-    if (!visible) translateY.value = sheetHeight;
-  }, [sheetHeight, translateY, visible]);
+    visibleRef.current = visible;
+  }, [visible]);
 
-  // 受控模式下，监听 visible 变化触发动画
-  React.useEffect(() => {
-    // 如果正在关闭中，不要触发打开动画
-    if (visible && isOpenControlled && !isClosingRef.current) {
-      const pair = resolveInitialPair(value, bounds, type);
-      setDraft({ draftStart: pair.start, draftEnd: pair.end });
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          active.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) });
-          translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.quad) });
-        });
-      });
-
-      if (lazyContent && !contentMounted) {
-        setTimeout(() => {
-          setContentMounted(true);
-        }, 50);
-      }
+  const dismissSheet = React.useCallback(() => {
+    const p = sheetRef.current?.dismiss();
+    if (p && typeof (p as any).catch === 'function') {
+      (p as any).catch(() => {});
     }
-  }, [visible, isOpenControlled]);
+  }, []);
+
+  React.useEffect(() => {
+    if (visible && !sheetMounted) {
+      setSheetMounted(true);
+    }
+  }, [sheetMounted, visible]);
+
+  const detents = React.useMemo<Array<'auto' | number>>(() => {
+    if (drawerSize == null) return ['auto'];
+    const n = typeof drawerSize === 'number' ? drawerSize : Number.parseFloat(drawerSize);
+    if (!Number.isFinite(n) || n <= 0) return ['auto'];
+    const fraction = clampNumber(n / screenH, 0.1, 0.92);
+    return [fraction];
+  }, [drawerSize, screenH]);
 
   const [activeSide, setActiveSide] = React.useState<Side>('start');
 
@@ -520,7 +493,15 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     setDraft({ draftStart: pair.start, draftEnd: pair.end });
   }, [bounds, type, value?.[0], value?.[1]]);
 
-  const effectiveStr = React.useMemo(() => buildModelStr(draftStart, draftEnd, format, t('betweenTime.to')), [draftEnd, draftStart, format, t]);
+  React.useEffect(() => {
+    if (visible) {
+      const pair = resolveInitialPair(value, bounds, type);
+      setDraft({ draftStart: pair.start, draftEnd: pair.end });
+      if (lazyContent && !contentMounted) setContentMounted(true);
+    }
+    // 只希望在进入打开态时重置草稿，不跟随其他依赖重复触发。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const defaultCellUnits = React.useMemo(() => [
     t('betweenTime.unit.year'),
@@ -543,34 +524,12 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   }, [t]);
 
   const close = React.useCallback(() => {
-    if (!visible) return;
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
+    onOpenChange?.(false);
+    if (!isOpenControlled) {
+      setInnerOpen(false);
     }
-    isClosingRef.current = true;
-    active.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) });
-    translateY.value = withTiming(sheetHeight, { duration: 220, easing: Easing.out(Easing.quad) });
-    // 延迟通知外部关闭，等动画完成后再更新状态
-    closeTimerRef.current = setTimeout(() => {
-      onOpenChange?.(false);
-      if (!isOpenControlled) {
-        setInnerOpen(false);
-      }
-      isClosingRef.current = false;
-      closeTimerRef.current = null;
-      onDismissComplete?.();
-    }, 260);
-  }, [active, isOpenControlled, onDismissComplete, onOpenChange, sheetHeight, translateY, visible]);
-
-  React.useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = null;
-      }
-    };
-  }, []);
+    dismissSheet();
+  }, [dismissSheet, isOpenControlled, onOpenChange]);
 
   const openPicker = React.useCallback(() => {
     if (disabled) return;
@@ -582,29 +541,32 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     const pair = resolveInitialPair(value, bounds, type);
     setDraft({ draftStart: pair.start, draftEnd: pair.end });
 
-    // 双重延迟：先让 Modal 渲染，再启动动画
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        active.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) });
-        translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.quad) });
-      });
-    });
-
-    // 动画完成后再挂载 picker 内容
     if (lazyContent && !contentMounted) {
-      setTimeout(() => {
-        setContentMounted(true);
-      }, 50);
+      setContentMounted(true);
     }
-  }, [active, bounds, contentMounted, disabled, isOpenControlled, lazyContent, onOpenChange, translateY, type, value, visible]);
+  }, [bounds, contentMounted, disabled, isOpenControlled, lazyContent, onOpenChange, type, value, visible]);
 
   React.useImperativeHandle(ref, () => ({
     open: openPicker,
     close,
   }), [openPicker, close]);
 
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: active.value }));
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+  React.useEffect(() => {
+    if (visible && sheetMounted) {
+      const rafId = requestAnimationFrame(() => {
+        if (!visibleRef.current) return;
+        if (isPresentedRef.current) return;
+        const p = sheetRef.current?.present();
+        if (p && typeof (p as any).catch === 'function') {
+          (p as any).catch(() => {});
+        }
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+    if (!visible && isPresentedRef.current) {
+      dismissSheet();
+    }
+  }, [dismissSheet, sheetMounted, visible]);
 
   const columnsCount = React.useMemo(() => getColumnsCount(type), [type]);
   const wheelsRef = React.useRef<Array<WheelColumnHandle | null>>([]);
@@ -766,194 +728,283 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     [children, disabled, openPicker]
   );
 
+  const handleSheetDidPresent = React.useCallback(() => {
+    isPresentedRef.current = true;
+    if (!visibleRef.current) {
+      dismissSheet();
+    }
+  }, [dismissSheet]);
+
+  const handleSheetDidDismiss = React.useCallback(() => {
+    isPresentedRef.current = false;
+    onOpenChange?.(false);
+    if (!isOpenControlled) setInnerOpen(false);
+    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
+    onDismissComplete?.();
+  }, [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]);
+
+  const handleBackdropPress = React.useCallback(() => {
+    if (disabled || !visible) return;
+    onCancel?.();
+    const pair = resolveInitialPair(value, bounds, type);
+    setDraft({ draftStart: pair.start, draftEnd: pair.end });
+    close();
+  }, [bounds, close, disabled, onCancel, type, value, visible]);
+
+  const useManualIOSBackdrop = Platform.OS === 'ios';
+  const backdropOpacity = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [backdropMounted, setBackdropMounted] = React.useState(useManualIOSBackdrop && visible);
+
+  React.useEffect(() => {
+    if (!useManualIOSBackdrop) return;
+
+    backdropOpacity.stopAnimation();
+
+    if (visible) {
+      setBackdropMounted(true);
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    Animated.timing(backdropOpacity, {
+      toValue: 0,
+      duration: 120,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished && !visibleRef.current) {
+        setBackdropMounted(false);
+      }
+    });
+  }, [backdropOpacity, useManualIOSBackdrop, visible]);
+
+  const sheetNode = (
+    <TrueSheet
+      ref={sheetRef}
+      detents={detents}
+      backgroundColor={theme.colors.surface}
+      cornerRadius={undefined}
+      grabber={false}
+      draggable={false}
+      dimmed={!useManualIOSBackdrop}
+      dimmedDetentIndex={0}
+      insetAdjustment="never"
+      dismissible={Platform.OS === 'ios' ? false : !disabled}
+      onDidPresent={handleSheetDidPresent}
+      onDidDismiss={handleSheetDidDismiss}
+    >
+      <View
+        style={[
+          styles.sheetInner,
+          {
+            backgroundColor: theme.colors.surface,
+            paddingBottom: wp(16) + safeBottom,
+          },
+        ]}
+        pointerEvents={disabled ? 'none' : 'auto'}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
+            {title ?? t('betweenTime.title')}
+          </Text>
+          <Button
+            skin="text"
+            onPress={handleClear}
+            disabled={disabled}
+            fontSize={sp(14)}
+            fontColor={theme.colors.muted}
+            minHeight={wp(32)}
+            paddingHorizontal={wp(8)}
+          >
+            {t('betweenTime.clear')}
+          </Button>
+        </View>
+
+        {Array.isArray(quickDate) && quickDate.length > 0 ? (
+          <View style={styles.quickRow}>
+            {quickDate.map((k) => (
+              <Pressable
+                key={k}
+                onPress={() => handleQuickPick(k)}
+                style={({ pressed }) => [
+                  styles.quickPill,
+                  {
+                    borderColor: `${theme.colors.primary}22`,
+                    backgroundColor: `${theme.colors.primary}14`,
+                  },
+                  pressed && { opacity: 0.8 },
+                ]}
+                disabled={disabled}
+              >
+                <Text style={[styles.quickText, { color: theme.colors.primary }]}>{getQuickLabel(k)}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.rangeRow}>
+          <Pressable
+            onPress={() => setActiveSide('start')}
+            style={({ pressed }) => [
+              styles.rangePill,
+              activeSide === 'start'
+                ? { borderColor: theme.colors.primary, backgroundColor: '#FFFFFF' }
+                : { borderColor: theme.colors.border, backgroundColor: '#FFFFFF' },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.rangeText,
+                { color: activeSide === 'start' ? theme.colors.primary : theme.colors.muted },
+              ]}
+              numberOfLines={1}
+            >
+              {draftStart ? draftStart.format(format) : t('betweenTime.startTime')}
+            </Text>
+          </Pressable>
+
+          <Text style={[styles.toText, { color: theme.colors.muted }]}>{t('betweenTime.to')}</Text>
+
+          <Pressable
+            onPress={() => setActiveSide('end')}
+            style={({ pressed }) => [
+              styles.rangePill,
+              activeSide === 'end'
+                ? { borderColor: theme.colors.primary, backgroundColor: '#FFFFFF' }
+                : { borderColor: theme.colors.border, backgroundColor: '#FFFFFF' },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.rangeText,
+                { color: activeSide === 'end' ? theme.colors.primary : theme.colors.muted },
+              ]}
+              numberOfLines={1}
+            >
+              {draftEnd ? draftEnd.format(format) : t('betweenTime.endTime')}
+            </Text>
+          </Pressable>
+        </View>
+
+        {contentMounted ? (
+          <View style={styles.pickerArea}>
+            <View style={styles.unitRow}>
+              {unitLabels.map((u, idx) => (
+                <View key={`${u}-${idx}`} style={[styles.unitCell, { width: columnWidth }]}>
+                  <Text style={[styles.unitText, { color: theme.colors.muted }]}>{u}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.pickerWrapper} onLayout={onColumnsLayout}>
+              {Platform.OS !== 'ios' && (
+                <View style={[styles.highlightBar, { backgroundColor: '#F2F2F2' }]} pointerEvents="none" />
+              )}
+              <View style={styles.columnsRow}>
+                {columns.map((col, colIdx) => (
+                  <WheelColumn
+                    key={`col-${colIdx}-${columnsCount}`}
+                    ref={(instance) => {
+                      wheelsRef.current[colIdx] = instance;
+                    }}
+                    data={col}
+                    selectedIndex={Math.max(0, indices[colIdx] ?? 0)}
+                    onSelectedIndexChange={(idx) => handleWheelIndexChange(colIdx, idx)}
+                    width={columnWidth}
+                    disabled={disabled}
+                  />
+                ))}
+              </View>
+              {Platform.OS !== 'ios' && (
+                <>
+                  <View style={styles.topMask} pointerEvents="none">
+                    <LinearGradient
+                      colors={['#FFFFFF', 'rgba(255,255,255,0)']}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </View>
+                  <View style={styles.bottomMask} pointerEvents="none">
+                    <LinearGradient
+                      colors={['rgba(255,255,255,0)', '#FFFFFF']}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.pickerArea, { height: WHEEL_AREA_HEIGHT + wp(26) }]} />
+        )}
+
+        <View style={styles.footer}>
+          <View style={styles.footerBtnWrapper}>
+            <Button
+              skin="thin"
+              onPress={handleCancel}
+              disabled={disabled}
+              block
+              minHeight={wp(44)}
+              round={wp(14)}
+              fontSize={sp(16)}
+            >
+              {t('betweenTime.cancel')}
+            </Button>
+          </View>
+          <View style={styles.footerBtnWrapper}>
+            <Button
+              onPress={handleConfirm}
+              disabled={disabled}
+              block
+              minHeight={wp(44)}
+              round={wp(14)}
+              fontSize={sp(16)}
+            >
+              {t('betweenTime.confirm')}
+            </Button>
+          </View>
+        </View>
+      </View>
+    </TrueSheet>
+  );
+
   return (
     <>
       {triggerNode}
-      <Modal visible={visible} transparent statusBarTranslucent animationType="none" onRequestClose={close}>
-        <View style={styles.modalRoot} pointerEvents={disabled ? 'none' : 'auto'}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close}>
-            <Animated.View style={[styles.backdrop, backdropStyle]} />
-          </Pressable>
-
-          <Animated.View style={[styles.sheet, { height: sheetHeight }, sheetStyle]}>
-            <View style={[styles.sheetInner, { backgroundColor: theme.colors.surface, paddingBottom: wp(16) + safeBottom }]}>
-              <View style={styles.header}>
-                <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
-                  {title ?? t('betweenTime.title')}
-                </Text>
-                <Button
-                  skin="text"
-                  onPress={handleClear}
-                  disabled={disabled}
-                  fontSize={sp(14)}
-                  fontColor={theme.colors.muted}
-                  minHeight={wp(32)}
-                  paddingHorizontal={wp(8)}
+      {sheetMounted ? (
+        useManualIOSBackdrop ? (
+          <Modal
+            visible
+            transparent
+            animationType="none"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={handleBackdropPress}
+          >
+            <View style={styles.modalRoot} pointerEvents="box-none">
+              {backdropMounted ? (
+                <Pressable
+                  style={StyleSheet.absoluteFill}
+                  onPress={handleBackdropPress}
+                  disabled={disabled || !visible}
                 >
-                  {t('betweenTime.clear')}
-                </Button>
-              </View>
-
-              {Array.isArray(quickDate) && quickDate.length > 0 ? (
-                <View
-                  style={styles.quickRow}
-                  onLayout={(e) => {
-                    const h = e.nativeEvent.layout.height;
-                    if (Math.abs(h - quickRowHeight) > 0.5) setQuickRowHeight(h);
-                  }}
-                >
-                  {quickDate.map((k) => (
-                    <Pressable
-                      key={k}
-                      onPress={() => handleQuickPick(k)}
-                      style={({ pressed }) => [
-                        styles.quickPill,
-                        {
-                          borderColor: `${theme.colors.primary}22`,
-                          backgroundColor: `${theme.colors.primary}14`,
-                        },
-                        pressed && { opacity: 0.8 },
-                      ]}
-                      disabled={disabled}
-                    >
-                      <Text style={[styles.quickText, { color: theme.colors.primary }]}>{getQuickLabel(k)}</Text>
-                    </Pressable>
-                  ))}
-                </View>
+                  <Animated.View style={[styles.iosBackdrop, { opacity: backdropOpacity }]} />
+                </Pressable>
               ) : null}
-
-              <View style={styles.rangeRow}>
-                <Pressable
-                  onPress={() => setActiveSide('start')}
-                  style={({ pressed }) => [
-                    styles.rangePill,
-                    activeSide === 'start'
-                      ? { borderColor: theme.colors.primary, backgroundColor: '#FFFFFF' }
-                      : { borderColor: theme.colors.border, backgroundColor: '#FFFFFF' },
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.rangeText,
-                      { color: activeSide === 'start' ? theme.colors.primary : theme.colors.muted },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {draftStart ? draftStart.format(format) : t('betweenTime.startTime')}
-                  </Text>
-                </Pressable>
-
-                <Text style={[styles.toText, { color: theme.colors.muted }]}>{t('betweenTime.to')}</Text>
-
-                <Pressable
-                  onPress={() => setActiveSide('end')}
-                  style={({ pressed }) => [
-                    styles.rangePill,
-                    activeSide === 'end'
-                      ? { borderColor: theme.colors.primary, backgroundColor: '#FFFFFF' }
-                      : { borderColor: theme.colors.border, backgroundColor: '#FFFFFF' },
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.rangeText,
-                      { color: activeSide === 'end' ? theme.colors.primary : theme.colors.muted },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {draftEnd ? draftEnd.format(format) : t('betweenTime.endTime')}
-                  </Text>
-                </Pressable>
-              </View>
-
-              {contentMounted ? (
-                <View style={styles.pickerArea}>
-                  <View style={styles.unitRow}>
-                    {unitLabels.map((u, idx) => (
-                      <View key={`${u}-${idx}`} style={[styles.unitCell, { width: columnWidth }]}>
-                        <Text style={[styles.unitText, { color: theme.colors.muted }]}>{u}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  <View style={styles.pickerWrapper} onLayout={onColumnsLayout}>
-                    {/* iOS 使用原生 picker 时，保留系统自带的选中区视觉；
-                        Android 自绘 wheel 继续使用这条高亮条。 */}
-                    {Platform.OS !== 'ios' && (
-                      <View style={[styles.highlightBar, { backgroundColor: '#F2F2F2' }]} pointerEvents="none" />
-                    )}
-                    <View style={styles.columnsRow}>
-                      {columns.map((col, colIdx) => (
-                        <WheelColumn
-                          key={`col-${colIdx}-${columnsCount}`}
-                          ref={(instance) => {
-                            wheelsRef.current[colIdx] = instance;
-                          }}
-                          data={col}
-                          selectedIndex={Math.max(0, indices[colIdx] ?? 0)}
-                          onSelectedIndexChange={(idx) => handleWheelIndexChange(colIdx, idx)}
-                          width={columnWidth}
-                          disabled={disabled}
-                        />
-                      ))}
-                    </View>
-                    {Platform.OS !== 'ios' && (
-                      <>
-                        {/* 顶部渐变遮罩 */}
-                        <View style={styles.topMask} pointerEvents="none">
-                          <LinearGradient
-                            colors={['#FFFFFF', 'rgba(255,255,255,0)']}
-                            style={StyleSheet.absoluteFill}
-                          />
-                        </View>
-                        {/* 底部渐变遮罩 */}
-                        <View style={styles.bottomMask} pointerEvents="none">
-                          <LinearGradient
-                            colors={['rgba(255,255,255,0)', '#FFFFFF']}
-                            style={StyleSheet.absoluteFill}
-                          />
-                        </View>
-                      </>
-                    )}
-                  </View>
-                </View>
-              ) : (
-                <View style={[styles.pickerArea, { height: WHEEL_AREA_HEIGHT + wp(26) }]} />
-              )}
-
-              <View style={styles.footer}>
-                <View style={styles.footerBtnWrapper}>
-                  <Button
-                    skin="thin"
-                    onPress={handleCancel}
-                    disabled={disabled}
-                    block
-                    minHeight={wp(44)}
-                    round={wp(14)}
-                    fontSize={sp(16)}
-                  >
-                    {t('betweenTime.cancel')}
-                  </Button>
-                </View>
-                <View style={styles.footerBtnWrapper}>
-                  <Button
-                    onPress={handleConfirm}
-                    disabled={disabled}
-                    block
-                    minHeight={wp(44)}
-                    round={wp(14)}
-                    fontSize={sp(16)}
-                  >
-                    {t('betweenTime.confirm')}
-                  </Button>
-                </View>
-              </View>
+              {sheetNode}
             </View>
-          </Animated.View>
-        </View>
-      </Modal>
+          </Modal>
+        ) : (
+          sheetNode
+        )
+      ) : null}
     </>
   );
 });
@@ -961,19 +1012,13 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
 const styles = StyleSheet.create({
   modalRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
-  backdrop: {
+  iosBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-  },
-  sheet: {
-    borderTopLeftRadius: wp(16),
-    borderTopRightRadius: wp(16),
-    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
   },
   sheetInner: {
-    flex: 1,
+    width: '100%',
     paddingHorizontal: wp(16),
     paddingTop: wp(14),
     paddingBottom: wp(16),
