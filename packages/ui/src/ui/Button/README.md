@@ -110,6 +110,7 @@ export function Demo() {
 - `btnIcon` 仍可用，但更推荐改为 `iconOnly`
 - `iconPosition` 支持 `start | end`
 - `iconOnly` 场景建议显式传 `accessibilityLabel`
+- 普通按钮默认按高度推导图标与 loading 尺寸，不会因为 `width` 较大而放大
 
 ## 按压反馈
 
@@ -267,6 +268,7 @@ export function Demo() {
 - `style` 控制按钮外层布局
 - `contentStyle` 控制按钮内容层
 - `textStyle` 仅在 `children` 为字符串或数字时生效
+- `onPressIn / onPressOut` 会与内置按压反馈组合执行
 - `iconSize` 影响 icon 的占位布局尺寸，不会强改传入 icon 节点自身大小
 - `shadow` 仍支持旧版能力
 - `borderWidth` 和 `round` 仍支持旧版精细化控制

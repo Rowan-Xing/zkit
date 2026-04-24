@@ -1,15 +1,18 @@
 import * as React from 'react';
-import type { DimensionValue } from 'react-native';
-import {
+import type {
   ColorSchemeName,
-  Pressable,
+  DimensionValue,
+  GestureResponderEvent,
   StyleProp,
-  StyleSheet,
   TextStyle,
+  ViewStyle,
+} from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
   processColor,
   useColorScheme,
   View,
-  ViewStyle,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -60,7 +63,7 @@ type ResolvedTonePalette = {
 
 type NativePressableProps = Omit<
   React.ComponentPropsWithoutRef<typeof Pressable>,
-  'style' | 'children' | 'disabled' | 'onPressIn' | 'onPressOut'
+  'style' | 'children' | 'disabled'
 >;
 
 export interface ButtonProps extends NativePressableProps {
@@ -170,6 +173,37 @@ export interface ButtonProps extends NativePressableProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+type ButtonVisualColors = {
+  backgroundColor: string;
+  borderColor: string;
+  textColor: string;
+};
+
+type PressEffectFlags = {
+  darken: boolean;
+  scale: boolean;
+  opacity: boolean;
+};
+
+type LinearPoint = { x: number; y: number };
+
+type LinearGradientProps = {
+  pointerEvents?: 'none';
+  colors: string[];
+  start?: LinearPoint;
+  end?: LinearPoint;
+  style?: StyleProp<ViewStyle>;
+};
+
+const PRESS_TIMING = { duration: 140, easing: Easing.out(Easing.cubic) } as const;
+const LOADING_TIMING = { duration: 200, easing: Easing.out(Easing.cubic) } as const;
+const DISABLED_OPACITY = 0.55;
+const PRESSED_OPACITY = 0.84;
+const PRESSED_SCALE = 0.98;
+const OUTLINE_BORDER_WIDTH = wp(1.5);
+const LINK_MIN_PADDING_Y = wp(2);
+const LOADING_TEXT_SHIFT = wp(2);
+
 const SEMANTIC_COLORS: Record<string, string> = {
   warn: '#F59E0B',
   warning: '#F59E0B',
@@ -250,6 +284,10 @@ function resolveVariantFromSkin(skin: ButtonSkin | undefined): ButtonVariant | u
   if (skin === 'thin') return 'soft';
   if (skin === 'outlined' || skin === 'dashed') return 'outline';
   return 'ghost';
+}
+
+function isPrimitiveTextChild(children: React.ReactNode): children is string | number {
+  return typeof children === 'string' || typeof children === 'number';
 }
 
 function resolveTonePalette(
@@ -385,9 +423,22 @@ function resolveShadowStyle(
 
 type LinearConfig = {
   colors: string[];
-  start?: { x: number; y: number };
-  end?: { x: number; y: number };
+  start?: LinearPoint;
+  end?: LinearPoint;
 };
+
+const LINEAR_DIRECTIONS: Record<string, Pick<LinearConfig, 'start' | 'end'>> = {
+  'to right': { start: { x: 0, y: 0.5 }, end: { x: 1, y: 0.5 } },
+  'to left': { start: { x: 1, y: 0.5 }, end: { x: 0, y: 0.5 } },
+  'to bottom': { start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } },
+  'to top': { start: { x: 0.5, y: 1 }, end: { x: 0.5, y: 0 } },
+  'to bottom right': { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } },
+  'to bottom left': { start: { x: 1, y: 0 }, end: { x: 0, y: 1 } },
+  'to top right': { start: { x: 0, y: 1 }, end: { x: 1, y: 0 } },
+  'to top left': { start: { x: 1, y: 1 }, end: { x: 0, y: 0 } },
+};
+
+let cachedLinearGradientComponent: React.ComponentType<LinearGradientProps> | null | undefined;
 
 function degToVector(deg: number) {
   const rad = (deg * Math.PI) / 180;
@@ -402,26 +453,18 @@ function parseLinear(linear: string[] | undefined): LinearConfig | undefined {
   const raw = linear.map((x) => String(x));
 
   const first = raw[0]?.trim() ?? '';
-  const hasDirection = first.includes('deg') || first.startsWith('to ');
+  const direction = first.toLowerCase();
+  const hasDirection = direction.includes('deg') || direction.startsWith('to ');
   const colors = (hasDirection ? raw.slice(1) : raw).filter(Boolean);
   if (colors.length < 2) return undefined;
 
   if (!hasDirection) return { colors };
 
-  if (first.startsWith('to ')) {
-    const key = first.toLowerCase();
-    if (key === 'to right') return { colors, start: { x: 0, y: 0.5 }, end: { x: 1, y: 0.5 } };
-    if (key === 'to left') return { colors, start: { x: 1, y: 0.5 }, end: { x: 0, y: 0.5 } };
-    if (key === 'to bottom') return { colors, start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } };
-    if (key === 'to top') return { colors, start: { x: 0.5, y: 1 }, end: { x: 0.5, y: 0 } };
-    if (key === 'to bottom right') return { colors, start: { x: 0, y: 0 }, end: { x: 1, y: 1 } };
-    if (key === 'to bottom left') return { colors, start: { x: 1, y: 0 }, end: { x: 0, y: 1 } };
-    if (key === 'to top right') return { colors, start: { x: 0, y: 1 }, end: { x: 1, y: 0 } };
-    if (key === 'to top left') return { colors, start: { x: 1, y: 1 }, end: { x: 0, y: 0 } };
-    return { colors };
+  if (direction.startsWith('to ')) {
+    return { colors, ...LINEAR_DIRECTIONS[direction] };
   }
 
-  const n = parseFloat(first.replace('deg', '').trim());
+  const n = parseFloat(direction.replace('deg', '').trim());
   if (!Number.isFinite(n)) return { colors };
   const v = degToVector(n);
   return {
@@ -432,12 +475,332 @@ function parseLinear(linear: string[] | undefined): LinearConfig | undefined {
 }
 
 function pickLinearGradientComponent() {
+  if (cachedLinearGradientComponent !== undefined) return cachedLinearGradientComponent;
+
   try {
-    const mod = require('expo-linear-gradient') as { LinearGradient?: React.ComponentType<any> };
-    return mod.LinearGradient ?? null;
+    const mod = require('expo-linear-gradient') as {
+      LinearGradient?: React.ComponentType<LinearGradientProps>;
+    };
+    cachedLinearGradientComponent = mod.LinearGradient ?? null;
   } catch {
-    return null;
+    cachedLinearGradientComponent = null;
   }
+
+  return cachedLinearGradientComponent;
+}
+
+function resolveButtonSizeStyle({
+  block,
+  width,
+  height,
+  minHeight,
+  iconOnly,
+  sizeConfig,
+}: {
+  block: boolean;
+  width?: DimensionValue;
+  height?: DimensionValue;
+  minHeight?: number;
+  iconOnly: boolean;
+  sizeConfig: ButtonSizeConfig;
+}): ViewStyle {
+  const widthFromBlock = block ? '100%' : undefined;
+  const resolvedWidth = width ?? widthFromBlock;
+  const squareSide = normalizeNumber(width) ?? normalizeNumber(height) ?? sizeConfig.iconOnlySide;
+
+  if (iconOnly) {
+    return {
+      width: resolvedWidth ?? squareSide,
+      height: height ?? squareSide,
+    };
+  }
+
+  return {
+    ...(resolvedWidth !== undefined ? { width: resolvedWidth } : undefined),
+    ...(height !== undefined ? { height } : undefined),
+    minHeight: minHeight ?? sizeConfig.minHeight,
+  };
+}
+
+function resolveButtonSideLength(
+  sizeStyle: ViewStyle,
+  iconOnly: boolean,
+  minHeight: number | undefined,
+  sizeConfig: ButtonSizeConfig
+) {
+  const heightSide = normalizeNumber(sizeStyle.height);
+  if (heightSide != null) return heightSide;
+
+  if (iconOnly) {
+    return normalizeNumber(sizeStyle.width) ?? sizeConfig.iconOnlySide;
+  }
+
+  return minHeight ?? sizeConfig.minHeight;
+}
+
+function resolveRadiusStyle({
+  rounded,
+  shape,
+  sizeStyle,
+  iconOnly,
+  minHeight,
+  radius,
+  cornerRadii,
+  sizeConfig,
+}: {
+  rounded: boolean;
+  shape: ButtonShape;
+  sizeStyle: ViewStyle;
+  iconOnly: boolean;
+  minHeight?: number;
+  radius?: number;
+  cornerRadii?: ViewStyle;
+  sizeConfig: ButtonSizeConfig;
+}): ViewStyle {
+  if (rounded || shape === 'pill') {
+    const r = resolveButtonSideLength(sizeStyle, iconOnly, minHeight, sizeConfig) / 2;
+    return {
+      borderRadius: r,
+      borderTopLeftRadius: r,
+      borderTopRightRadius: r,
+      borderBottomRightRadius: r,
+      borderBottomLeftRadius: r,
+    };
+  }
+
+  if (shape === 'square') {
+    return { borderRadius: 0 };
+  }
+
+  if (cornerRadii) {
+    return { ...cornerRadii };
+  }
+
+  if (typeof radius === 'number' && Number.isFinite(radius)) {
+    return { borderRadius: radius };
+  }
+
+  return { borderRadius: sizeConfig.radius };
+}
+
+function resolveVisualColors({
+  variant,
+  visualDisabled,
+  hasGradientBackground,
+  linearCfg,
+  bgOverride,
+  fontOverride,
+  disabledBgOverride,
+  disabledFontOverride,
+  disabledBorderOverride,
+  primary,
+  tonePalette,
+  theme,
+}: {
+  variant: ButtonVariant;
+  visualDisabled: boolean;
+  hasGradientBackground: boolean;
+  linearCfg?: LinearConfig;
+  bgOverride?: string;
+  fontOverride?: string;
+  disabledBgOverride?: string;
+  disabledFontOverride?: string;
+  disabledBorderOverride?: string;
+  primary: string;
+  tonePalette: ResolvedTonePalette;
+  theme: ReturnType<typeof useTheme>;
+}): ButtonVisualColors {
+  const finalBg = bgOverride ?? primary;
+  const disabledTextColor = disabledFontOverride ?? theme.colors.disabled;
+  const fallbackLinearBg = resolveColorToken(linearCfg?.colors[0], finalBg);
+
+  if (hasGradientBackground) {
+    return {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+      textColor: visualDisabled ? disabledTextColor : (fontOverride ?? tonePalette.solidTextColor),
+    };
+  }
+
+  if (variant === 'ghost' || variant === 'link') {
+    return {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+      textColor: visualDisabled ? disabledTextColor : (fontOverride ?? finalBg),
+    };
+  }
+
+  if (variant === 'outline') {
+    return {
+      backgroundColor: 'transparent',
+      borderColor: visualDisabled ? (disabledBorderOverride ?? theme.colors.border) : finalBg,
+      textColor: visualDisabled ? disabledTextColor : (fontOverride ?? finalBg),
+    };
+  }
+
+  if (variant === 'soft') {
+    const softBg = pickRgbaFromColor(finalBg, 0.12) ?? theme.colors.secondary;
+    const softBorder = pickRgbaFromColor(finalBg, 0.22) ?? theme.colors.border;
+
+    return {
+      backgroundColor: visualDisabled ? (disabledBgOverride ?? theme.colors.secondary) : softBg,
+      borderColor: visualDisabled ? (disabledBorderOverride ?? theme.colors.border) : softBorder,
+      textColor: visualDisabled ? disabledTextColor : (fontOverride ?? finalBg),
+    };
+  }
+
+  return {
+    backgroundColor: visualDisabled
+      ? (disabledBgOverride ?? theme.colors.secondary)
+      : linearCfg
+        ? fallbackLinearBg
+        : finalBg,
+    borderColor: 'transparent',
+    textColor: visualDisabled ? disabledTextColor : (fontOverride ?? tonePalette.solidTextColor),
+  };
+}
+
+function resolveContentPaddingStyle({
+  iconOnly,
+  variant,
+  paddingHorizontal,
+  paddingVertical,
+  sizeConfig,
+}: {
+  iconOnly: boolean;
+  variant: ButtonVariant;
+  paddingHorizontal?: number;
+  paddingVertical?: number;
+  sizeConfig: ButtonSizeConfig;
+}): ViewStyle {
+  if (iconOnly) return {};
+
+  const px = paddingHorizontal ?? sizeConfig.paddingHorizontal;
+  const py = paddingVertical ?? sizeConfig.paddingVertical;
+
+  if (variant === 'link') {
+    return { paddingHorizontal: 0, paddingVertical: Math.max(LINK_MIN_PADDING_Y, py * 0.25) };
+  }
+
+  return { paddingHorizontal: px, paddingVertical: py };
+}
+
+function resolvePressEffect({
+  disableHover,
+  interactionDisabled,
+  pressEffect,
+}: {
+  disableHover: boolean;
+  interactionDisabled: boolean;
+  pressEffect: ButtonPressEffect;
+}): ButtonPressEffect {
+  if (disableHover || interactionDisabled) return 'none';
+  if (pressEffect !== 'auto') return pressEffect;
+  return 'scale-opacity';
+}
+
+function resolvePressEffectFlags(pressEffect: ButtonPressEffect): PressEffectFlags {
+  return {
+    darken: pressEffect === 'darken' || pressEffect === 'scale-darken',
+    scale:
+      pressEffect === 'scale' ||
+      pressEffect === 'scale-darken' ||
+      pressEffect === 'scale-opacity',
+    opacity: pressEffect === 'opacity' || pressEffect === 'scale-opacity',
+  };
+}
+
+function resolvePressOverlay({
+  darken,
+  hasGradientBackground,
+  variant,
+  primary,
+}: {
+  darken: boolean;
+  hasGradientBackground: boolean;
+  variant: ButtonVariant;
+  primary: string;
+}) {
+  if (!darken) return { color: '#000000', strength: 0 };
+
+  const isFilled = hasGradientBackground || variant === 'solid' || variant === 'soft';
+  return {
+    color: isFilled ? '#000000' : primary,
+    strength: hasGradientBackground || variant === 'solid' ? 0.12 : 0.08,
+  };
+}
+
+function resolveBorderStyle({
+  variant,
+  dashedBorder,
+  borderWidth,
+  visualColors,
+  theme,
+}: {
+  variant: ButtonVariant;
+  dashedBorder: boolean;
+  borderWidth?: ViewStyle;
+  visualColors: ButtonVisualColors;
+  theme: ReturnType<typeof useTheme>;
+}): ViewStyle {
+  const isOutlineLike = variant === 'outline' || dashedBorder;
+  const baseBorderWidth = borderWidth ?? (isOutlineLike ? { borderWidth: OUTLINE_BORDER_WIDTH } : undefined);
+
+  if (!baseBorderWidth) return {};
+
+  return {
+    ...baseBorderWidth,
+    borderStyle: dashedBorder ? 'dashed' : 'solid',
+    borderColor:
+      visualColors.borderColor !== 'transparent' ? visualColors.borderColor : theme.colors.border,
+  };
+}
+
+function resolveIconBoxStyle(hasIcon: boolean, iconSize: number): ViewStyle {
+  if (!hasIcon) return {};
+
+  return {
+    height: iconSize,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  };
+}
+
+function resolveIconSize({
+  iconSize,
+  sizeStyle,
+  iconOnly,
+  minHeight,
+  sizeConfig,
+}: {
+  iconSize?: number;
+  sizeStyle: ViewStyle;
+  iconOnly: boolean;
+  minHeight?: number;
+  sizeConfig: ButtonSizeConfig;
+}) {
+  if (typeof iconSize === 'number' && Number.isFinite(iconSize)) return iconSize;
+  const side = resolveButtonSideLength(sizeStyle, iconOnly, minHeight, sizeConfig);
+  return Math.max(sizeConfig.iconSize, Math.round(side * 0.45));
+}
+
+function resolveLoadingSize({
+  loadingSize,
+  sizeStyle,
+  iconOnly,
+  minHeight,
+  sizeConfig,
+}: {
+  loadingSize?: number;
+  sizeStyle: ViewStyle;
+  iconOnly: boolean;
+  minHeight?: number;
+  sizeConfig: ButtonSizeConfig;
+}) {
+  if (typeof loadingSize === 'number' && Number.isFinite(loadingSize)) return loadingSize;
+  const side = resolveButtonSideLength(sizeStyle, iconOnly, minHeight, sizeConfig);
+  return Math.max(sizeConfig.loadingSize, Math.round(side * 0.45));
 }
 
 export function Button({
@@ -487,6 +850,8 @@ export function Button({
   contentStyle,
   textStyle,
   onPress,
+  onPressIn,
+  onPressOut,
   testID,
   accessibilityState,
   accessibilityLabel,
@@ -519,7 +884,9 @@ export function Button({
     scheme === 'dark' ? disabledDarkBorderColor : disabledBorderColor;
 
   const linearCfg = React.useMemo(() => parseLinear(linear), [linear]);
-  const LinearGradientComponent = React.useMemo<React.ComponentType<any> | undefined>(
+  const LinearGradientComponent = React.useMemo<
+    React.ComponentType<LinearGradientProps> | undefined
+  >(
     () => (linearCfg ? (pickLinearGradientComponent() ?? undefined) : undefined),
     [linearCfg]
   );
@@ -532,185 +899,97 @@ export function Button({
     [resolvedVariant, scheme, shadow]
   );
 
-  const defaultMinHeight = sizeConfig.minHeight;
-  const defaultPaddingX = sizeConfig.paddingHorizontal;
-  const defaultPaddingY = sizeConfig.paddingVertical;
-  const defaultFontSize = sizeConfig.fontSize;
-  const defaultRadius = sizeConfig.radius;
-  const defaultIconOnlySide = sizeConfig.iconOnlySide;
   const defaultGap = sizeConfig.gap;
-  const defaultIconSize = sizeConfig.iconSize;
-  const defaultLoadingSize = sizeConfig.loadingSize;
+  const resolvedButtonSizeStyle = React.useMemo(
+    () =>
+      resolveButtonSizeStyle({
+        block,
+        width,
+        height,
+        minHeight,
+        iconOnly: resolvedIconOnly,
+        sizeConfig,
+      }),
+    [block, height, minHeight, resolvedIconOnly, sizeConfig, width]
+  );
 
-  const resolvedButtonSizeStyle = React.useMemo<ViewStyle>(() => {
-    const widthFromBlock = block ? '100%' : undefined;
-    const resolvedW = width ?? widthFromBlock;
-    const resolvedH = height;
-    const resolvedMinHeight = minHeight ?? defaultMinHeight;
-    const squareSide = normalizeNumber(width) ?? normalizeNumber(height) ?? defaultIconOnlySide;
+  const resolvedRadiusStyle = React.useMemo(
+    () =>
+      resolveRadiusStyle({
+        rounded,
+        shape,
+        sizeStyle: resolvedButtonSizeStyle,
+        iconOnly: resolvedIconOnly,
+        minHeight,
+        radius,
+        cornerRadii: resolvedCornerRadii,
+        sizeConfig,
+      }),
+    [
+      minHeight,
+      radius,
+      resolvedButtonSizeStyle,
+      resolvedCornerRadii,
+      resolvedIconOnly,
+      rounded,
+      shape,
+      sizeConfig,
+    ]
+  );
 
-    if (resolvedIconOnly) {
-      return {
-        ...(resolvedW !== undefined ? { width: resolvedW } : { width: squareSide }),
-        ...(resolvedH !== undefined ? { height: resolvedH } : { height: squareSide }),
-      };
-    }
+  const resolvedVisualColors = React.useMemo(
+    () =>
+      resolveVisualColors({
+        variant: resolvedVariant,
+        visualDisabled: resolvedVisualDisabled,
+        hasGradientBackground,
+        linearCfg,
+        bgOverride: resolvedBgOverride,
+        fontOverride: resolvedFontOverride,
+        disabledBgOverride: resolvedDisabledBgOverride,
+        disabledFontOverride: resolvedDisabledFontOverride,
+        disabledBorderOverride: resolvedDisabledBorderOverride,
+        primary: resolvedPrimary,
+        tonePalette: resolvedTonePalette,
+        theme,
+      }),
+    [
+      hasGradientBackground,
+      linearCfg,
+      resolvedBgOverride,
+      resolvedDisabledBgOverride,
+      resolvedDisabledBorderOverride,
+      resolvedDisabledFontOverride,
+      resolvedFontOverride,
+      resolvedPrimary,
+      resolvedTonePalette,
+      resolvedVariant,
+      resolvedVisualDisabled,
+      theme,
+    ]
+  );
 
-    return {
-      ...(resolvedW !== undefined ? { width: resolvedW } : null),
-      ...(resolvedH !== undefined ? { height: resolvedH } : null),
-      minHeight: resolvedMinHeight,
-    };
-  }, [block, defaultIconOnlySide, defaultMinHeight, height, minHeight, resolvedIconOnly, width]);
-
-  const resolvedRadiusStyle = React.useMemo<ViewStyle>(() => {
-    if (rounded || shape === 'pill') {
-      const side =
-        normalizeNumber(resolvedButtonSizeStyle.height) ??
-        normalizeNumber(resolvedButtonSizeStyle.width) ??
-        minHeight ??
-        defaultMinHeight;
-      const r = side / 2;
-      return {
-        borderRadius: r,
-        borderTopLeftRadius: r,
-        borderTopRightRadius: r,
-        borderBottomRightRadius: r,
-        borderBottomLeftRadius: r,
-      };
-    }
-
-    if (shape === 'square') {
-      return { borderRadius: 0 };
-    }
-
-    if (resolvedCornerRadii) {
-      return { ...resolvedCornerRadii };
-    }
-
-    if (typeof radius === 'number' && Number.isFinite(radius)) {
-      return { borderRadius: radius };
-    }
-
-    return { borderRadius: defaultRadius };
-  }, [
-    defaultMinHeight,
-    defaultRadius,
-    minHeight,
-    radius,
-    resolvedButtonSizeStyle.height,
-    resolvedButtonSizeStyle.width,
-    resolvedCornerRadii,
-    rounded,
-    shape,
-  ]);
-
-  const resolvedVisualColors = React.useMemo(() => {
-    const finalBg = resolvedBgOverride ?? resolvedPrimary;
-    const thinBg = pickRgbaFromColor(finalBg, 0.12);
-    const thinBorder = pickRgbaFromColor(finalBg, 0.22);
-    const fallbackLinearBg = resolveColorToken(linearCfg?.colors[0], finalBg);
-
-    if (hasGradientBackground) {
-      return {
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        textColor: resolvedVisualDisabled
-          ? (resolvedDisabledFontOverride ?? theme.colors.disabled)
-          : (resolvedFontOverride ?? resolvedTonePalette.solidTextColor),
-      };
-    }
-
-    if (resolvedVariant === 'ghost' || resolvedVariant === 'link') {
-      return {
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        textColor: resolvedVisualDisabled
-          ? (resolvedDisabledFontOverride ?? theme.colors.disabled)
-          : (resolvedFontOverride ?? finalBg),
-      };
-    }
-
-    if (resolvedVariant === 'outline') {
-      return {
-        backgroundColor: 'transparent',
-        borderColor: resolvedVisualDisabled
-          ? (resolvedDisabledBorderOverride ?? theme.colors.border)
-          : finalBg,
-        textColor: resolvedVisualDisabled
-          ? (resolvedDisabledFontOverride ?? theme.colors.disabled)
-          : (resolvedFontOverride ?? finalBg),
-      };
-    }
-
-    if (resolvedVariant === 'soft') {
-      return {
-        backgroundColor: resolvedVisualDisabled
-          ? (resolvedDisabledBgOverride ?? theme.colors.secondary)
-          : (thinBg ?? theme.colors.secondary),
-        borderColor: resolvedVisualDisabled
-          ? (resolvedDisabledBorderOverride ?? theme.colors.border)
-          : (thinBorder ?? theme.colors.border),
-        textColor: resolvedVisualDisabled
-          ? (resolvedDisabledFontOverride ?? theme.colors.disabled)
-          : (resolvedFontOverride ?? finalBg),
-      };
-    }
-
-    return {
-      backgroundColor: resolvedVisualDisabled
-        ? (resolvedDisabledBgOverride ?? theme.colors.secondary)
-        : linearCfg
-          ? fallbackLinearBg
-          : finalBg,
-      borderColor: 'transparent',
-      textColor: resolvedVisualDisabled
-        ? (resolvedDisabledFontOverride ?? theme.colors.disabled)
-        : (resolvedFontOverride ?? resolvedTonePalette.solidTextColor),
-    };
-  }, [
-    hasGradientBackground,
-    linearCfg,
-    resolvedBgOverride,
-    resolvedDisabledBgOverride,
-    resolvedDisabledBorderOverride,
-    resolvedDisabledFontOverride,
-    resolvedFontOverride,
-    resolvedPrimary,
-    resolvedTonePalette.solidTextColor,
-    resolvedVariant,
-    resolvedVisualDisabled,
-    theme.colors.border,
-    theme.colors.disabled,
-    theme.colors.secondary,
-  ]);
-
-  const resolvedContentPaddingStyle = React.useMemo<ViewStyle>(() => {
-    if (resolvedIconOnly) return {};
-    const px = paddingHorizontal ?? defaultPaddingX;
-    const py = paddingVertical ?? defaultPaddingY;
-    if (resolvedVariant === 'link') {
-      return { paddingHorizontal: 0, paddingVertical: Math.max(wp(2), py * 0.25) };
-    }
-    return { paddingHorizontal: px, paddingVertical: py };
-  }, [
-    defaultPaddingX,
-    defaultPaddingY,
-    paddingHorizontal,
-    paddingVertical,
-    resolvedIconOnly,
-    resolvedVariant,
-  ]);
+  const resolvedContentPaddingStyle = React.useMemo(
+    () =>
+      resolveContentPaddingStyle({
+        iconOnly: resolvedIconOnly,
+        variant: resolvedVariant,
+        paddingHorizontal,
+        paddingVertical,
+        sizeConfig,
+      }),
+    [paddingHorizontal, paddingVertical, resolvedIconOnly, resolvedVariant, sizeConfig]
+  );
 
   const resolvedText = React.useMemo(() => {
     if (children == null) return null;
-    if (typeof children === 'string' || typeof children === 'number') {
+    if (isPrimitiveTextChild(children)) {
       return (
         <Text
           numberOfLines={1}
           style={[
             styles.textBase,
-            { fontSize: fontSize ?? defaultFontSize, color: resolvedVisualColors.textColor },
+            { fontSize: fontSize ?? sizeConfig.fontSize, color: resolvedVisualColors.textColor },
             resolvedVariant === 'link' ? styles.linkText : null,
             textStyle,
           ]}
@@ -722,83 +1001,72 @@ export function Button({
     return children;
   }, [
     children,
-    defaultFontSize,
     fontSize,
     resolvedVariant,
     resolvedVisualColors.textColor,
+    sizeConfig.fontSize,
     textStyle,
   ]);
 
   const hasText = Boolean(resolvedText);
   const hasIcon = icon != null;
 
-  const resolvedIconSize = React.useMemo(() => {
-    if (typeof iconSize === 'number' && Number.isFinite(iconSize)) return iconSize;
-    const side =
-      normalizeNumber(resolvedButtonSizeStyle.height) ??
-      normalizeNumber(resolvedButtonSizeStyle.width) ??
-      (resolvedIconOnly ? defaultIconOnlySide : (minHeight ?? defaultMinHeight));
-    return Math.max(defaultIconSize, Math.round(side * 0.45));
-  }, [
-    defaultIconOnlySide,
-    defaultIconSize,
-    defaultMinHeight,
-    iconSize,
-    minHeight,
-    resolvedButtonSizeStyle.height,
-    resolvedButtonSizeStyle.width,
-    resolvedIconOnly,
-  ]);
+  const resolvedIconSize = React.useMemo(
+    () =>
+      resolveIconSize({
+        iconSize,
+        sizeStyle: resolvedButtonSizeStyle,
+        iconOnly: resolvedIconOnly,
+        minHeight,
+        sizeConfig,
+      }),
+    [iconSize, minHeight, resolvedButtonSizeStyle, resolvedIconOnly, sizeConfig]
+  );
 
   const resolvedIconNode = React.useMemo(() => (icon == null ? null : icon), [icon]);
   const resolvedIconOnlyNode = resolvedIconNode ?? resolvedText;
 
   const inferredAccessibilityLabel =
-    resolvedIconOnly && (typeof children === 'string' || typeof children === 'number')
+    resolvedIconOnly && isPrimitiveTextChild(children)
       ? String(children)
       : undefined;
   const resolvedAccessibilityLabel = accessibilityLabel ?? inferredAccessibilityLabel;
 
   const pressSv = useSharedValue(0);
-  const timing = React.useMemo(() => ({ duration: 140, easing: Easing.out(Easing.cubic) }), []);
-
   const loadingSv = useSharedValue(loading ? 1 : 0);
-  const loadingTiming = React.useMemo(
-    () => ({ duration: 200, easing: Easing.out(Easing.cubic) }),
-    []
-  );
   const [spinnerMounted, setSpinnerMounted] = React.useState(loading);
   const hideSpinnerTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const resolvedPressEffect = React.useMemo<ButtonPressEffect>(() => {
-    if (disableHover) return 'none';
-    if (resolvedInteractionDisabled) return 'none';
-    if (pressEffect !== 'auto') return pressEffect;
-    return 'scale-opacity';
-  }, [disableHover, pressEffect, resolvedInteractionDisabled]);
+  const resolvedPressEffect = React.useMemo(
+    () =>
+      resolvePressEffect({
+        disableHover,
+        interactionDisabled: resolvedInteractionDisabled,
+        pressEffect,
+      }),
+    [disableHover, pressEffect, resolvedInteractionDisabled]
+  );
 
-  const pressDarkenEnabled =
-    resolvedPressEffect === 'darken' || resolvedPressEffect === 'scale-darken';
-  const pressScaleEnabled =
-    resolvedPressEffect === 'scale' ||
-    resolvedPressEffect === 'scale-darken' ||
-    resolvedPressEffect === 'scale-opacity';
-  const pressOpacityEnabled =
-    resolvedPressEffect === 'opacity' || resolvedPressEffect === 'scale-opacity';
+  const pressEffectFlags = React.useMemo(
+    () => resolvePressEffectFlags(resolvedPressEffect),
+    [resolvedPressEffect]
+  );
+  const {
+    darken: pressDarkenEnabled,
+    opacity: pressOpacityEnabled,
+    scale: pressScaleEnabled,
+  } = pressEffectFlags;
 
-  const resolvedPressOverlayColor = React.useMemo(() => {
-    if (!pressDarkenEnabled) return '#000000';
-    if (hasGradientBackground || resolvedVariant === 'solid' || resolvedVariant === 'soft')
-      return '#000000';
-    return resolvedPrimary;
-  }, [hasGradientBackground, pressDarkenEnabled, resolvedPrimary, resolvedVariant]);
-
-  const resolvedPressOverlayStrength = React.useMemo(() => {
-    if (!pressDarkenEnabled) return 0;
-    if (hasGradientBackground || resolvedVariant === 'solid') return 0.12;
-    if (resolvedVariant === 'soft') return 0.08;
-    return 0.08;
-  }, [hasGradientBackground, pressDarkenEnabled, resolvedVariant]);
+  const resolvedPressOverlay = React.useMemo(
+    () =>
+      resolvePressOverlay({
+        darken: pressDarkenEnabled,
+        hasGradientBackground,
+        variant: resolvedVariant,
+        primary: resolvedPrimary,
+      }),
+    [hasGradientBackground, pressDarkenEnabled, resolvedPrimary, resolvedVariant]
+  );
 
   React.useEffect(() => {
     if (resolvedInteractionDisabled || resolvedPressEffect === 'none') {
@@ -814,13 +1082,15 @@ export function Button({
 
     if (loading) {
       setSpinnerMounted(true);
-    } else {
-      hideSpinnerTimerRef.current = setTimeout(() => {
-        setSpinnerMounted(false);
-      }, loadingTiming.duration);
     }
 
-    loadingSv.value = withTiming(loading ? 1 : 0, loadingTiming);
+    loadingSv.value = withTiming(loading ? 1 : 0, LOADING_TIMING);
+
+    if (!loading && spinnerMounted) {
+      hideSpinnerTimerRef.current = setTimeout(() => {
+        setSpinnerMounted(false);
+      }, LOADING_TIMING.duration);
+    }
 
     return () => {
       if (hideSpinnerTimerRef.current) {
@@ -828,13 +1098,15 @@ export function Button({
         hideSpinnerTimerRef.current = null;
       }
     };
-  }, [loading, loadingSv, loadingTiming]);
+  }, [loading, loadingSv, spinnerMounted]);
 
   const rootAnimatedStyle = useAnimatedStyle(() => {
-    const baseOpacity = resolvedVisualDisabled ? 0.55 : 1;
-    const scale = pressScaleEnabled ? interpolate(pressSv.value, [0, 1], [1, 0.98]) : 1;
+    const baseOpacity = resolvedVisualDisabled ? DISABLED_OPACITY : 1;
+    const scale = pressScaleEnabled
+      ? interpolate(pressSv.value, [0, 1], [1, PRESSED_SCALE])
+      : 1;
     const opacity = pressOpacityEnabled
-      ? interpolate(pressSv.value, [0, 1], [baseOpacity, 0.84])
+      ? interpolate(pressSv.value, [0, 1], [baseOpacity, PRESSED_OPACITY])
       : baseOpacity;
     return {
       opacity,
@@ -844,71 +1116,70 @@ export function Button({
 
   const pressOverlayAnimatedStyle = useAnimatedStyle(() => {
     const opacity = pressDarkenEnabled
-      ? interpolate(pressSv.value, [0, 1], [0, resolvedPressOverlayStrength])
+      ? interpolate(pressSv.value, [0, 1], [0, resolvedPressOverlay.strength])
       : 0;
     return { opacity };
-  }, [pressDarkenEnabled, resolvedPressOverlayStrength]);
+  }, [pressDarkenEnabled, resolvedPressOverlay.strength]);
 
   const handlePress = React.useCallback(
-    (e: any) => {
+    (e: GestureResponderEvent) => {
       if (resolvedInteractionDisabled) return;
       onPress?.(e);
     },
     [onPress, resolvedInteractionDisabled]
   );
 
-  const resolvedBorderStyle = React.useMemo<ViewStyle>(() => {
-    const isOutlineLike = resolvedVariant === 'outline' || dashedBorder;
-    const baseBorderWidth =
-      resolvedBorderWidth ?? (isOutlineLike ? { borderWidth: wp(1.5) } : undefined);
-    const borderStyle = dashedBorder ? 'dashed' : 'solid';
-    const borderColor =
-      resolvedVisualColors.borderColor !== 'transparent'
-        ? resolvedVisualColors.borderColor
-        : theme.colors.border;
-    return {
-      ...(baseBorderWidth ?? null),
-      ...(baseBorderWidth ? { borderStyle } : null),
-      ...(baseBorderWidth ? { borderColor } : null),
-    };
-  }, [
-    dashedBorder,
-    resolvedBorderWidth,
-    resolvedVariant,
-    resolvedVisualColors.borderColor,
-    theme.colors.border,
-  ]);
+  const handlePressIn = React.useCallback(
+    (e: GestureResponderEvent) => {
+      if (!resolvedInteractionDisabled && resolvedPressEffect !== 'none') {
+        pressSv.value = withTiming(1, PRESS_TIMING);
+      }
+      onPressIn?.(e);
+    },
+    [onPressIn, pressSv, resolvedInteractionDisabled, resolvedPressEffect]
+  );
 
-  const resolvedIconBaseBoxStyle = React.useMemo<ViewStyle>(() => {
-    if (!hasIcon) return {};
-    return {
-      height: resolvedIconSize,
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-    };
-  }, [hasIcon, resolvedIconSize]);
+  const handlePressOut = React.useCallback(
+    (e: GestureResponderEvent) => {
+      if (!resolvedInteractionDisabled && resolvedPressEffect !== 'none') {
+        pressSv.value = withTiming(0, PRESS_TIMING);
+      }
+      onPressOut?.(e);
+    },
+    [onPressOut, pressSv, resolvedInteractionDisabled, resolvedPressEffect]
+  );
 
-  const resolvedLoadingSize = React.useMemo(() => {
-    if (typeof loadingSize === 'number' && Number.isFinite(loadingSize)) return loadingSize;
-    const baseMinH = minHeight ?? defaultMinHeight;
-    const sideFromH = normalizeNumber(resolvedButtonSizeStyle.height);
-    const sideFromW = normalizeNumber(resolvedButtonSizeStyle.width);
-    const side = sideFromH ?? sideFromW ?? (resolvedIconOnly ? defaultIconOnlySide : baseMinH);
-    return Math.max(defaultLoadingSize, Math.round(side * 0.45));
-  }, [
-    defaultIconOnlySide,
-    defaultLoadingSize,
-    defaultMinHeight,
-    loadingSize,
-    minHeight,
-    resolvedButtonSizeStyle.height,
-    resolvedButtonSizeStyle.width,
-    resolvedIconOnly,
-  ]);
+  const resolvedBorderStyle = React.useMemo(
+    () =>
+      resolveBorderStyle({
+        variant: resolvedVariant,
+        dashedBorder,
+        borderWidth: resolvedBorderWidth,
+        visualColors: resolvedVisualColors,
+        theme,
+      }),
+    [dashedBorder, resolvedBorderWidth, resolvedVariant, resolvedVisualColors, theme]
+  );
+
+  const resolvedIconBaseBoxStyle = React.useMemo(
+    () => resolveIconBoxStyle(hasIcon, resolvedIconSize),
+    [hasIcon, resolvedIconSize]
+  );
+
+  const resolvedLoadingSize = React.useMemo(
+    () =>
+      resolveLoadingSize({
+        loadingSize,
+        sizeStyle: resolvedButtonSizeStyle,
+        iconOnly: resolvedIconOnly,
+        minHeight,
+        sizeConfig,
+      }),
+    [loadingSize, minHeight, resolvedButtonSizeStyle, resolvedIconOnly, sizeConfig]
+  );
 
   const spinnerSize = resolvedLoadingSize;
-  const loadingTextShift = React.useMemo(() => wp(2), []);
+  const spinnerVisible = loading || spinnerMounted;
 
   const spinnerBoxAnimatedStyle = useAnimatedStyle(() => {
     const mr = hasText && !resolvedIconOnly ? (gap ?? defaultGap) : 0;
@@ -956,9 +1227,9 @@ export function Button({
       const scale = interpolate(loadingSv.value, [0, 1], [1, 0.98]);
       return { opacity, transform: [{ scale }] };
     }
-    const translateX = interpolate(loadingSv.value, [0, 1], [0, loadingTextShift]);
+    const translateX = interpolate(loadingSv.value, [0, 1], [0, LOADING_TEXT_SHIFT]);
     return { transform: [{ translateX }] };
-  }, [loadingSv, loadingTextShift, resolvedIconOnly]);
+  }, [loadingSv, resolvedIconOnly]);
 
   const shouldClipRoot =
     shadow === 'none' || resolvedVariant === 'ghost' || resolvedVariant === 'link';
@@ -973,17 +1244,11 @@ export function Button({
       accessibilityState={{
         ...accessibilityState,
         disabled: Boolean(resolvedInteractionDisabled),
-        busy: Boolean(loading),
+        busy: Boolean(loading || accessibilityState?.busy),
       }}
       disabled={resolvedInteractionDisabled}
-      onPressIn={() => {
-        if (resolvedInteractionDisabled || resolvedPressEffect === 'none') return;
-        pressSv.value = withTiming(1, timing);
-      }}
-      onPressOut={() => {
-        if (resolvedInteractionDisabled || resolvedPressEffect === 'none') return;
-        pressSv.value = withTiming(0, timing);
-      }}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onPress={handlePress}
       style={[
         styles.root,
@@ -1023,7 +1288,7 @@ export function Button({
           style={[
             StyleSheet.absoluteFill,
             resolvedRadiusStyle,
-            { backgroundColor: resolvedPressOverlayColor },
+            { backgroundColor: resolvedPressOverlay.color },
             pressOverlayAnimatedStyle,
           ]}
         />
@@ -1031,11 +1296,13 @@ export function Button({
         {resolvedIconOnly ? (
           <>
             <Animated.View style={[styles.centerOverlay, spinnerBoxAnimatedStyle]}>
-              <LoadingSpinner
-                animating={spinnerMounted}
-                color={resolvedVisualColors.textColor}
-                size={spinnerSize}
-              />
+              {spinnerVisible ? (
+                <LoadingSpinner
+                  animating={spinnerVisible}
+                  color={resolvedVisualColors.textColor}
+                  size={spinnerSize}
+                />
+              ) : null}
             </Animated.View>
             {resolvedIconOnlyNode ? (
               <Animated.View style={contentAnimatedStyle}>{resolvedIconOnlyNode}</Animated.View>
@@ -1046,11 +1313,13 @@ export function Button({
             <Animated.View
               style={[styles.spinnerBox, { height: spinnerSize }, spinnerBoxAnimatedStyle]}
             >
-              <LoadingSpinner
-                animating={spinnerMounted}
-                color={resolvedVisualColors.textColor}
-                size={spinnerSize}
-              />
+              {spinnerVisible ? (
+                <LoadingSpinner
+                  animating={spinnerVisible}
+                  color={resolvedVisualColors.textColor}
+                  size={spinnerSize}
+                />
+              ) : null}
             </Animated.View>
 
             {resolvedIconNode && iconPosition === 'start' ? (
