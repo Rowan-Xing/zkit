@@ -1,24 +1,35 @@
 # Switch
 
-Switch 是一个高性能的开关组件
+Switch 是布尔开关组件，状态模型与 Checkbox 这类选择控件保持一致：
 
+- `checked/defaultChecked/onChange`
+- 受控模式只跟随外部 `checked`
+- 非受控模式会先更新 UI 线程动画，再同步内部状态
 - 交互与过渡动画基于 `react-native-reanimated`
-- 支持 `value/onValueChange`（React 习惯）
-- 支持 `change/click` 事件语义：`onChange`（变更后）与 `onClick`（变更前）
 
 ## 基础用法
 
 ```tsx
-import { Switch } from 'y2kit-ui';
 import * as React from 'react';
+import { Switch } from 'y2kit-ui';
 
 export function Demo() {
-  const [open, setOpen] = React.useState(false);
-  return <Switch value={open} onValueChange={setOpen} />;
+  const [checked, setChecked] = React.useState(false);
+  return <Switch checked={checked} onChange={setChecked} />;
 }
 ```
 
-## 显示内文字
+## 内置文案
+
+```tsx
+import { Switch } from 'y2kit-ui';
+
+export function Demo() {
+  return <Switch checkedLabel="开" uncheckedLabel="关" />;
+}
+```
+
+## 语义色与尺寸
 
 ```tsx
 import { Switch } from 'y2kit-ui';
@@ -26,14 +37,16 @@ import { Switch } from 'y2kit-ui';
 export function Demo() {
   return (
     <>
-      <Switch label={['开', '关']} />
-      <Switch label={['ON', 'OFF']} />
+      <Switch tone="primary" />
+      <Switch tone="success" size="sm" />
+      <Switch tone="danger" size="lg" />
+      <Switch color="#0EA5E9" />
     </>
   );
 }
 ```
 
-## 修改颜色
+## 状态
 
 ```tsx
 import { Switch } from 'y2kit-ui';
@@ -41,39 +54,8 @@ import { Switch } from 'y2kit-ui';
 export function Demo() {
   return (
     <>
-      <Switch value color="danger" />
-      <Switch value color="success" />
-      <Switch value color="error" />
-    </>
-  );
-}
-```
-
-## 状态：disabled / loading
-
-```tsx
-import { Switch } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <>
-      <Switch value disabled />
-      <Switch value loading />
-    </>
-  );
-}
-```
-
-## 圆角与间隙
-
-```tsx
-import { Switch } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <>
-      <Switch round={4} space="6px" />
-      <Switch round={6} />
+      <Switch checked disabled />
+      <Switch checked loading />
     </>
   );
 }
@@ -81,86 +63,31 @@ export function Demo() {
 
 ## Props
 
-Switch 基于 React Native 的 `Pressable`，除下述 props 外，也支持 `Pressable` 的其它属性（例如 `hitSlop`、`accessibilityLabel`、`testID` 等）。
+Switch 基于 React Native `Pressable`，会透传常用 Pressable 属性和事件；组件自身固定使用 `accessibilityRole="switch"`，并维护 `checked/disabled/busy` 状态。
 
-### 值与状态
+### 状态
 
-- `value?: boolean`
-  - 默认值：`false`
-  - 说明：当前开关状态（受控）。
-- `defaultValue?: boolean`
-  - 默认值：`false`
-  - 说明：非受控模式下的初始开关状态（仅在未传 `value` 时生效）。
-- `disabled?: boolean`
-  - 默认值：`false`
-  - 说明：是否禁用。禁用后无法点击切换，并降低整体不透明度。
-- `loading?: boolean`
-  - 默认值：`false`
-  - 说明：是否加载中。加载中无法点击切换，并在圆点内显示旋转动效。
+- `checked?: boolean`：受控开关状态。
+- `defaultChecked?: boolean`：非受控初始状态，默认 `false`。
+- `onChange?: (checked: boolean) => void`：开关状态变更回调。
+- `disabled?: boolean`：禁用，默认 `false`。
+- `loading?: boolean`：加载中，默认 `false`；加载中不可切换，并在 thumb 内显示 spinner。
 
-### 样式
+### 外观
 
-- `size?: 'small' | 'normal' | 'large'`
-  - 默认值：`'normal'`
-  - 说明：尺寸规格。
-- `space?: number | string`
-  - 默认值：`'2px'`
-  - 说明：轨道内边距（圆点与轨道的“间隙”）。
-  - 取值：
-    - `number`：按 RN 数值像素解释
-    - `string`：支持 `'6px'` 或 `'6'`（会解析为数值）
-- `round?: string | number`
-  - 默认值：`''`（表现为胶囊圆角）
-  - 说明：轨道圆角。
-  - 取值：
-    - 空值：圆角 = `height / 2`
-    - `number`：按 RN 数值像素解释
-    - `string`：支持 `'6px'` 或 `'6'`（会解析为数值）
-
-### 颜色
-
-颜色 props 支持两种写法：
-
-- 语义色 token：`'primary' | 'danger' | 'success' | 'error' | 'info'`
-- 任意颜色字符串：例如 `'#FF0000'`、`'rgba(0,0,0,0.5)'`
-
-具体 props：
-
-- `color?: string`
-  - 默认值：`''`（空值时使用主题 `theme.colors.primary`）
-  - 说明：打开（激活）状态的轨道背景色。
-- `bgColor?: string`
-  - 默认值：`'info'`
-  - 说明：关闭（未激活）状态的轨道背景色（亮色模式）。
-- `darkBgColor?: string`
-  - 默认值：`''`
-  - 说明：关闭（未激活）状态的轨道背景色（暗黑模式）；空值时沿用 `bgColor` 的语义色/颜色解析逻辑。
-- `btnColor?: string`
-  - 默认值：`'white'`
-  - 说明：圆点（按钮）的背景色。
-
-### 文案
-
-- `label?: [string, string] | string[]`
-  - 默认值：`[]`
-  - 说明：轨道内的开关文字数组。
-  - 约定：
-    - `label[0]`：打开文案
-    - `label[1]`：关闭文案
-
-### 事件
-
-- `onValueChange?: (next: boolean) => void`
-  - 说明：状态更新回调（受控场景下用于更新 `value`）。
-- `onChange?: (status: boolean) => void`
-  - 说明：状态变更时触发，参数为变更后的状态。
-- `onClick?: (status: boolean) => void`
-  - 说明：组件被点击时触发，参数为变更前的状态。
-
-## 兼容映射
-
-为兼容 tmui 的命名，也支持：
-
-- `modelValue`：等价 `value`
-- `defaultModelValue`：等价 `defaultValue`
-- `onUpdateModelValue`：等价 `onValueChange`
+- `size?: 'sm' | 'md' | 'lg'`：尺寸，默认 `'md'`。
+- `tone?: 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info'`：语义色，默认 `'primary'`。
+- `color?: string`：选中轨道颜色覆盖，支持语义色 token 或颜色字符串。
+- `uncheckedColor?: string`：未选中轨道颜色覆盖。
+- `darkUncheckedColor?: string`：暗色模式下未选中轨道颜色覆盖。
+- `thumbColor?: string`：thumb 背景色覆盖。
+- `checkedLabelColor?: string`：选中文案颜色覆盖。
+- `uncheckedLabelColor?: string`：未选中文案颜色覆盖。
+- `checkedLabel?: string`：选中态轨道内文案。
+- `uncheckedLabel?: string`：未选中态轨道内文案。
+- `duration?: number`：状态切换动画时长，默认 `180`。
+- `thumbInset?: number`：thumb 与轨道边缘间距。
+- `radius?: number`：轨道圆角。
+- `style?: Pressable['style']`：外层 Pressable 样式。
+- `trackStyle?: StyleProp<ViewStyle>`：轨道样式覆盖。
+- `thumbStyle?: StyleProp<ViewStyle>`：thumb 样式覆盖。

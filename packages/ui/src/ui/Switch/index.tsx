@@ -1,207 +1,509 @@
 import * as React from 'react';
-import { ColorSchemeName, Pressable, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
+import type {
+  GestureResponderEvent,
+  Insets,
+  PressableStateCallbackType,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
+import { Pressable, processColor, StyleSheet, useColorScheme, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
   interpolateColor,
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 import { wp } from 'y2kit-tools';
 import { useTheme } from '../../theme/useTheme';
+import type { Theme } from '../../theme/types';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { Text } from '../Text';
 
-type SwitchSize = 'small' | 'normal' | 'large';
+export type SwitchSize = 'sm' | 'md' | 'lg';
+export type SwitchTone = 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info';
 
-function parsePx(value: number | string | undefined, fallback: number) {
-  if (typeof value === 'number') return value;
-  if (typeof value !== 'string') return fallback;
-  const trimmed = value.trim();
-  if (trimmed.endsWith('px')) {
-    const n = parseFloat(trimmed.slice(0, -2));
-    return Number.isFinite(n) ? n : fallback;
-  }
-  const n = parseFloat(trimmed);
-  return Number.isFinite(n) ? n : fallback;
-}
+type SwitchMetrics = {
+  width: number;
+  height: number;
+  thumbInset: number;
+  fontSize: number;
+  labelInset: number;
+};
 
-function resolveNamedColor(input: string | undefined, themePrimary: string) {
-  if (!input) return undefined;
-  const key = input.trim();
-  if (!key) return undefined;
-  if (key === 'primary') return themePrimary;
-  if (key === 'danger') return '#F97316';
-  if (key === 'success') return '#22C55E';
-  if (key === 'error') return '#EF4444';
-  if (key === 'info') return '#E5E7EB';
-  return key;
-}
+type SwitchTonePalette = {
+  checkedTrackColor: string;
+  checkedLabelColor: string;
+};
 
-function sizeToTrack(size: SwitchSize) {
-  if (size === 'small') return { width: wp(44), height: wp(24), fontSize: wp(12) };
-  if (size === 'large') return { width: wp(74), height: wp(40), fontSize: wp(14) };
-  return { width: wp(58), height: wp(32), fontSize: wp(13) };
-}
-
-export type SwitchProps = Omit<
+type NativePressableProps = Omit<
   React.ComponentPropsWithoutRef<typeof Pressable>,
-  'style' | 'disabled' | 'onPressIn' | 'onPressOut' | 'onPress'
-> & {
-  color?: string;
-  bgColor?: string;
-  darkBgColor?: string;
-  btnColor?: string;
-  size?: SwitchSize;
-  space?: number | string;
+  'accessibilityRole' | 'accessibilityState' | 'children' | 'disabled' | 'style' | 'onChange'
+>;
 
-  value?: boolean;
-  defaultValue?: boolean;
-  onValueChange?: (next: boolean) => void;
+const SEMANTIC_COLORS: Record<string, string> = {
+  warn: '#F59E0B',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  success: '#22C55E',
+  danger: '#DC2626',
+  info: '#3B82F6',
+};
+
+const TRACK_PRESSED_SCALE = 0.985;
+const THUMB_PRESSED_SCALE = 0.96;
+const DISABLED_OPACITY = 0.5;
+const VALUE_TIMING_DURATION = 180;
+const PRESS_IN_DURATION = 90;
+const PRESS_OUT_DURATION = 140;
+
+function resolveSwitchMetrics(size: SwitchSize): SwitchMetrics {
+  if (size === 'sm') {
+    return {
+      width: wp(46),
+      height: wp(26),
+      thumbInset: wp(2),
+      fontSize: wp(11),
+      labelInset: wp(2),
+    };
+  }
+
+  if (size === 'lg') {
+    return {
+      width: wp(72),
+      height: wp(40),
+      thumbInset: wp(2.5),
+      fontSize: wp(13),
+      labelInset: wp(4),
+    };
+  }
+
+  return {
+    width: wp(58),
+    height: wp(32),
+    thumbInset: wp(2),
+    fontSize: wp(13),
+    labelInset: wp(3),
+  };
+}
+
+function resolveTonePalette(tone: SwitchTone, theme: Theme): SwitchTonePalette {
+  if (tone === 'neutral') {
+    return {
+      checkedTrackColor: theme.colors.secondary,
+      checkedLabelColor: theme.colors.onSecondary,
+    };
+  }
+
+  if (tone === 'success') {
+    return {
+      checkedTrackColor: SEMANTIC_COLORS.success,
+      checkedLabelColor: '#FFFFFF',
+    };
+  }
+
+  if (tone === 'warning') {
+    return {
+      checkedTrackColor: SEMANTIC_COLORS.warning,
+      checkedLabelColor: '#111827',
+    };
+  }
+
+  if (tone === 'danger') {
+    return {
+      checkedTrackColor: SEMANTIC_COLORS.danger,
+      checkedLabelColor: '#FFFFFF',
+    };
+  }
+
+  if (tone === 'info') {
+    return {
+      checkedTrackColor: SEMANTIC_COLORS.info,
+      checkedLabelColor: '#FFFFFF',
+    };
+  }
+
+  return {
+    checkedTrackColor: theme.colors.primary,
+    checkedLabelColor: theme.colors.onPrimary,
+  };
+}
+
+function resolveColorToken(input: string | undefined, fallback: string, theme: Theme) {
+  if (input == null) return fallback;
+  const key = input.trim();
+  if (!key) return fallback;
+
+  const resolved =
+    key === 'primary'
+      ? theme.colors.primary
+      : key === 'secondary' || key === 'neutral'
+        ? theme.colors.secondary
+        : key === 'surface'
+          ? theme.colors.surface
+          : key === 'border'
+            ? theme.colors.border
+            : key === 'muted'
+              ? theme.colors.muted
+              : SEMANTIC_COLORS[key] ?? key;
+
+  return processColor(resolved) == null ? fallback : resolved;
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(value, min), max);
+}
+
+function resolveDuration(duration: number | undefined) {
+  if (duration == null) return VALUE_TIMING_DURATION;
+  if (!Number.isFinite(duration)) return VALUE_TIMING_DURATION;
+  return Math.max(0, duration);
+}
+
+function toTimingConfig(duration: number) {
+  return {
+    duration,
+    easing: Easing.out(Easing.cubic),
+    reduceMotion: ReduceMotion.System,
+  } as const;
+}
+
+function resolveHitSlop(width: number, height: number): Insets | undefined {
+  const minTouchTarget = wp(44);
+  const zeroPx = wp(0);
+  const vertical = Math.max(zeroPx, (minTouchTarget - height) / 2);
+  const horizontal = Math.max(zeroPx, (minTouchTarget - width) / 2);
+  if (vertical === zeroPx && horizontal === zeroPx) return undefined;
+  return {
+    top: vertical,
+    bottom: vertical,
+    left: horizontal,
+    right: horizontal,
+  };
+}
+
+export type SwitchProps = NativePressableProps & {
+  checked?: boolean;
+  defaultChecked?: boolean;
+  onChange?: (checked: boolean) => void;
 
   disabled?: boolean;
   loading?: boolean;
-  label?: [string, string] | string[];
-  round?: string | number;
 
-  style?: StyleProp<ViewStyle>;
+  size?: SwitchSize;
+  tone?: SwitchTone;
+  duration?: number;
+
+  color?: string;
+  uncheckedColor?: string;
+  darkUncheckedColor?: string;
+  thumbColor?: string;
+  checkedLabelColor?: string;
+  uncheckedLabelColor?: string;
+
+  checkedLabel?: string;
+  uncheckedLabel?: string;
+
+  thumbInset?: number;
+  radius?: number;
+
+  style?: React.ComponentPropsWithoutRef<typeof Pressable>['style'];
+  trackStyle?: StyleProp<ViewStyle>;
+  thumbStyle?: StyleProp<ViewStyle>;
+  accessibilityState?: React.ComponentPropsWithoutRef<typeof Pressable>['accessibilityState'];
   testID?: string;
 };
 
 export function Switch({
-  color,
-  bgColor = 'info',
-  darkBgColor,
-  btnColor = 'white',
-  size = 'normal',
-  space = '2px',
-  value: valueProp,
-  defaultValue = false,
-  onValueChange,
+  checked: checkedProp,
+  defaultChecked = false,
+  onChange,
   disabled = false,
   loading = false,
-  label,
-  round,
+  size = 'md',
+  tone = 'primary',
+  duration,
+  color,
+  uncheckedColor,
+  darkUncheckedColor,
+  thumbColor,
+  checkedLabelColor,
+  uncheckedLabelColor,
+  checkedLabel,
+  uncheckedLabel,
+  thumbInset,
+  radius,
   style,
+  trackStyle,
+  thumbStyle,
   testID,
+  hitSlop,
+  onPress,
+  onPressIn,
+  onPressOut,
+  accessibilityState,
   ...pressableProps
 }: SwitchProps) {
   const theme = useTheme();
-  const scheme: ColorSchemeName = useColorScheme();
+  const scheme = useColorScheme();
 
-  const isControlled = valueProp !== undefined;
-  const [uncontrolledValue, setUncontrolledValue] = React.useState<boolean>(defaultValue);
-  const value = valueProp ?? uncontrolledValue;
+  const isControlled = checkedProp !== undefined;
+  const [uncontrolledChecked, setUncontrolledChecked] = React.useState<boolean>(() => defaultChecked);
+  const checked = isControlled ? checkedProp : uncontrolledChecked;
+  const interactive = !disabled && !loading;
 
-  const track = React.useMemo(() => sizeToTrack(size), [size]);
-  const padding = React.useMemo(() => parsePx(space, wp(2)), [space]);
-  const trackRadius = React.useMemo(() => {
-    const r = round === '' || round == null ? track.height / 2 : parsePx(round, track.height / 2);
-    return Math.max(0, r);
-  }, [round, track.height]);
-  const knobSize = React.useMemo(() => Math.max(1, track.height - padding * 2), [padding, track.height]);
-  const knobRadius = React.useMemo(() => Math.max(0, Math.min(knobSize / 2, trackRadius - padding)), [knobSize, padding, trackRadius]);
-  const travel = React.useMemo(() => Math.max(0, track.width - knobSize - padding * 2), [knobSize, padding, track.width]);
-
-  const activeColor = React.useMemo(
-    () => resolveNamedColor(color, theme.colors.primary) ?? theme.colors.primary,
-    [color, theme.colors.primary]
+  const tonePalette = React.useMemo(() => resolveTonePalette(tone, theme), [theme, tone]);
+  const checkedTrackColor = React.useMemo(
+    () => resolveColorToken(color, tonePalette.checkedTrackColor, theme),
+    [color, theme, tonePalette.checkedTrackColor]
   );
-  const inactiveColor = React.useMemo(() => {
-    const isDark = scheme === 'dark';
-    const raw = isDark ? darkBgColor : bgColor;
-    return resolveNamedColor(raw, theme.colors.primary) ?? (isDark ? '#374151' : '#E5E7EB');
-  }, [bgColor, darkBgColor, scheme, theme.colors.primary]);
-  const knobColor = React.useMemo(() => resolveNamedColor(btnColor, theme.colors.primary) ?? btnColor, [btnColor, theme.colors.primary]);
+  const resolvedCheckedLabelColor = checkedLabelColor ?? tonePalette.checkedLabelColor;
+  const resolvedUncheckedLabelColor = uncheckedLabelColor ?? (scheme === 'dark' ? '#F9FAFB' : theme.colors.onSurface);
+  const uncheckedTrackColor = React.useMemo(() => {
+    const fallback = scheme === 'dark' ? '#374151' : theme.colors.border;
+    const candidate = scheme === 'dark' ? darkUncheckedColor ?? uncheckedColor : uncheckedColor;
+    return resolveColorToken(candidate, fallback, theme);
+  }, [darkUncheckedColor, scheme, theme, uncheckedColor]);
+  const resolvedThumbColor = React.useMemo(
+    () => resolveColorToken(thumbColor, theme.colors.surface, theme),
+    [theme, thumbColor]
+  );
 
-  const enabled = !disabled && !loading;
+  const zeroPx = wp(0);
+  const onePx = wp(1);
+  const labelShift = wp(2);
+  const metrics = React.useMemo(() => resolveSwitchMetrics(size), [size]);
+  const resolvedThumbInset = React.useMemo(() => {
+    const rawInset = thumbInset ?? metrics.thumbInset;
+    return clampNumber(rawInset, zeroPx, Math.max(zeroPx, (metrics.height - onePx) / 2));
+  }, [metrics.height, metrics.thumbInset, onePx, thumbInset, zeroPx]);
+  const thumbSize = Math.max(onePx, metrics.height - resolvedThumbInset * 2);
+  const travel = Math.max(zeroPx, metrics.width - thumbSize - resolvedThumbInset * 2);
+  const resolvedRadius = radius ?? metrics.height / 2;
+  const trackRadius = Math.max(zeroPx, resolvedRadius);
+  const thumbRadius = Math.max(zeroPx, Math.min(thumbSize / 2, trackRadius - resolvedThumbInset));
+  const labelPaddingHorizontal = metrics.labelInset;
+  const checkedLabelSlotStyle = React.useMemo(
+    () => ({
+      left: zeroPx,
+      right: thumbSize + resolvedThumbInset,
+      paddingLeft: labelPaddingHorizontal + resolvedThumbInset,
+      paddingRight: labelPaddingHorizontal,
+    }),
+    [labelPaddingHorizontal, resolvedThumbInset, thumbSize, zeroPx]
+  );
+  const uncheckedLabelSlotStyle = React.useMemo(
+    () => ({
+      left: thumbSize + resolvedThumbInset,
+      right: zeroPx,
+      paddingLeft: labelPaddingHorizontal,
+      paddingRight: labelPaddingHorizontal + resolvedThumbInset,
+    }),
+    [labelPaddingHorizontal, resolvedThumbInset, thumbSize, zeroPx]
+  );
+  const thumbShadowStyle = React.useMemo(
+    () => ({
+      shadowRadius: wp(6),
+      shadowOffset: { width: wp(0), height: wp(2) },
+      elevation: wp(2),
+    }),
+    []
+  );
+  const hasLabels = checkedLabel != null || uncheckedLabel != null;
+  const resolvedDuration = resolveDuration(duration);
+  const valueTiming = React.useMemo(() => toTimingConfig(resolvedDuration), [resolvedDuration]);
+  const pressInTiming = React.useMemo(() => toTimingConfig(PRESS_IN_DURATION), []);
+  const pressOutTiming = React.useMemo(() => toTimingConfig(PRESS_OUT_DURATION), []);
+  const defaultHitSlop = React.useMemo(
+    () => resolveHitSlop(metrics.width, metrics.height),
+    [metrics.height, metrics.width]
+  );
 
-  const progressSv = useSharedValue(value ? 1 : 0);
+  const progressSv = useSharedValue(checked ? 1 : 0);
   const pressSv = useSharedValue(0);
 
   React.useEffect(() => {
-    progressSv.value = withTiming(value ? 1 : 0, { duration: 180, easing: Easing.out(Easing.cubic) });
-  }, [progressSv, value]);
+    if (!isControlled) return;
+    progressSv.value = withTiming(checked ? 1 : 0, valueTiming);
+  }, [checked, isControlled, progressSv, valueTiming]);
+
+  React.useEffect(() => {
+    if (interactive) return;
+    pressSv.value = withTiming(0, pressOutTiming);
+  }, [interactive, pressOutTiming, pressSv]);
+
+  const containerAnimatedStyle = useAnimatedStyle(() => {
+    const pressedOpacity = interpolate(pressSv.value, [0, 1], [1, 0.9]);
+    const pressedScale = interpolate(pressSv.value, [0, 1], [1, TRACK_PRESSED_SCALE]);
+    return {
+      opacity: disabled ? DISABLED_OPACITY : pressedOpacity,
+      transform: [{ scale: pressedScale }],
+    };
+  }, [disabled]);
 
   const trackAnimatedStyle = useAnimatedStyle(() => {
-    const bg = interpolateColor(progressSv.value, [0, 1], [inactiveColor, activeColor]);
-    const scale = interpolate(pressSv.value, [0, 1], [1, 0.98]);
     return {
-      backgroundColor: bg,
-      transform: [{ scale }],
+      backgroundColor: interpolateColor(progressSv.value, [0, 1], [uncheckedTrackColor, checkedTrackColor]),
     };
-  }, [activeColor, inactiveColor]);
+  }, [checkedTrackColor, uncheckedTrackColor]);
 
-  const knobAnimatedStyle = useAnimatedStyle(() => {
-    const x = travel * progressSv.value;
+  const thumbAnimatedStyle = useAnimatedStyle(() => {
+    const pressedScale = interpolate(pressSv.value, [0, 1], [1, THUMB_PRESSED_SCALE]);
     return {
-      transform: [{ translateX: x }],
+      transform: [{ translateX: travel * progressSv.value }, { scale: pressedScale }],
     };
   }, [travel]);
 
-  const labelOnStyle = useAnimatedStyle(() => ({ opacity: progressSv.value }), []);
-  const labelOffStyle = useAnimatedStyle(() => ({ opacity: 1 - progressSv.value }), []);
+  const checkedLabelAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: progressSv.value,
+      transform: [{ translateX: interpolate(progressSv.value, [0, 1], [-labelShift, zeroPx]) }],
+    };
+  }, [labelShift, zeroPx]);
 
-  const labelPair = React.useMemo(() => {
-    if (!label || label.length < 2) return null;
-    return [String(label[0] ?? ''), String(label[1] ?? '')] as const;
-  }, [label]);
+  const uncheckedLabelAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: 1 - progressSv.value,
+      transform: [{ translateX: interpolate(progressSv.value, [0, 1], [zeroPx, labelShift]) }],
+    };
+  }, [labelShift, zeroPx]);
 
-  const setValue = React.useCallback(
+  const commitChecked = React.useCallback(
     (next: boolean) => {
-      onValueChange?.(next);
-      if (!isControlled) setUncontrolledValue(next);
+      if (!isControlled) {
+        progressSv.value = withTiming(next ? 1 : 0, valueTiming);
+        setUncontrolledChecked(next);
+      }
+      onChange?.(next);
     },
-    [isControlled, onValueChange]
+    [isControlled, onChange, progressSv, valueTiming]
   );
 
-  const handlePress = React.useCallback(() => {
-    if (!enabled) return;
-    const next = !value;
-    setValue(next);
-  }, [enabled, setValue, value]);
+  const handlePress = React.useCallback(
+    (event: GestureResponderEvent) => {
+      if (!interactive) return;
+      commitChecked(!checked);
+      onPress?.(event);
+    },
+    [checked, commitChecked, interactive, onPress]
+  );
 
-  const rootOpacity = disabled ? 0.45 : 1;
+  const handlePressIn = React.useCallback(
+    (event: GestureResponderEvent) => {
+      if (!interactive) return;
+      pressSv.value = withTiming(1, pressInTiming);
+      onPressIn?.(event);
+    },
+    [interactive, onPressIn, pressInTiming, pressSv]
+  );
+
+  const handlePressOut = React.useCallback(
+    (event: GestureResponderEvent) => {
+      pressSv.value = withTiming(0, pressOutTiming);
+      onPressOut?.(event);
+    },
+    [onPressOut, pressOutTiming, pressSv]
+  );
+
+  const resolvedStyle = React.useCallback(
+    (state: PressableStateCallbackType) => {
+      const userStyle = typeof style === 'function' ? style(state) : style;
+      return [styles.root, userStyle];
+    },
+    [style]
+  );
 
   return (
     <Pressable
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value, disabled: !enabled }}
-      testID={testID}
-      disabled={!enabled}
-      onPress={handlePress}
-      onPressIn={() => {
-        pressSv.value = withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) });
-      }}
-      onPressOut={() => {
-        pressSv.value = withTiming(0, { duration: 140, easing: Easing.out(Easing.cubic) });
-      }}
-      style={[{ opacity: loading ? 1 : rootOpacity }, style]}
       {...pressableProps}
+      testID={testID}
+      accessibilityRole="switch"
+      accessibilityState={{
+        ...accessibilityState,
+        checked,
+        disabled: !interactive,
+        busy: loading,
+      }}
+      disabled={!interactive}
+      hitSlop={hitSlop ?? defaultHitSlop}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={resolvedStyle}
     >
       <Animated.View
         style={[
-          styles.track,
+          styles.visual,
           {
-            width: track.width,
-            height: track.height,
+            width: metrics.width,
+            height: metrics.height,
             borderRadius: trackRadius,
-            padding,
           },
-          trackAnimatedStyle,
+          containerAnimatedStyle,
         ]}
       >
-        {labelPair ? (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.labels, { paddingHorizontal: padding + wp(8) }]}>
-            <Animated.View style={labelOnStyle}>
-              <Text style={[styles.labelText, { fontSize: track.fontSize, color: theme.colors.onPrimary }]} numberOfLines={1}>
-                {labelPair[0]}
+        <Animated.View
+          style={[
+            styles.track,
+            {
+              borderRadius: trackRadius,
+            },
+            trackAnimatedStyle,
+            trackStyle,
+          ]}
+        />
+
+        {hasLabels ? (
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              styles.labels,
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.labelLayer,
+                styles.checkedLabelLayer,
+                checkedLabelSlotStyle,
+                checkedLabelAnimatedStyle,
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.labelText,
+                  {
+                    color: resolvedCheckedLabelColor,
+                    fontSize: metrics.fontSize,
+                  },
+                ]}
+              >
+                {checkedLabel ?? ''}
               </Text>
             </Animated.View>
-            <Animated.View style={labelOffStyle}>
-              <Text style={[styles.labelText, { fontSize: track.fontSize, color: '#111827' }]} numberOfLines={1}>
-                {labelPair[1]}
+            <Animated.View
+              style={[
+                styles.labelLayer,
+                styles.uncheckedLabelLayer,
+                uncheckedLabelSlotStyle,
+                uncheckedLabelAnimatedStyle,
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.labelText,
+                  {
+                    color: resolvedUncheckedLabelColor,
+                    fontSize: metrics.fontSize,
+                  },
+                ]}
+              >
+                {uncheckedLabel ?? ''}
               </Text>
             </Animated.View>
           </View>
@@ -209,20 +511,25 @@ export function Switch({
 
         <Animated.View
           style={[
-            styles.knob,
+            styles.thumb,
             {
-              width: knobSize,
-              height: knobSize,
-              left: padding,
-              top: padding,
-              borderRadius: knobRadius,
-              backgroundColor: knobColor,
+              width: thumbSize,
+              height: thumbSize,
+              left: resolvedThumbInset,
+              top: resolvedThumbInset,
+              borderRadius: thumbRadius,
+              backgroundColor: resolvedThumbColor,
             },
-            knobAnimatedStyle,
+            thumbAnimatedStyle,
+            thumbShadowStyle,
+            thumbStyle,
           ]}
         >
           {loading ? (
-            <LoadingSpinner size={Math.max(12, knobSize * 0.58)} color={value ? theme.colors.onPrimary : theme.colors.muted} />
+            <LoadingSpinner
+              size={Math.max(wp(12), thumbSize * 0.58)}
+              color={checked ? checkedTrackColor : theme.colors.muted}
+            />
           ) : null}
         </Animated.View>
       </Animated.View>
@@ -231,27 +538,39 @@ export function Switch({
 }
 
 const styles = StyleSheet.create({
-  track: {
-    justifyContent: 'center',
+  root: {
+    alignSelf: 'flex-start',
   },
-  knob: {
+  visual: {
+    overflow: 'visible',
+  },
+  track: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  thumb: {
     position: 'absolute',
-    left: 0,
-    top: 0,
-    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.16,
   },
   labels: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+  },
+  labelLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkedLabelLayer: {
+    alignItems: 'flex-start',
+  },
+  uncheckedLabelLayer: {
+    alignItems: 'flex-end',
   },
   labelText: {
     includeFontPadding: false,
+    fontWeight: '600',
   },
 });

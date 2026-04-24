@@ -79,7 +79,7 @@ export type {
   DatePickerValue,
 } from './ui/DatePicker/index';
 export { Switch } from './ui/Switch/index';
-export type { SwitchProps } from './ui/Switch/index';
+export type { SwitchProps, SwitchSize, SwitchTone } from './ui/Switch/index';
 export { SliderCaptcha } from './ui/SliderCaptcha/index';
 export type {
   SliderCaptchaChallenge,
