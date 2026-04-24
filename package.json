@@ -6,6 +6,7 @@
   "scripts": {
     "build": "pnpm --filter y2kit-tools build && pnpm --filter y2kit-ui build",
     "typecheck": "pnpm --filter y2kit-tools typecheck && pnpm --filter y2kit-ui typecheck && pnpm --filter @y2kit/example typecheck",
+    "validate": "pnpm build && pnpm typecheck",
     "changeset": "changeset",
     "version:packages": "changeset version",
     "release:packages": "changeset publish",
