@@ -206,5 +206,5 @@ await loading.withPromise(api.createOrder(), {
 
 1. **Provider 已集成**：`LoadingProvider` 已内置于 `ComponentLibProvider`，无需额外配置
 2. **看门狗保护**：loading 状态超过 15 秒会自动关闭，防止卡死
-3. **唯一实例**：全局只有一个 loading 实例，后调用会覆盖前一个
+3. **唯一实例**：全局只有一个 loading 实例，后调用会覆盖前一个；较早的 `withPromise` 结果不会覆盖较新的状态
 4. **动画性能**：使用 `useNativeDriver` 确保动画流畅

@@ -23,8 +23,10 @@
  */
 
 import * as React from 'react';
+import { Feather } from '@expo/vector-icons';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { wp } from 'y2kit-tools';
+import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui/Text';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 
@@ -97,29 +99,114 @@ const DEFAULT_ERROR_TEXT = '操作失败';
 const DEFAULT_SUCCESS_DELAY = 1200;
 const DEFAULT_ERROR_DELAY = 1400;
 const WATCHDOG_TIMEOUT = 15000;
+const ENTER_DURATION_MS = 180;
+const EXIT_DURATION_MS = 160;
+const CARD_MIN_WIDTH = wp(120);
+const CARD_MAX_WIDTH = wp(220);
+const CARD_MIN_HEIGHT = wp(112);
+const CARD_PADDING_HORIZONTAL = wp(18);
+const CARD_PADDING_VERTICAL = wp(18);
+const CARD_RADIUS = wp(18);
+const ICON_FRAME_SIZE = wp(44);
+const LOADING_ICON_SIZE = wp(33);
+const RESULT_ICON_SIZE = wp(40);
+const TEXT_MARGIN_TOP = wp(10);
+const TEXT_MAX_WIDTH = wp(184);
+const TEXT_FONT_SIZE = wp(14);
+const TEXT_LINE_HEIGHT = wp(19);
+const SHADOW_RADIUS = wp(18);
+const SHADOW_OFFSET_Y = wp(8);
+const ANDROID_ELEVATION = wp(8);
 
-// ============================================================================
-// Icons (使用 Unicode 符号作为简单图标)
-// ============================================================================
+type ResolvedShowOptions = {
+  text: string;
+  blocking: boolean;
+};
 
-function SuccessIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <View style={[styles.iconContainer, { width: size, height: size }]}>
-      <Text allowFontScaling={false} style={[styles.iconText, { fontSize: size * 0.7, color }]}>
-        ✓
-      </Text>
-    </View>
-  );
+type ResolvedResultOptions = {
+  text: string;
+  autoHide: boolean;
+  hideDelay: number;
+  blocking: boolean;
+};
+
+function normalizeDelayMs(value: number | undefined, fallback: number) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.max(0, value);
 }
 
-function ErrorIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <View style={[styles.iconContainer, { width: size, height: size }]}>
-      <Text allowFontScaling={false} style={[styles.iconText, { fontSize: size * 0.7, color }]}>
-        ✕
-      </Text>
-    </View>
-  );
+function resolveShowOptions(textOrOptions: string | LoadingShowOptions): ResolvedShowOptions {
+  if (typeof textOrOptions === 'string') {
+    return { text: textOrOptions, blocking: true };
+  }
+
+  return {
+    text: textOrOptions.text ?? DEFAULT_TEXT,
+    blocking: textOrOptions.blocking ?? true,
+  };
+}
+
+function resolveResultOptions(
+  textOrOptions: string | LoadingResultOptions,
+  defaultText: string,
+  defaultDelay: number
+): ResolvedResultOptions {
+  if (typeof textOrOptions === 'string') {
+    return {
+      text: textOrOptions,
+      autoHide: true,
+      hideDelay: defaultDelay,
+      blocking: false,
+    };
+  }
+
+  return {
+    text: textOrOptions.text ?? defaultText,
+    autoHide: textOrOptions.autoHide ?? true,
+    hideDelay: normalizeDelayMs(textOrOptions.hideDelay, defaultDelay),
+    blocking: textOrOptions.blocking ?? false,
+  };
+}
+
+function resolveSuccessText<T>(
+  resolver: LoadingWithPromiseOptions<T>['successTextResolver'],
+  result: T,
+  fallback: string
+) {
+  if (typeof resolver !== 'function') return fallback;
+
+  try {
+    return resolver(result) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function resolveErrorText<T>(
+  resolver: LoadingWithPromiseOptions<T>['errorTextResolver'],
+  result: T | undefined,
+  error: unknown,
+  fallback: string
+) {
+  if (typeof resolver !== 'function') return fallback;
+
+  try {
+    return resolver(result, error) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function createBusinessError<T>(message: string, response: T) {
+  const error = new Error(message || DEFAULT_ERROR_TEXT) as Error & { response?: T };
+  error.response = response;
+  return error;
+}
+
+function getAccessibilityLabel(status: LoadingStatus, text: string) {
+  const statusText = status === 'loading' ? DEFAULT_TEXT : status === 'success' ? DEFAULT_SUCCESS_TEXT : DEFAULT_ERROR_TEXT;
+  if (!text || text === statusText) return statusText;
+  return `${statusText}，${text}`;
 }
 
 // ============================================================================
@@ -134,10 +221,14 @@ class LoadingServiceClass {
   private mounted = false;
   private setState: React.Dispatch<React.SetStateAction<LoadingState>> | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private requestId = 0;
 
   /** @internal 设置挂载状态 */
   setMounted(mounted: boolean) {
     this.mounted = mounted;
+    if (!mounted) {
+      this.requestId += 1;
+    }
   }
 
   /** @internal 设置状态更新函数 */
@@ -150,47 +241,18 @@ class LoadingServiceClass {
    * @param textOrOptions - 文案字符串或选项对象
    */
   show(textOrOptions: string | LoadingShowOptions = DEFAULT_TEXT) {
-    let text = DEFAULT_TEXT;
-    let blocking = true;
-
-    if (typeof textOrOptions === 'string') {
-      text = textOrOptions;
-    } else if (textOrOptions && typeof textOrOptions === 'object') {
-      text = textOrOptions.text ?? DEFAULT_TEXT;
-      blocking = textOrOptions.blocking ?? true;
-    }
-
-    this.clearHideTimer();
-
-    if (!this.mounted || !this.setState) {
-      console.warn('[LoadingService] Provider not mounted');
-      return;
-    }
-
-    this.setState((prev) => ({
-      ...prev,
-      visible: true,
-      text,
-      blocking,
-      status: 'loading',
-    }));
+    this.showInternal(resolveShowOptions(textOrOptions));
   }
 
   /** 隐藏 Loading */
   hide() {
-    this.clearHideTimer();
-
-    if (!this.mounted || !this.setState) return;
-
-    this.setState((prev) => ({
-      ...prev,
-      visible: false,
-    }));
+    this.hideInternal();
   }
 
   /** @internal 清理所有定时器 */
   clearAllTimers() {
     this.clearHideTimer();
+    this.requestId += 1;
   }
 
   /**
@@ -198,40 +260,7 @@ class LoadingServiceClass {
    * @param textOrOptions - 文案字符串或选项对象
    */
   success(textOrOptions: string | LoadingResultOptions = DEFAULT_SUCCESS_TEXT) {
-    let text = DEFAULT_SUCCESS_TEXT;
-    let autoHide = true;
-    let hideDelay = DEFAULT_SUCCESS_DELAY;
-    let blocking = false;
-
-    if (typeof textOrOptions === 'string') {
-      text = textOrOptions;
-    } else if (textOrOptions && typeof textOrOptions === 'object') {
-      text = textOrOptions.text ?? DEFAULT_SUCCESS_TEXT;
-      autoHide = textOrOptions.autoHide ?? true;
-      hideDelay = textOrOptions.hideDelay ?? DEFAULT_SUCCESS_DELAY;
-      blocking = textOrOptions.blocking ?? false;
-    }
-
-    this.clearHideTimer();
-
-    if (!this.mounted || !this.setState) {
-      console.warn('[LoadingService] Provider not mounted');
-      return;
-    }
-
-    this.setState((prev) => ({
-      ...prev,
-      visible: true,
-      text,
-      blocking,
-      status: 'success',
-    }));
-
-    if (autoHide) {
-      this.hideTimer = setTimeout(() => {
-        this.hide();
-      }, hideDelay);
-    }
+    this.showResult('success', resolveResultOptions(textOrOptions, DEFAULT_SUCCESS_TEXT, DEFAULT_SUCCESS_DELAY));
   }
 
   /**
@@ -239,40 +268,7 @@ class LoadingServiceClass {
    * @param textOrOptions - 文案字符串或选项对象
    */
   error(textOrOptions: string | LoadingResultOptions = DEFAULT_ERROR_TEXT) {
-    let text = DEFAULT_ERROR_TEXT;
-    let autoHide = true;
-    let hideDelay = DEFAULT_ERROR_DELAY;
-    let blocking = false;
-
-    if (typeof textOrOptions === 'string') {
-      text = textOrOptions;
-    } else if (textOrOptions && typeof textOrOptions === 'object') {
-      text = textOrOptions.text ?? DEFAULT_ERROR_TEXT;
-      autoHide = textOrOptions.autoHide ?? true;
-      hideDelay = textOrOptions.hideDelay ?? DEFAULT_ERROR_DELAY;
-      blocking = textOrOptions.blocking ?? false;
-    }
-
-    this.clearHideTimer();
-
-    if (!this.mounted || !this.setState) {
-      console.warn('[LoadingService] Provider not mounted');
-      return;
-    }
-
-    this.setState((prev) => ({
-      ...prev,
-      visible: true,
-      text,
-      blocking,
-      status: 'error',
-    }));
-
-    if (autoHide) {
-      this.hideTimer = setTimeout(() => {
-        this.hide();
-      }, hideDelay);
-    }
+    this.showResult('error', resolveResultOptions(textOrOptions, DEFAULT_ERROR_TEXT, DEFAULT_ERROR_DELAY));
   }
 
   /**
@@ -295,42 +291,138 @@ class LoadingServiceClass {
       errorTextResolver,
     } = options;
 
-    this.show({ text: loadingText, blocking: blockingDuringLoading });
+    const requestId = this.showInternal({ text: loadingText, blocking: blockingDuringLoading });
+    const resultHideDelay = normalizeDelayMs(hideDelay, DEFAULT_SUCCESS_DELAY);
 
+    let result: T;
     try {
-      const result = await promise;
-
-      let ok = true;
-      if (typeof isSuccess === 'function') {
-        try {
-          ok = Boolean(isSuccess(result));
-        } catch {
-          ok = false;
-        }
+      result = await promise;
+    } catch (error) {
+      if (requestId !== null) {
+        const finalErrorText = resolveErrorText(errorTextResolver, undefined, error, errorText);
+        this.showResult(
+          'error',
+          { text: finalErrorText, autoHide, hideDelay: resultHideDelay, blocking: blockingOnResult },
+          requestId
+        );
       }
-
-      if (ok) {
-        const finalSuccessText =
-          typeof successTextResolver === 'function' ? successTextResolver(result) ?? successText : successText;
-        this.success({ text: finalSuccessText, autoHide, hideDelay, blocking: blockingOnResult });
-        return result;
-      }
-
-      const finalErrorText =
-        typeof errorTextResolver === 'function' ? errorTextResolver(result) ?? errorText : errorText;
-      this.error({ text: finalErrorText, autoHide, hideDelay, blocking: blockingOnResult });
-
-      const bizError = new Error(typeof finalErrorText === 'string' ? finalErrorText : '业务失败') as Error & {
-        response?: T;
-      };
-      bizError.response = result;
-      throw bizError;
-    } catch (e) {
-      const finalErrorText =
-        typeof errorTextResolver === 'function' ? errorTextResolver(undefined, e) ?? errorText : errorText;
-      this.error({ text: finalErrorText, autoHide, hideDelay, blocking: blockingOnResult });
-      throw e;
+      throw error;
     }
+
+    let ok = true;
+    let successCheckError: unknown;
+
+    if (typeof isSuccess === 'function') {
+      try {
+        ok = Boolean(isSuccess(result));
+      } catch (error) {
+        ok = false;
+        successCheckError = error;
+      }
+    }
+
+    if (ok) {
+      if (requestId !== null) {
+        const finalSuccessText = resolveSuccessText(successTextResolver, result, successText);
+        this.showResult(
+          'success',
+          { text: finalSuccessText, autoHide, hideDelay: resultHideDelay, blocking: blockingOnResult },
+          requestId
+        );
+      }
+      return result;
+    }
+
+    const finalErrorText = resolveErrorText(errorTextResolver, result, successCheckError, errorText);
+    if (requestId !== null) {
+      this.showResult(
+        'error',
+        { text: finalErrorText, autoHide, hideDelay: resultHideDelay, blocking: blockingOnResult },
+        requestId
+      );
+    }
+    throw createBusinessError(finalErrorText, result);
+  }
+
+  private showInternal(options: ResolvedShowOptions) {
+    const nextRequestId = this.nextRequestId();
+
+    this.clearHideTimer();
+
+    if (!this.mounted || !this.setState) {
+      console.warn('[LoadingService] Provider not mounted');
+      return null;
+    }
+
+    this.setState((prev) => ({
+      ...prev,
+      visible: true,
+      text: options.text,
+      blocking: options.blocking,
+      status: 'loading',
+    }));
+
+    return nextRequestId;
+  }
+
+  private showResult(status: Exclude<LoadingStatus, 'loading'>, options: ResolvedResultOptions, requestId?: number) {
+    if (requestId !== undefined && requestId !== this.requestId) {
+      return false;
+    }
+
+    const resultRequestId = requestId ?? this.nextRequestId();
+
+    this.clearHideTimer();
+
+    if (!this.mounted || !this.setState) {
+      console.warn('[LoadingService] Provider not mounted');
+      return false;
+    }
+
+    this.setState((prev) => ({
+      ...prev,
+      visible: true,
+      text: options.text,
+      blocking: options.blocking,
+      status,
+    }));
+
+    if (options.autoHide) {
+      this.hideTimer = setTimeout(() => {
+        this.hideInternal(resultRequestId);
+      }, options.hideDelay);
+    }
+
+    return true;
+  }
+
+  private hideInternal(requestId?: number) {
+    if (requestId !== undefined && requestId !== this.requestId) {
+      return false;
+    }
+
+    if (requestId === undefined) {
+      this.nextRequestId();
+    }
+
+    this.clearHideTimer();
+
+    if (!this.mounted || !this.setState) return false;
+
+    this.setState((prev) => {
+      if (!prev.visible) return prev;
+      return {
+        ...prev,
+        visible: false,
+      };
+    });
+
+    return true;
+  }
+
+  private nextRequestId() {
+    this.requestId += 1;
+    return this.requestId;
   }
 
   private clearHideTimer() {
@@ -350,6 +442,7 @@ export const loading = new LoadingServiceClass();
 
 function LoadingOverlay({ state }: { state: LoadingState }) {
   const { visible, text, blocking, status } = state;
+  const theme = useTheme();
 
   const progress = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
   const lastVisibleRef = React.useRef(Boolean(visible));
@@ -368,7 +461,7 @@ function LoadingOverlay({ state }: { state: LoadingState }) {
     progress.stopAnimation();
     Animated.timing(progress, {
       toValue: visible ? 1 : 0,
-      duration: visible ? 180 : 160,
+      duration: visible ? ENTER_DURATION_MS : EXIT_DURATION_MS,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -392,7 +485,7 @@ function LoadingOverlay({ state }: { state: LoadingState }) {
         {
           scale: progress.interpolate({
             inputRange: [0, 1],
-            outputRange: [0.98, 1],
+            outputRange: [0.96, 1],
           }),
         },
       ],
@@ -400,29 +493,50 @@ function LoadingOverlay({ state }: { state: LoadingState }) {
     [progress]
   );
 
-  const iconSize = wp(33);
+  const foregroundColor = theme.colors.surface;
+  const cardBackgroundColor = theme.colors.onSurface;
+  const accessibilityLabel = React.useMemo(() => getAccessibilityLabel(status, text), [status, text]);
 
   return (
-    <Animated.View pointerEvents={overlayPointerEvents} style={overlayStyle} collapsable={false}>
+    <Animated.View
+      pointerEvents={overlayPointerEvents}
+      style={overlayStyle}
+      collapsable={false}
+      accessibilityElementsHidden={!visible}
+      importantForAccessibility={visible ? 'yes' : 'no-hide-descendants'}
+    >
       <View style={styles.shadowWrap} pointerEvents={overlayPointerEvents}>
         <View style={styles.contentWrap} pointerEvents={overlayPointerEvents} collapsable={false}>
-          <Animated.View style={[styles.box, boxAnimStyle]} pointerEvents={overlayPointerEvents}>
+          <Animated.View
+            accessible={visible}
+            accessibilityLabel={accessibilityLabel}
+            accessibilityLiveRegion="polite"
+            style={[styles.box, boxAnimStyle, { backgroundColor: cardBackgroundColor }]}
+            pointerEvents={overlayPointerEvents}
+          >
             <View style={styles.iconWrap}>
-              {/* Loading 状态 */}
               <View style={[styles.iconLayer, { opacity: status === 'loading' ? 1 : 0 }]}>
-                <LoadingSpinner size={iconSize} color="#FFFFFF" speed={1.2} animating={visible && status === 'loading'} />
+                <LoadingSpinner
+                  size={LOADING_ICON_SIZE}
+                  color={foregroundColor}
+                  speed={1.2}
+                  animating={visible && status === 'loading'}
+                />
               </View>
-              {/* 成功状态 */}
               <View style={[styles.iconLayer, { opacity: status === 'success' ? 1 : 0 }]}>
-                <SuccessIcon size={wp(40)} color="#FFFFFF" />
+                <Feather name="check" size={RESULT_ICON_SIZE} color={foregroundColor} />
               </View>
-              {/* 失败状态 */}
               <View style={[styles.iconLayer, { opacity: status === 'error' ? 1 : 0 }]}>
-                <ErrorIcon size={wp(40)} color="#FFFFFF" />
+                <Feather name="x" size={RESULT_ICON_SIZE} color={foregroundColor} />
               </View>
             </View>
             {Boolean(text) && (
-              <Text allowFontScaling={false} style={styles.text}>
+              <Text
+                allowFontScaling={false}
+                ellipsizeMode="tail"
+                numberOfLines={2}
+                style={[styles.text, { color: foregroundColor }]}
+              >
                 {text}
               </Text>
             )}
@@ -510,17 +624,19 @@ const styles = StyleSheet.create({
   },
   shadowWrap: {
     alignSelf: 'center',
-    borderRadius: wp(12),
+    maxWidth: CARD_MAX_WIDTH,
+    borderRadius: CARD_RADIUS,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOpacity: 0.2,
-        shadowRadius: wp(10),
-        shadowOffset: { width: 0, height: wp(4) },
+        shadowOpacity: 0.18,
+        shadowRadius: SHADOW_RADIUS,
+        shadowOffset: { width: wp(0), height: SHADOW_OFFSET_Y },
         backgroundColor: 'transparent',
       },
       android: {
         backgroundColor: 'transparent',
+        elevation: ANDROID_ELEVATION,
       },
     }),
   },
@@ -529,17 +645,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   box: {
-    height: wp(120),
-    width: wp(120),
+    minWidth: CARD_MIN_WIDTH,
+    maxWidth: CARD_MAX_WIDTH,
+    minHeight: CARD_MIN_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: wp(12),
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: CARD_PADDING_HORIZONTAL,
+    paddingVertical: CARD_PADDING_VERTICAL,
+    borderRadius: CARD_RADIUS,
     overflow: 'hidden',
   },
   iconWrap: {
-    width: wp(44),
-    height: wp(44),
+    width: ICON_FRAME_SIZE,
+    height: ICON_FRAME_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -548,16 +666,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    fontWeight: 'bold',
-  },
   text: {
-    marginTop: wp(10),
-    color: '#FFFFFF',
-    fontSize: wp(14),
+    maxWidth: TEXT_MAX_WIDTH,
+    marginTop: TEXT_MARGIN_TOP,
+    fontSize: TEXT_FONT_SIZE,
+    lineHeight: TEXT_LINE_HEIGHT,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
