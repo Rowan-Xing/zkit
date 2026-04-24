@@ -482,6 +482,28 @@ function resolveButtonSizeStyle({
   };
 }
 
+function resolveContentSizeStyle({
+  iconOnly,
+  sizeStyle,
+}: {
+  iconOnly: boolean;
+  sizeStyle: ViewStyle;
+}): ViewStyle {
+  const contentSizeStyle: ViewStyle = {};
+
+  if (iconOnly || sizeStyle.width !== undefined) {
+    contentSizeStyle.width = '100%';
+  }
+
+  if (iconOnly || sizeStyle.height !== undefined) {
+    contentSizeStyle.height = '100%';
+  } else if (sizeStyle.minHeight !== undefined) {
+    contentSizeStyle.minHeight = sizeStyle.minHeight;
+  }
+
+  return contentSizeStyle;
+}
+
 function resolveButtonSideLength(
   sizeStyle: ViewStyle,
   iconOnly: boolean,
@@ -959,6 +981,14 @@ function ButtonImpl({
       }),
     [linkMinPaddingY, paddingHorizontal, paddingVertical, resolvedIconOnly, resolvedVariant, sizeConfig]
   );
+  const resolvedContentSizeStyle = React.useMemo(
+    () =>
+      resolveContentSizeStyle({
+        iconOnly: resolvedIconOnly,
+        sizeStyle: resolvedButtonSizeStyle,
+      }),
+    [resolvedButtonSizeStyle, resolvedIconOnly]
+  );
 
   const resolvedText = React.useMemo(() => {
     if (children == null) return null;
@@ -1256,6 +1286,7 @@ function ButtonImpl({
         pointerEvents="none"
         style={[
           styles.content,
+          resolvedContentSizeStyle,
           resolvedContentPaddingStyle,
           resolvedRadiusStyle,
           resolvedBorderStyle,
@@ -1348,7 +1379,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   content: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
