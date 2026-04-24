@@ -322,7 +322,7 @@ function Playground() {
                   {enabled ? 'Enabled' : 'Disabled'}
                 </Text>
               </View>
-              <Switch checked={enabled} onChange={setEnabled} checkedLabel="On" uncheckedLabel="Off" />
+              <Switch checked={enabled} onChange={setEnabled} />
             </View>
 
             <View style={styles.spinnerRow}>

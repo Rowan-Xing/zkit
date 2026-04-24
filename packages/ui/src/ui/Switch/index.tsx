@@ -31,6 +31,7 @@ type SwitchMetrics = {
   thumbInset: number;
   fontSize: number;
   labelInset: number;
+  labelSlotMinWidth: number;
 };
 
 type SwitchTonePalette = {
@@ -55,6 +56,7 @@ const SEMANTIC_COLORS: Record<string, string> = {
 const TRACK_PRESSED_SCALE = 0.985;
 const THUMB_PRESSED_SCALE = 0.96;
 const DISABLED_OPACITY = 0.5;
+const LABEL_TEXT_WIDTH_FACTOR = 0.58;
 const VALUE_TIMING_DURATION = 180;
 const PRESS_IN_DURATION = 90;
 const PRESS_OUT_DURATION = 140;
@@ -67,6 +69,7 @@ function resolveSwitchMetrics(size: SwitchSize): SwitchMetrics {
       thumbInset: wp(2),
       fontSize: wp(11),
       labelInset: wp(2),
+      labelSlotMinWidth: wp(26),
     };
   }
 
@@ -77,15 +80,17 @@ function resolveSwitchMetrics(size: SwitchSize): SwitchMetrics {
       thumbInset: wp(2.5),
       fontSize: wp(13),
       labelInset: wp(4),
+      labelSlotMinWidth: wp(40),
     };
   }
 
   return {
-    width: wp(58),
+    width: wp(56),
     height: wp(32),
-    thumbInset: wp(2),
-    fontSize: wp(13),
+    thumbInset: wp(3),
+    fontSize: wp(12),
     labelInset: wp(3),
+    labelSlotMinWidth: wp(32),
   };
 }
 
@@ -261,7 +266,7 @@ export function Switch({
     [color, theme, tonePalette.checkedTrackColor]
   );
   const resolvedCheckedLabelColor = checkedLabelColor ?? tonePalette.checkedLabelColor;
-  const resolvedUncheckedLabelColor = uncheckedLabelColor ?? (scheme === 'dark' ? '#F9FAFB' : theme.colors.onSurface);
+  const resolvedUncheckedLabelColor = uncheckedLabelColor ?? (scheme === 'dark' ? '#D1D5DB' : theme.colors.muted);
   const uncheckedTrackColor = React.useMemo(() => {
     const fallback = scheme === 'dark' ? '#374151' : theme.colors.border;
     const candidate = scheme === 'dark' ? darkUncheckedColor ?? uncheckedColor : uncheckedColor;
@@ -281,7 +286,15 @@ export function Switch({
     return clampNumber(rawInset, zeroPx, Math.max(zeroPx, (metrics.height - onePx) / 2));
   }, [metrics.height, metrics.thumbInset, onePx, thumbInset, zeroPx]);
   const thumbSize = Math.max(onePx, metrics.height - resolvedThumbInset * 2);
-  const travel = Math.max(zeroPx, metrics.width - thumbSize - resolvedThumbInset * 2);
+  const hasLabels = checkedLabel != null || uncheckedLabel != null;
+  const maxLabelLength = Math.max(checkedLabel?.length ?? 0, uncheckedLabel?.length ?? 0);
+  const labelSlotWidth = hasLabels
+    ? Math.max(metrics.labelSlotMinWidth, maxLabelLength * metrics.fontSize * LABEL_TEXT_WIDTH_FACTOR + metrics.labelInset * 2)
+    : zeroPx;
+  const trackWidth = hasLabels
+    ? Math.max(metrics.width, thumbSize + resolvedThumbInset + labelSlotWidth)
+    : metrics.width;
+  const travel = Math.max(zeroPx, trackWidth - thumbSize - resolvedThumbInset * 2);
   const resolvedRadius = radius ?? metrics.height / 2;
   const trackRadius = Math.max(zeroPx, resolvedRadius);
   const thumbRadius = Math.max(zeroPx, Math.min(thumbSize / 2, trackRadius - resolvedThumbInset));
@@ -290,7 +303,7 @@ export function Switch({
     () => ({
       left: zeroPx,
       right: thumbSize + resolvedThumbInset,
-      paddingLeft: labelPaddingHorizontal + resolvedThumbInset,
+      paddingLeft: labelPaddingHorizontal,
       paddingRight: labelPaddingHorizontal,
     }),
     [labelPaddingHorizontal, resolvedThumbInset, thumbSize, zeroPx]
@@ -300,26 +313,25 @@ export function Switch({
       left: thumbSize + resolvedThumbInset,
       right: zeroPx,
       paddingLeft: labelPaddingHorizontal,
-      paddingRight: labelPaddingHorizontal + resolvedThumbInset,
+      paddingRight: labelPaddingHorizontal,
     }),
     [labelPaddingHorizontal, resolvedThumbInset, thumbSize, zeroPx]
   );
   const thumbShadowStyle = React.useMemo(
     () => ({
-      shadowRadius: wp(6),
-      shadowOffset: { width: wp(0), height: wp(2) },
-      elevation: wp(2),
+      shadowRadius: wp(4),
+      shadowOffset: { width: wp(0), height: wp(1) },
+      elevation: wp(1),
     }),
     []
   );
-  const hasLabels = checkedLabel != null || uncheckedLabel != null;
   const resolvedDuration = resolveDuration(duration);
   const valueTiming = React.useMemo(() => toTimingConfig(resolvedDuration), [resolvedDuration]);
   const pressInTiming = React.useMemo(() => toTimingConfig(PRESS_IN_DURATION), []);
   const pressOutTiming = React.useMemo(() => toTimingConfig(PRESS_OUT_DURATION), []);
   const defaultHitSlop = React.useMemo(
-    () => resolveHitSlop(metrics.width, metrics.height),
-    [metrics.height, metrics.width]
+    () => resolveHitSlop(trackWidth, metrics.height),
+    [metrics.height, trackWidth]
   );
 
   const progressSv = useSharedValue(checked ? 1 : 0);
@@ -438,7 +450,7 @@ export function Switch({
         style={[
           styles.visual,
           {
-            width: metrics.width,
+            width: trackWidth,
             height: metrics.height,
             borderRadius: trackRadius,
           },
@@ -467,7 +479,6 @@ export function Switch({
             <Animated.View
               style={[
                 styles.labelLayer,
-                styles.checkedLabelLayer,
                 checkedLabelSlotStyle,
                 checkedLabelAnimatedStyle,
               ]}
@@ -479,6 +490,7 @@ export function Switch({
                   {
                     color: resolvedCheckedLabelColor,
                     fontSize: metrics.fontSize,
+                    lineHeight: metrics.fontSize * 1.12,
                   },
                 ]}
               >
@@ -488,7 +500,6 @@ export function Switch({
             <Animated.View
               style={[
                 styles.labelLayer,
-                styles.uncheckedLabelLayer,
                 uncheckedLabelSlotStyle,
                 uncheckedLabelAnimatedStyle,
               ]}
@@ -500,6 +511,7 @@ export function Switch({
                   {
                     color: resolvedUncheckedLabelColor,
                     fontSize: metrics.fontSize,
+                    lineHeight: metrics.fontSize * 1.12,
                   },
                 ]}
               >
@@ -552,7 +564,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.12,
   },
   labels: {
     alignItems: 'center',
@@ -563,14 +575,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkedLabelLayer: {
-    alignItems: 'flex-start',
-  },
-  uncheckedLabelLayer: {
-    alignItems: 'flex-end',
-  },
   labelText: {
     includeFontPadding: false,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

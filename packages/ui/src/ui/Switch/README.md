@@ -21,6 +21,8 @@ export function Demo() {
 
 ## 内置文案
 
+常规设置项优先使用外部 label 描述功能，用开关位置和颜色表达状态。只有在空间独立、文案极短且不会和外部状态文案重复时，才使用内置文案。
+
 ```tsx
 import { Switch } from 'y2kit-ui';
 
