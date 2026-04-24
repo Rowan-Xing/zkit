@@ -38,6 +38,12 @@ pnpm example:ios:simulator
 pnpm example:android
 ```
 
+运行 Android development build 到真机：
+
+```bash
+pnpm example:android:device
+```
+
 ### 在 `apps/example` 目录执行
 
 仅启动 Metro：
@@ -64,12 +70,19 @@ pnpm ios:simulator
 pnpm android
 ```
 
+运行 Android development build 到真机：
+
+```bash
+pnpm android:device
+```
+
 ## 区别
 
 - `pnpm example:start` / `pnpm start`：只启动 Metro bundler
 - `pnpm example:ios:device` / `pnpm ios:device`：构建并安装 iOS development build 到真机
 - `pnpm example:ios:simulator` / `pnpm ios:simulator`：构建并运行 iOS 模拟器
 - `pnpm example:android` / `pnpm android`：构建并运行 Android development build
+- `pnpm example:android:device` / `pnpm android:device`：构建并安装 Android development build 到真机
 
 ## 常用流程
 

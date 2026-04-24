@@ -17,6 +17,7 @@ module.exports = {
       appleTeamId: 'CQ5QU9G4F2',
     },
     android: {
+      package: 'com.anonymous.y2kitexample',
       edgeToEdgeEnabled: true,
       icon,
       adaptiveIcon: {

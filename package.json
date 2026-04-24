@@ -14,7 +14,8 @@
     "example:ios": "pnpm --filter @y2kit/example ios",
     "example:ios:device": "pnpm --filter @y2kit/example ios:device",
     "example:ios:simulator": "pnpm --filter @y2kit/example ios:simulator",
-    "example:android": "pnpm --filter @y2kit/example android"
+    "example:android": "pnpm --filter @y2kit/example android",
+    "example:android:device": "pnpm --filter @y2kit/example android:device"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.7",
