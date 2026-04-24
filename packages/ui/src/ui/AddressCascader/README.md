@@ -1,8 +1,10 @@
 # AddressCascader
 
-AddressCascader 是一个省/市/区（县）三级联动选择组件，基于 [Picker](src/ui/Picker/index.tsx) 封装。
+AddressCascader 是一个省/市/区（县）三级联动选择组件。
 
 默认内置中国省市区数据（来自 `@vant/area-data` 的原始数据转换），也可以通过 `list` 自定义级联数据。
+
+交互采用“步骤路径 + 单列列表”：用户先选省份，再进入城市，再进入区县。每一层都使用全宽列表展示，长地名最多两行显示，不再被三列滚轮挤压截断。
 
 ## 基础用法
 
@@ -49,6 +51,18 @@ export function Demo() {
 }
 ```
 
+## 长文本触发器
+
+弹层内部会完整展示长地名。触发器由业务自己渲染，如果表单行空间较窄，可以用 `labels` 自己决定展示层级：
+
+```tsx
+<AddressCascader value={value} onValueChange={setValue}>
+  {({ labels }) => (
+    <Button>{labels.slice(-2).join(' / ') || '选择地址'}</Button>
+  )}
+</AddressCascader>
+```
+
 ## Props
 
 ### 数据源
@@ -86,7 +100,8 @@ export function Demo() {
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | title | string | - | '选择地址' | 弹窗标题 |
-| separator | string | - | '-' | 标签拼接分隔符 |
+| separator | string | - | ' / ' | 标签拼接分隔符 |
+| levelLabels | string[] | - | ['省份', '城市', '区县'] | 步骤路径占位文案 |
 | lazyContent | boolean | - | true | 是否延迟渲染选择器内容 |
 | drawerSize | string \| number | - | 自动计算 | 弹窗高度 |
 | disabled | boolean | - | false | 是否禁用 |
@@ -103,7 +118,7 @@ export function Demo() {
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| children | ReactNode \| ((ctx: { label: string; value: string[] }) => ReactNode) | 触发器内容 |
+| children | ReactNode \| ((ctx: AddressCascaderRenderContext) => ReactNode) | 触发器内容 |
 
 ## onConfirm / onChange Payload
 
@@ -111,6 +126,17 @@ export function Demo() {
 type AddressCascaderConfirmPayload = {
   value: string[];
   values: string[];
+  label: string;
+  labels: string[];
+  items: PickerTreeNode[];
+};
+```
+
+`onChange` 会在步骤选择过程中触发，可能返回未完成的部分路径；`onConfirm` 只会在当前路径已经选到末级时触发。
+
+```ts
+type AddressCascaderRenderContext = {
+  value: string[];
   label: string;
   labels: string[];
   items: PickerTreeNode[];

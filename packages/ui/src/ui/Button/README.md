@@ -1,6 +1,6 @@
 # Button
 
-`Button` 只保留语义化 API：`variant / tone / shape / size / pressEffect / iconOnly`。
+`Button` 只保留语义化 API：`variant / tone / shape / size / pressEffect / iconOnly / loadingMode`。
 
 设计原则：
 
@@ -90,6 +90,26 @@ export function Demo() {
 }
 ```
 
+## 加载状态
+
+```tsx
+import { Button } from 'y2kit-ui';
+
+export function Demo() {
+  return (
+    <>
+      <Button loading loadingMode="inline">保存</Button>
+      <Button loading loadingMode="replace">保存</Button>
+      <Button loading loadingMode="overlay">保存</Button>
+    </>
+  );
+}
+```
+
+- `inline`：默认模式，spinner 从左侧进入，文字保持可见
+- `replace`：加载时隐藏原内容，spinner 在按钮内水平垂直居中
+- `overlay`：原内容保留占位但淡出透明，spinner 在按钮内水平垂直居中
+
 ## 渐变与阴影
 
 ```tsx
@@ -119,6 +139,7 @@ export function Demo() {
 - `block?: boolean`
 - `disabled?: boolean`
 - `loading?: boolean`
+- `loadingMode?: 'inline' | 'replace' | 'overlay'`
 - `gradient?: ButtonGradient`
 - `shadow?: 'none' | 'sm' | 'md' | 'lg' | ButtonShadowConfig`
 - `style?: ViewStyle`

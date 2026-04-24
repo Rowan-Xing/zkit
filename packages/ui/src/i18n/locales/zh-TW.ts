@@ -12,6 +12,10 @@ export const zhTW = {
 
   // AddressCascader
   'addressCascader.title': '請選擇地址',
+  'addressCascader.province': '省份',
+  'addressCascader.city': '城市',
+  'addressCascader.district': '區縣',
+  'addressCascader.empty': '暫無可選地址',
 
   // BetweenTime
   'betweenTime.title': '請選擇時間',

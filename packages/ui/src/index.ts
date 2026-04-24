@@ -4,6 +4,7 @@ export type {
   ButtonGradient,
   ButtonGradientDirection,
   ButtonGradientPoint,
+  ButtonLoadingMode,
   ButtonPressEffect,
   ButtonProps,
   ButtonRef,
@@ -65,7 +66,9 @@ export { AddressCascader } from './ui/AddressCascader/index';
 export type {
   AddressCascaderChangePayload,
   AddressCascaderConfirmPayload,
+  AddressCascaderHandle,
   AddressCascaderProps,
+  AddressCascaderRenderContext,
   AddressCascaderValue,
 } from './ui/AddressCascader/index';
 export { DatePicker } from './ui/DatePicker/index';

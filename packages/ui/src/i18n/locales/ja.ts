@@ -12,6 +12,10 @@ export const ja = {
 
   // AddressCascader
   'addressCascader.title': '住所を選択',
+  'addressCascader.province': '都道府県',
+  'addressCascader.city': '市区町村',
+  'addressCascader.district': '町域',
+  'addressCascader.empty': '選択できる住所がありません',
 
   // BetweenTime
   'betweenTime.title': '期間を選択',

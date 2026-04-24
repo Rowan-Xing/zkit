@@ -12,6 +12,10 @@ export const zhCN = {
 
   // AddressCascader
   'addressCascader.title': '请选择地址',
+  'addressCascader.province': '省份',
+  'addressCascader.city': '城市',
+  'addressCascader.district': '区县',
+  'addressCascader.empty': '暂无可选地址',
 
   // BetweenTime
   'betweenTime.title': '请选择时间',

@@ -38,6 +38,7 @@ export type ButtonPressEffect =
   | 'darken'
   | 'scale-darken'
   | 'scale-opacity';
+export type ButtonLoadingMode = 'inline' | 'replace' | 'overlay';
 export type ButtonBorderStyle = 'solid' | 'dashed';
 export type ButtonGradientDirection =
   | 'to right'
@@ -127,6 +128,7 @@ export interface ButtonProps extends NativePressableProps {
   iconOnly?: boolean;
 
   loading?: boolean;
+  loadingMode?: ButtonLoadingMode;
   loadingSize?: number;
   fontSize?: number;
 
@@ -830,6 +832,7 @@ function ButtonImpl({
   iconPosition = 'start',
   iconOnly = false,
   loading = false,
+  loadingMode = 'inline',
   loadingSize,
   fontSize,
   minHeight,
@@ -873,6 +876,8 @@ function ButtonImpl({
 
   const resolvedVariant = variant ?? 'solid';
   const resolvedIconOnly = iconOnly;
+  const resolvedLoadingMode = resolvedIconOnly ? 'overlay' : loadingMode;
+  const usesCenteredLoading = resolvedLoadingMode !== 'inline';
 
   const resolvedInteractionDisabled = disabled || loading;
   const resolvedVisualDisabled = disabled;
@@ -1174,6 +1179,16 @@ function ButtonImpl({
     () => resolveIconBoxStyle(hasIcon, resolvedIconSize),
     [hasIcon, resolvedIconSize]
   );
+  const resolvedCenteredIconBoxStyle = React.useMemo((): ViewStyle => {
+    if (!hasIcon) return {};
+
+    const space = hasText ? (gap ?? defaultGap) : 0;
+
+    return {
+      width: resolvedIconSize,
+      ...(iconPosition === 'end' ? { marginLeft: space } : { marginRight: space }),
+    };
+  }, [defaultGap, gap, hasIcon, hasText, iconPosition, resolvedIconSize]);
 
   const resolvedLoadingSize = React.useMemo(
     () =>
@@ -1206,6 +1221,16 @@ function ButtonImpl({
     };
   }, [defaultGap, gap, hasText, loadingSv, resolvedIconOnly, spinnerSize]);
 
+  const centeredSpinnerAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(loadingSv.value, [0, 1], [0, 1]);
+    const scale = interpolate(loadingSv.value, [0, 1], [0.92, 1]);
+
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  }, [loadingSv]);
+
   const iconBoxAnimatedStyle = useAnimatedStyle(() => {
     if (!hasIcon || resolvedIconOnly) return { width: 0, opacity: 0 };
     const space = hasText ? (gap ?? defaultGap) : 0;
@@ -1231,14 +1256,14 @@ function ButtonImpl({
   ]);
 
   const contentAnimatedStyle = useAnimatedStyle(() => {
-    if (resolvedIconOnly) {
+    if (resolvedIconOnly || usesCenteredLoading) {
       const opacity = interpolate(loadingSv.value, [0, 1], [1, 0]);
       const scale = interpolate(loadingSv.value, [0, 1], [1, 0.98]);
       return { opacity, transform: [{ scale }] };
     }
     const translateX = interpolate(loadingSv.value, [0, 1], [0, loadingTextShift]);
     return { transform: [{ translateX }] };
-  }, [loadingSv, loadingTextShift, resolvedIconOnly]);
+  }, [loadingSv, loadingTextShift, resolvedIconOnly, usesCenteredLoading]);
 
   const shouldClipRoot =
     shadow === 'none' || resolvedVariant === 'ghost' || resolvedVariant === 'link';
@@ -1254,6 +1279,7 @@ function ButtonImpl({
       }),
     [minHeight, resolvedButtonSizeStyle, resolvedIconOnly, resolvedVariant, sizeConfig]
   );
+  const shouldRenderCenteredContent = resolvedLoadingMode !== 'replace' || !loading;
 
   return (
     <AnimatedPressable
@@ -1331,6 +1357,36 @@ function ButtonImpl({
               <Animated.View style={contentAnimatedStyle}>{resolvedIconOnlyNode}</Animated.View>
             ) : null}
           </>
+        ) : usesCenteredLoading ? (
+          <>
+            {shouldRenderCenteredContent ? (
+              <Animated.View style={[styles.centerContent, contentAnimatedStyle]}>
+                {resolvedIconNode && iconPosition === 'start' ? (
+                  <View style={[resolvedIconBaseBoxStyle, resolvedCenteredIconBoxStyle]}>
+                    {resolvedIconNode}
+                  </View>
+                ) : null}
+
+                {resolvedText}
+
+                {resolvedIconNode && iconPosition === 'end' ? (
+                  <View style={[resolvedIconBaseBoxStyle, resolvedCenteredIconBoxStyle]}>
+                    {resolvedIconNode}
+                  </View>
+                ) : null}
+              </Animated.View>
+            ) : null}
+
+            <Animated.View style={[styles.centerOverlay, centeredSpinnerAnimatedStyle]}>
+              {spinnerVisible ? (
+                <LoadingSpinner
+                  animating={spinnerVisible}
+                  color={resolvedVisualColors.textColor}
+                  size={spinnerSize}
+                />
+              ) : null}
+            </Animated.View>
+          </>
         ) : (
           <>
             <Animated.View
@@ -1400,6 +1456,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   textBase: {
     letterSpacing: 0,

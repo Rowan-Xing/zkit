@@ -12,6 +12,10 @@ export const enUS = {
 
   // AddressCascader
   'addressCascader.title': 'Select Address',
+  'addressCascader.province': 'Province',
+  'addressCascader.city': 'City',
+  'addressCascader.district': 'District',
+  'addressCascader.empty': 'No addresses available',
 
   // BetweenTime
   'betweenTime.title': 'Select Time Range',

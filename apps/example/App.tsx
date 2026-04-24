@@ -137,6 +137,7 @@ function Playground() {
   const theme = useTheme();
   const [enabled, setEnabled] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
+  const [centerBusy, setCenterBusy] = React.useState(false);
   const [note, setNote] = React.useState('Expo 54 playground');
   const [checkedItems, setCheckedItems] = React.useState<string[]>(['motion']);
   const [density, setDensity] = React.useState<Density>('comfortable');
@@ -191,6 +192,28 @@ function Playground() {
       errorText: 'Failed',
     });
   }, []);
+
+  const handleBusyDemo = React.useCallback(async () => {
+    if (busy) return;
+
+    setBusy(true);
+    try {
+      await wait(1200);
+    } finally {
+      setBusy(false);
+    }
+  }, [busy]);
+
+  const handleCenterBusyDemo = React.useCallback(async () => {
+    if (centerBusy) return;
+
+    setCenterBusy(true);
+    try {
+      await wait(1200);
+    } finally {
+      setCenterBusy(false);
+    }
+  }, [centerBusy]);
 
   const handlePermissionPurpose = React.useCallback(() => {
     permissionPurposeDialog.show({
@@ -266,8 +289,11 @@ function Playground() {
               icon={icon('refresh-cw', '#FFFFFF')}
               onPress={() => cardToast.showInfo('Refreshed')}
             />
-            <Button loading={busy} onPress={() => setBusy((value) => !value)}>
-              {busy ? 'Busy' : 'Toggle busy'}
+            <Button loading={busy} onPress={handleBusyDemo}>
+              Sync
+            </Button>
+            <Button loading={centerBusy} loadingMode="overlay" onPress={handleCenterBusyDemo}>
+              Center load
             </Button>
           </View>
         </Section>
@@ -406,9 +432,10 @@ function Playground() {
               label={addressLabel}
               onLabelChange={setAddressLabel}
             >
-              {({ label }) => (
-                <FieldTrigger iconName="map-pin" label="AddressCascader" value={label || addressLabel} />
-              )}
+              {({ label, labels }) => {
+                const compactAddress = labels.length > 1 ? labels.slice(-2).join(' / ') : label || addressLabel;
+                return <FieldTrigger iconName="map-pin" label="AddressCascader" value={compactAddress} />;
+              }}
             </AddressCascader>
 
             <BetweenTime
