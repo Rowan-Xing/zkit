@@ -116,6 +116,7 @@ export type {
   ActionDialogOpenOptions,
   ActionDialogOptions,
   ActionDialogResult,
+  ActionDialogService,
 } from './services/ActionDialogService/index';
 export { loading, LoadingProvider } from './services/LoadingService/index';
 export type {

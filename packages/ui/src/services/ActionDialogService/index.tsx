@@ -432,6 +432,24 @@ export type ActionDialogHandle = {
 };
 
 /**
+ * 命令式对话框公开服务接口。
+ *
+ * 只暴露业务接入真正需要的能力，Provider 绑定、内部结算等生命周期细节不进入公共 API。
+ */
+export type ActionDialogService = {
+  /** 打开一个自定义弹窗。 */
+  open: (options?: ActionDialogOpenOptions) => ActionDialogHandle;
+  /** 打开语义化确认框。 */
+  confirm: (options?: ActionDialogConfirmOptions) => Promise<boolean>;
+  /** 打开语义化提示框。 */
+  alert: (options?: ActionDialogAlertOptions) => Promise<boolean>;
+  /** 关闭当前正在显示的弹窗。 */
+  hide: () => void;
+  /** 按作用域关闭当前弹窗。 */
+  hideByScope: (scopeKey?: string) => void;
+};
+
+/**
  * 归一化后的 action。
  *
  * 组件内部渲染和交互只消费这个结构，避免在渲染过程中反复处理默认值。
@@ -509,8 +527,17 @@ type ActionDialogState = {
   rawOptions: ActionDialogOpenOptions;
   /** 当前用于渲染的归一化配置。 */
   options: NormalizedActionDialogOptions;
-  /** 当前弹窗结果的 resolve 函数。 */
-  settle: ((result: ActionDialogResult) => void) | null;
+};
+
+/**
+ * 当前命令式弹窗的运行期记录。
+ *
+ * Promise 结算不放进 React state，避免 state updater 里出现副作用。
+ */
+type ActiveActionDialog = {
+  id: string;
+  rawOptions: ActionDialogOpenOptions;
+  settle: (result: ActionDialogResult) => void;
 };
 
 /** Provider 尚未打开任何弹窗时使用的空配置。 */
@@ -529,7 +556,6 @@ const initialState: ActionDialogState = {
   open: false,
   rawOptions: {},
   options: EMPTY_NORMALIZED_OPTIONS,
-  settle: null,
 };
 
 /**
@@ -648,8 +674,14 @@ class ActionDialogServiceClass {
   /** Provider 挂载后注入的状态更新器。 */
   private setState: React.Dispatch<React.SetStateAction<ActionDialogState>> | null = null;
 
+  /** Provider 当前是否已经挂载。 */
+  private mounted = false;
+
   /** 用于生成递增 id，避免同一毫秒内多次打开时发生冲突。 */
   private sequence = 0;
+
+  /** 当前弹窗的命令式生命周期记录。 */
+  private active: ActiveActionDialog | null = null;
 
   /**
    * 由 `ActionDialogProvider` 在挂载时注入状态更新器。
@@ -658,6 +690,19 @@ class ActionDialogServiceClass {
    */
   setStateUpdater(updater: React.Dispatch<React.SetStateAction<ActionDialogState>>) {
     this.setState = updater;
+    this.mounted = true;
+  }
+
+  /**
+   * Provider 卸载时清理状态更新器。
+   *
+   * 如果卸载时仍有弹窗未结算，主动以 `api` 原因结束，避免调用方的 Promise 永久悬挂。
+   */
+  clearStateUpdater(updater: React.Dispatch<React.SetStateAction<ActionDialogState>>) {
+    if (this.setState !== updater) return;
+    this.settleActive({ type: 'dismiss', reason: 'api' }, false);
+    this.setState = null;
+    this.mounted = false;
   }
 
   /**
@@ -671,26 +716,37 @@ class ActionDialogServiceClass {
   open(options: ActionDialogOpenOptions = {}): ActionDialogHandle {
     const id = `action-dialog-${Date.now()}-${++this.sequence}`;
 
+    let settleResult: (result: ActionDialogResult) => void = () => {};
     const result = new Promise<ActionDialogResult>((resolve) => {
-      if (!this.setState) {
-        console.warn('[actionDialog] Provider not mounted');
-        resolve({ type: 'dismiss', reason: 'api' });
-        return;
-      }
+      settleResult = resolve;
+    });
 
-      const rawOptions = { ...options };
-      const normalizedOptions = normalizeOpenOptions(rawOptions);
+    if (!this.mounted || !this.setState) {
+      console.warn('[actionDialog] Provider not mounted');
+      settleResult({ type: 'dismiss', reason: 'api' });
+      return {
+        id,
+        result,
+        close: () => {},
+        update: () => {},
+      };
+    }
 
-      this.setState((prev) => {
-        prev.settle?.({ type: 'dismiss', reason: 'replace' });
-        return {
-          id,
-          open: true,
-          rawOptions,
-          options: normalizedOptions,
-          settle: resolve,
-        };
-      });
+    const rawOptions = { ...options };
+    const normalizedOptions = normalizeOpenOptions(rawOptions);
+
+    this.settleActive({ type: 'dismiss', reason: 'replace' }, false);
+    this.active = {
+      id,
+      rawOptions,
+      settle: settleResult,
+    };
+
+    this.setState({
+      id,
+      open: true,
+      rawOptions,
+      options: normalizedOptions,
     });
 
     return {
@@ -716,7 +772,7 @@ class ActionDialogServiceClass {
     intent = 'default',
     footer,
     ...restOptions
-  }: ActionDialogConfirmOptions = {}) {
+  }: ActionDialogConfirmOptions = {}): Promise<boolean> {
     const handle = this.open({
       ...restOptions,
       footer: {
@@ -744,7 +800,7 @@ class ActionDialogServiceClass {
     intent = 'default',
     footer,
     ...restOptions
-  }: ActionDialogAlertOptions = {}) {
+  }: ActionDialogAlertOptions = {}): Promise<boolean> {
     const handle = this.open({
       ...restOptions,
       footer: {
@@ -758,7 +814,7 @@ class ActionDialogServiceClass {
 
   /** 关闭当前正在显示的弹窗。 */
   hide() {
-    this.closeCurrent('api');
+    this.settleActive({ type: 'dismiss', reason: 'api' });
   }
 
   /**
@@ -768,29 +824,26 @@ class ActionDialogServiceClass {
    */
   hideByScope(scopeKey?: string) {
     if (!scopeKey) return;
-
-    this.setState?.((prev) => {
-      if (!prev.open || prev.options.scopeKey !== scopeKey) return prev;
-      prev.settle?.({ type: 'dismiss', reason: 'api' });
-      return { ...prev, open: false, settle: null };
-    });
-  }
-
-  /** 关闭当前弹窗，并按给定原因结算结果。 */
-  private closeCurrent(reason: ActionDialogDismissReason) {
-    this.setState?.((prev) => {
-      if (!prev.open) return prev;
-      prev.settle?.({ type: 'dismiss', reason });
-      return { ...prev, open: false, settle: null };
-    });
+    if (this.active?.rawOptions.scopeKey !== scopeKey) return;
+    this.closeById(this.active.id, 'api');
   }
 
   /** 只关闭指定 id 的弹窗，避免旧句柄误关掉新弹窗。 */
-  private closeById(id: string, reason: ActionDialogDismissReason) {
+  closeById(id: string, reason: ActionDialogDismissReason) {
+    this.settleById(id, { type: 'dismiss', reason });
+  }
+
+  /** 按完整结果结算指定 id 的弹窗。 */
+  settleById(id: string, result: ActionDialogResult) {
+    if (this.active?.id !== id) return;
+
+    const active = this.active;
+    this.active = null;
+    active.settle(result);
+
     this.setState?.((prev) => {
-      if (!prev.open || prev.id !== id) return prev;
-      prev.settle?.({ type: 'dismiss', reason });
-      return { ...prev, open: false, settle: null };
+      if (prev.id !== id) return prev;
+      return { ...prev, open: false };
     });
   }
 
@@ -801,21 +854,53 @@ class ActionDialogServiceClass {
    * 1. 只有当前仍然存活的同 id 弹窗才会被更新
    * 2. 更新后会重新走一次 options 归一化
    */
-  private updateById(id: string, patch: Partial<ActionDialogOpenOptions>) {
+  updateById(id: string, patch: Partial<ActionDialogOpenOptions>) {
+    if (this.active?.id !== id || !this.setState) return;
+
+    const nextRawOptions = mergeOpenOptions(this.active.rawOptions, patch);
+    const nextOptions = normalizeOpenOptions(nextRawOptions);
+    this.active = {
+      ...this.active,
+      rawOptions: nextRawOptions,
+    };
+
     this.setState?.((prev) => {
       if (prev.id !== id) return prev;
-      const nextRawOptions = mergeOpenOptions(prev.rawOptions, patch);
       return {
         ...prev,
         rawOptions: nextRawOptions,
-        options: normalizeOpenOptions(nextRawOptions),
+        options: nextOptions,
       };
     });
   }
+
+  /** 结算当前弹窗。`closeState=false` 用于替换和 Provider 卸载场景。 */
+  private settleActive(result: ActionDialogResult, closeState = true) {
+    if (!this.active) return;
+    const activeId = this.active.id;
+
+    if (!closeState) {
+      const active = this.active;
+      this.active = null;
+      active.settle(result);
+      return;
+    }
+
+    this.settleById(activeId, result);
+  }
 }
 
-/** `ActionDialogService` 的全局单例。 */
-export const actionDialog = new ActionDialogServiceClass();
+/** `ActionDialogService` 的内部全局单例。 */
+const actionDialogService = new ActionDialogServiceClass();
+
+/** `ActionDialogService` 的公开全局单例。 */
+export const actionDialog: ActionDialogService = {
+  open: (options) => actionDialogService.open(options),
+  confirm: (options) => actionDialogService.confirm(options),
+  alert: (options) => actionDialogService.alert(options),
+  hide: () => actionDialogService.hide(),
+  hideByScope: (scopeKey) => actionDialogService.hideByScope(scopeKey),
+};
 
 /**
  * `ActionDialogCard` 的内部 props。
@@ -861,8 +946,6 @@ function ActionDialogCard({
   const anim = React.useRef(new Animated.Value(open ? 1 : 0)).current;
   /** 控制组件是否真正挂载到视图树。 */
   const [visible, setVisible] = React.useState(open);
-  /** 居中容器宿主：不参与键盘平移，可作为稳定的测量基准。 */
-  const centerRef = React.useRef<View | null>(null);
   /** 对话框自身高度，来自布局回调，不受 transform 影响。 */
   const dialogHeightRef = React.useRef(0);
   /** 最近一次键盘可见时的几何信息，用于布局变化后二次校准。 */
@@ -1363,14 +1446,12 @@ function ActionDialogCard({
         <Animated.View style={[styles.overlayBackground, { opacity: anim }]} />
         <Pressable style={styles.overlayPressable} onPress={handleOverlayPress}>
           <View
-            ref={centerRef}
             style={styles.center}
             onLayout={() => {
               if (keyboardMetricsRef.current) {
                 updateKeyboardOffsetFromMetrics();
               }
             }}
-            collapsable={false}
           >
             <Reanimated.View style={[styles.contentPressable, keyboardAnimatedStyle]}>
               <Pressable onPress={() => {}}>
@@ -1422,11 +1503,20 @@ function ActionDialogCard({
  */
 export function ActionDialogProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<ActionDialogState>(initialState);
+  const inFlightActionRef = React.useRef<{ id: string; key: string } | null>(null);
 
   /** Provider 挂载后，把状态更新器注入到 service。 */
   React.useEffect(() => {
-    actionDialog.setStateUpdater(setState);
+    actionDialogService.setStateUpdater(setState);
+    return () => {
+      actionDialogService.clearStateUpdater(setState);
+    };
   }, []);
+
+  /** 新弹窗打开时清掉上一轮 action 防重入记录。 */
+  React.useEffect(() => {
+    inFlightActionRef.current = null;
+  }, [state.id]);
 
   /**
    * 用统一方式关闭指定弹窗并结算结果。
@@ -1434,11 +1524,7 @@ export function ActionDialogProvider({ children }: { children: React.ReactNode }
    * 这是所有关闭路径最终都会收敛到的地方。
    */
   const closeWithResult = React.useCallback((id: string, result: ActionDialogResult) => {
-    setState((prev) => {
-      if (prev.id !== id) return prev;
-      prev.settle?.(result);
-      return { ...prev, open: false, settle: null };
-    });
+    actionDialogService.settleById(id, result);
   }, []);
 
   /**
@@ -1447,16 +1533,9 @@ export function ActionDialogProvider({ children }: { children: React.ReactNode }
    * 这会保留原始 options，再重新归一化，保证 `update()` 和初次 `open()` 的行为一致。
    */
   const updateCurrent = React.useCallback((patch: Partial<ActionDialogOpenOptions>) => {
-    setState((prev) => {
-      if (!prev.id) return prev;
-      const nextRawOptions = mergeOpenOptions(prev.rawOptions, patch);
-      return {
-        ...prev,
-        rawOptions: nextRawOptions,
-        options: normalizeOpenOptions(nextRawOptions),
-      };
-    });
-  }, []);
+    if (!state.id) return;
+    actionDialogService.updateById(state.id, patch);
+  }, [state.id]);
 
   /** 处理蒙层点击、返回键等 dismiss 类关闭。 */
   const dismissByReason = React.useCallback(
@@ -1485,9 +1564,10 @@ export function ActionDialogProvider({ children }: { children: React.ReactNode }
   const handleActionPress = React.useCallback(
     async (key: string) => {
       if (!state.id) return;
+      if (inFlightActionRef.current?.id === state.id) return;
 
       const action = state.options.actions.find((item) => item.key === key);
-      if (!action) return;
+      if (!action || action.disabled) return;
 
       const dialogId = state.id;
       const actionResult: ActionDialogResult = {
@@ -1497,6 +1577,7 @@ export function ActionDialogProvider({ children }: { children: React.ReactNode }
       };
 
       let handledByContext = false;
+      inFlightActionRef.current = { id: dialogId, key };
 
       /**
        * 提供给业务 action 的上下文。
@@ -1517,18 +1598,28 @@ export function ActionDialogProvider({ children }: { children: React.ReactNode }
           closeWithResult(dialogId, actionResult);
         },
         update: (patch) => {
-          updateCurrent(patch);
+          actionDialogService.updateById(dialogId, patch);
         },
       };
 
-      const handlerResult = await action.onPress?.(ctx);
-      if (handledByContext) return;
+      try {
+        const handlerResult = await action.onPress?.(ctx);
+        if (handledByContext) return;
 
-      /** `false` 明确表示阻止默认关闭，其他返回值交给 `closeOnPress` 决定。 */
-      const shouldClose = handlerResult === false ? false : action.closeOnPress;
-      if (shouldClose) closeWithResult(dialogId, actionResult);
+        /** `false` 明确表示阻止默认关闭，其他返回值交给 `closeOnPress` 决定。 */
+        const shouldClose = handlerResult === false ? false : action.closeOnPress;
+        if (shouldClose) closeWithResult(dialogId, actionResult);
+      } catch (error) {
+        if (!handledByContext) {
+          console.warn('[actionDialog] action onPress failed', error);
+        }
+      } finally {
+        if (inFlightActionRef.current?.id === dialogId && inFlightActionRef.current.key === key) {
+          inFlightActionRef.current = null;
+        }
+      }
     },
-    [closeWithResult, state.id, state.options.actions, updateCurrent]
+    [closeWithResult, state.id, state.options.actions]
   );
 
   return (

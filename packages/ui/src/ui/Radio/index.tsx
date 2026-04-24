@@ -32,6 +32,8 @@ const RadioContext = React.createContext<RadioContextValue | null>(null);
 
 type RadioGroupStoreListener = () => void;
 
+const noopSubscribe = () => () => {};
+
 class RadioGroupStore<T extends RadioItemValue> {
   private _value: T | null;
   private listeners = new Set<RadioGroupStoreListener>();
@@ -52,9 +54,10 @@ class RadioGroupStore<T extends RadioItemValue> {
   isSelected = (v: T) => Object.is(this._value, v);
 
   setValue = (value: T | null) => {
-    if (Object.is(this._value, value)) return;
+    if (Object.is(this._value, value)) return false;
     this._value = value;
     this.emit();
+    return true;
   };
 
   private emit() {
@@ -65,6 +68,7 @@ class RadioGroupStore<T extends RadioItemValue> {
 type RadioGroupContextValue<T extends RadioItemValue> = {
   store: RadioGroupStore<T>;
   disabled: boolean;
+  isControlled: boolean;
   selectValue: (value: T) => void;
 };
 
@@ -100,9 +104,9 @@ export type RadioProps = Omit<
   'style' | 'children' | 'onPressIn' | 'onPressOut'
 > & {
   itemValue?: RadioItemValue;
-  value?: boolean;
-  defaultValue?: boolean;
-  onValueChange?: (checked: boolean) => void;
+  checked?: boolean;
+  defaultChecked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
   disabled?: boolean;
   label?: string;
   children?: React.ReactNode | ((slot: RadioSlotProps) => React.ReactNode);
@@ -124,9 +128,9 @@ export type RadioProps = Omit<
 
 export function Radio({
   itemValue,
-  value: valueProp,
-  defaultValue = false,
-  onValueChange,
+  checked: checkedProp,
+  defaultChecked = false,
+  onCheckedChange,
   disabled = false,
   label,
   children,
@@ -153,17 +157,21 @@ export function Radio({
 
   const resolvedDisabled = disabled || Boolean(group?.disabled);
 
-  const isControlled = valueProp !== undefined;
-  const [uncontrolledChecked, setUncontrolledChecked] = React.useState<boolean>(defaultValue);
+  const isControlled = checkedProp !== undefined;
+  const [uncontrolledChecked, setUncontrolledChecked] = React.useState<boolean>(() => defaultChecked);
 
-  const isGroupItem = group != null && itemValue != null && !isControlled;
+  const isGroupItem = group != null && itemValue !== undefined && !isControlled;
+  const getGroupCheckedSnapshot = React.useCallback(
+    () => (group && itemValue !== undefined ? group.store.isSelected(itemValue) : false),
+    [group, itemValue]
+  );
   const groupChecked = React.useSyncExternalStore(
-    group?.store.subscribe ?? (() => () => {}),
-    () => (group && itemValue != null ? group.store.isSelected(itemValue) : false),
-    () => (group && itemValue != null ? group.store.isSelected(itemValue) : false)
+    group?.store.subscribe ?? noopSubscribe,
+    getGroupCheckedSnapshot,
+    getGroupCheckedSnapshot
   );
 
-  const checked = isGroupItem ? groupChecked : isControlled ? valueProp! : uncontrolledChecked;
+  const checked = isGroupItem ? groupChecked : isControlled ? checkedProp! : uncontrolledChecked;
 
   const resolvedSize = size ?? wp(20);
   const resolvedBorderWidth = borderWidth ?? wp(1.5);
@@ -175,6 +183,21 @@ export function Radio({
   const resolvedLabelSpace = labelSpace ?? wp(10);
   const resolvedLabelFontSize = labelFontSize ?? wp(15);
   const timing = React.useMemo(() => toTimingConfig(duration), [duration]);
+  const indicatorFrameStyle = React.useMemo(
+    () => ({
+      width: resolvedSize,
+      height: resolvedSize,
+      borderWidth: resolvedBorderWidth,
+      borderRadius: resolvedSize / 2,
+    }),
+    [resolvedBorderWidth, resolvedSize]
+  );
+  const labelMarginStyle = React.useMemo(() => {
+    if (hiddenIndicator) return null;
+    return labelDirection === 'right'
+      ? { marginRight: resolvedLabelSpace }
+      : { marginLeft: resolvedLabelSpace };
+  }, [hiddenIndicator, labelDirection, resolvedLabelSpace]);
 
   const checkedSv = useSharedValue(checked ? 1 : 0);
   const pressSv = useSharedValue(0);
@@ -195,28 +218,43 @@ export function Radio({
     };
   }, [resolvedPrimary, resolvedUncheck, theme.colors.surface]);
 
-  const setChecked = React.useCallback(
+  const emitCheckedChange = React.useCallback(
     (next: boolean) => {
       if (!isControlled) setUncontrolledChecked(next);
-      onValueChange?.(next);
+      onCheckedChange?.(next);
     },
-    [isControlled, onValueChange]
+    [isControlled, onCheckedChange]
   );
 
   const toggle = React.useCallback(() => {
     if (resolvedDisabled) return;
-    if (isGroupItem && group && itemValue != null) {
+    if (isGroupItem && group && itemValue !== undefined) {
       if (!groupChecked) {
-        checkedSv.value = withTiming(1, timing);
+        if (!group.isControlled) {
+          checkedSv.value = withTiming(1, timing);
+        }
         group.selectValue(itemValue);
       }
       return;
     }
 
     const next = !checked;
-    checkedSv.value = withTiming(next ? 1 : 0, timing);
-    setChecked(next);
-  }, [checked, checkedSv, group, groupChecked, isGroupItem, itemValue, resolvedDisabled, setChecked, timing]);
+    if (!isControlled) {
+      checkedSv.value = withTiming(next ? 1 : 0, timing);
+    }
+    emitCheckedChange(next);
+  }, [
+    checked,
+    checkedSv,
+    emitCheckedChange,
+    group,
+    groupChecked,
+    isControlled,
+    isGroupItem,
+    itemValue,
+    resolvedDisabled,
+    timing,
+  ]);
 
   const renderedLabel = React.useMemo(() => {
     if (!showLabel) return null;
@@ -245,53 +283,41 @@ export function Radio({
     return null;
   }, [checked, children, itemValue, label, resolvedDisabled, resolvedLabelFontSize, showLabel, theme.colors.disabled, theme.colors.onSurface, toggle]);
 
-  const order: Array<'indicator' | 'label'> = labelDirection === 'right' ? ['label', 'indicator'] : ['indicator', 'label'];
+  const indicatorContext = React.useMemo<RadioContextValue>(
+    () => ({
+      checkedSv,
+      size: resolvedSize,
+      dotColor: resolvedPrimary,
+    }),
+    [checkedSv, resolvedPrimary, resolvedSize]
+  );
 
-  const content = (
+  const indicatorNode = hiddenIndicator ? null : (
+    <RadioContext.Provider value={indicatorContext}>
+      <Animated.View
+        style={[
+          styles.indicatorOuter,
+          indicatorFrameStyle,
+          indicatorAnimatedStyle,
+          indicatorStyle,
+        ]}
+      >
+        <RadioIndicator />
+      </Animated.View>
+    </RadioContext.Provider>
+  );
+  const labelNode = renderedLabel ? (
+    <View style={[styles.labelWrap, labelMarginStyle]}>{renderedLabel}</View>
+  ) : null;
+  const content = labelDirection === 'right' ? (
     <>
-      {order.map((part) => {
-        if (part === 'indicator') {
-          if (hiddenIndicator) return null;
-          return (
-            <RadioContext.Provider
-              key="indicator"
-              value={{
-                checkedSv,
-                size: resolvedSize,
-                dotColor: resolvedPrimary,
-              }}
-            >
-              <Animated.View
-                style={[
-                  styles.indicatorOuter,
-                  {
-                    width: resolvedSize,
-                    height: resolvedSize,
-                    borderWidth: resolvedBorderWidth,
-                    borderRadius: resolvedSize / 2,
-                  },
-                  indicatorAnimatedStyle,
-                  indicatorStyle,
-                ]}
-              >
-                <RadioIndicator />
-              </Animated.View>
-            </RadioContext.Provider>
-          );
-        }
-        if (!renderedLabel) return null;
-        const marginStyle =
-          hiddenIndicator
-            ? null
-            : labelDirection === 'right'
-              ? { marginRight: resolvedLabelSpace }
-              : { marginLeft: resolvedLabelSpace };
-        return (
-          <View key="label" style={[styles.labelWrap, marginStyle]}>
-            {renderedLabel}
-          </View>
-        );
-      })}
+      {labelNode}
+      {indicatorNode}
+    </>
+  ) : (
+    <>
+      {indicatorNode}
+      {labelNode}
     </>
   );
 
@@ -383,29 +409,30 @@ export function RadioGroup<T extends RadioItemValue = RadioItemValue>({
   const isControlled = value !== undefined;
   const storeRef = React.useRef<RadioGroupStore<T> | null>(null);
   if (!storeRef.current) {
-    storeRef.current = new RadioGroupStore<T>((defaultValue ?? null) as T | null);
+    storeRef.current = new RadioGroupStore<T>(((isControlled ? value : defaultValue) ?? null) as T | null);
   }
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!isControlled) return;
     storeRef.current!.setValue((value ?? null) as T | null);
   }, [isControlled, value]);
 
   const selectValue = React.useCallback(
     (v: T) => {
-      storeRef.current!.setValue(v);
+      if (!isControlled) storeRef.current!.setValue(v);
       onValueChange?.(v);
     },
-    [onValueChange]
+    [isControlled, onValueChange]
   );
 
   const ctx = React.useMemo<RadioGroupContextValue<T>>(
     () => ({
       store: storeRef.current!,
       disabled,
+      isControlled,
       selectValue,
     }),
-    [disabled, selectValue]
+    [disabled, isControlled, selectValue]
   );
 
   const flexDirection = direction === 'column' ? 'column' : 'row';
@@ -459,4 +486,3 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
 });
-

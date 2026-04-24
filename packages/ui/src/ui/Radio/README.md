@@ -2,7 +2,7 @@
 
 Radio 与 RadioGroup 提供单选能力：
 
-- 单个 Radio：`value/defaultValue/onValueChange`（boolean）
+- 单个 Radio：`checked/defaultChecked/onCheckedChange`（boolean）
 - RadioGroup：管理一个“选中值”（`string | number | boolean | null`），组内 Radio 通过 `itemValue` 参与选择
 - 交互与过渡动画基于 `react-native-reanimated`
 
@@ -18,7 +18,7 @@ export function Demo() {
 
   return (
     <View style={{ gap: 12 }}>
-      <Radio value={checked} onValueChange={setChecked} label="我已阅读并同意" />
+      <Radio checked={checked} onCheckedChange={setChecked} label="我已阅读并同意" />
       <Text>当前：{String(checked)}</Text>
     </View>
   );
@@ -51,7 +51,7 @@ export function Demo() {
 
 ## 竖向排列 + 自定义外观（render-prop）
 
-`children` 支持 render-prop，可以拿到 `checked/toggle` 以便做整行可点的组合；同时配合 `hiddenIndicator` 隐藏默认圆点。
+`children` 支持 render-prop，可以拿到 `checked/disabled/toggle`。Radio 根节点本身就是可点击区域；自定义内容通常只读取 `checked` 做视觉变化，不需要在子节点里再绑定一次点击。
 
 ```tsx
 import * as React from 'react';
@@ -70,9 +70,8 @@ export function Demo() {
     <RadioGroup value={value} onValueChange={setValue} direction="column" gap={12} align="left">
       {list.map((item) => (
         <Radio key={item.id} itemValue={item.id} hiddenIndicator>
-          {({ checked, toggle }) => (
+          {({ checked }) => (
             <View
-              onTouchEnd={toggle}
               style={{
                 paddingHorizontal: 12,
                 paddingVertical: 12,
@@ -100,12 +99,12 @@ Radio 基于 React Native 的 `Pressable`，除下述 props 外，也支持 `Pre
 
 #### 值与事件
 
-- `value?: boolean`
+- `checked?: boolean`
   - 说明：受控选中态。传入后由外部完全接管选中状态。
-- `defaultValue?: boolean`
+- `defaultChecked?: boolean`
   - 默认值：`false`
-  - 说明：非受控模式下的初始选中态（仅在未传 `value` 时生效）。
-- `onValueChange?: (checked: boolean) => void`
+  - 说明：非受控模式下的初始选中态（仅在未传 `checked` 时生效）。
+- `onCheckedChange?: (checked: boolean) => void`
   - 说明：选中态变化回调。
 
 #### 组内选择（配合 RadioGroup）
@@ -187,6 +186,7 @@ RadioGroup 继承 React Native `View` 的所有 props，并额外提供以下 pr
   - 说明：非受控初始选中值（仅在未传 `value` 时生效）。
 - `onValueChange?: (value: string | number | boolean | null) => void`
   - 说明：选中值变化回调。
+  - 注意：受控模式下组件不会乐观改内部选中值；如果父组件拒绝这次变更，UI 会保持原状态。
 - `disabled?: boolean`
   - 默认值：`false`
   - 说明：组禁用；组内所有 Radio 都会被禁用。
@@ -203,4 +203,3 @@ RadioGroup 继承 React Native `View` 的所有 props，并额外提供以下 pr
     - `number`：按 RN 数值像素解释
     - `string`：支持 `'12px'` / `'12'`
     - `[columnGap, rowGap]`：分别控制列/行间距
-

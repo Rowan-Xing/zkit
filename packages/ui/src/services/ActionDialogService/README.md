@@ -5,6 +5,8 @@
 - `open(options)`：底层主入口
 - `confirm(options)`：语义化确认框，返回 `Promise<boolean>`
 - `alert(options)`：语义化提示框，返回 `Promise<boolean>`
+- `hide()`：关闭当前弹窗
+- `hideByScope(scopeKey)`：按作用域关闭当前弹窗
 
 ## 前置条件
 
@@ -125,6 +127,8 @@ dialogService.confirm({
 - `close()`：主动关闭当前对话框
 - `update(patch)`：更新当前对话框配置
 
+如果打开新弹窗时已有弹窗未结束，旧弹窗会以 `{ type: 'dismiss', reason: 'replace' }` 结算。
+
 常用字段：
 
 | 参数 | 类型 | 说明 |
@@ -170,10 +174,19 @@ dialogService.confirm({
 | intent | `'default' \| 'danger'` | 快速切换确认按钮语义 |
 | footer.layout | `'bar' \| 'row' \| 'stacked'` | 底部布局 |
 
+### actionDialog.hide()
+
+关闭当前弹窗，并让当前 `result` 以 `{ type: 'dismiss', reason: 'api' }` 结算。
+
+### actionDialog.hideByScope(scopeKey)
+
+只在当前弹窗的 `scopeKey` 命中时关闭弹窗，适合“同一业务域只保留一个弹窗”的场景。
+
 ## 设计说明
 
 - `y2kit-ui` 只保留新模型，不再内置 legacy `buttons / onConfirm / closeOnConfirm` 兼容。
 - `open` 是唯一底层入口，避免 `open / show / custom` 多个同能力名字并存。
 - 语义和视觉解耦：`role` 决定结果语义，`variant` 决定按钮样式，`footer.layout` 决定布局。
+- Provider 绑定与结果结算是内部生命周期细节，不作为 `actionDialog` 公开接口暴露。
 - 项目级兼容建议放在各自的 `dialogService` 中做参数转译。
 - 长期演进建议优先补 `Provider defaults/presets` 与语义化 theme tokens，而不是继续扩展 legacy 参数。
