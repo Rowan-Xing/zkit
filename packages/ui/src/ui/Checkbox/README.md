@@ -93,7 +93,7 @@ export function Demo() {
 - `icon`：自定义选中图标（默认使用组件库内置 `check.svg`）
 - `size` / `borderWidth` / `radius` / `shape`：尺寸与形状
 - `label` / `labelSpace`：快捷文案与间距
-- `hiddenCheckbox`：隐藏方块，仅复用交互/状态/无障碍
+- `hiddenCheckbox`：隐藏方块，仅复用交互/状态
 
 ## Props（完整清单）
 
@@ -160,7 +160,7 @@ Checkbox 继承 React Native `Pressable` 的所有 props，并额外提供以下
 
 - `hiddenCheckbox?: boolean`
   - 默认：`false`
-  - 说明：隐藏方块区域，仅复用交互/状态/无障碍；你可以在 `children(slot)` 里完全自定义 UI。
+  - 说明：隐藏方块区域，仅复用交互/状态；你可以在 `children(slot)` 里完全自定义 UI。
 
 - `icon?: ReactNode | string`
   - 默认：内置 `check.svg`

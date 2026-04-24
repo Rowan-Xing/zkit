@@ -141,7 +141,7 @@ Radio 基于 React Native 的 `Pressable`，除下述 props 外，也支持 `Pre
 
 - `hiddenIndicator?: boolean`
   - 默认值：`false`
-  - 说明：隐藏默认圆点；用于完全自定义外观，只复用交互/状态/无障碍。
+  - 说明：隐藏默认圆点；用于完全自定义外观，只复用交互/状态。
 - `size?: number`
   - 说明：圆点外圈尺寸（宽高相同）。
 - `borderWidth?: number`

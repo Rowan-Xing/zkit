@@ -152,7 +152,7 @@ export type CheckboxProps = Omit<
 
   // label 与方块之间的间距
   labelSpace?: number;
-  // 隐藏方块（用于完全自定义外观，只复用交互/状态/无障碍）
+  // 隐藏方块（用于完全自定义外观，只复用交互/状态）
   hiddenCheckbox?: boolean;
   // 自定义选中图标（默认使用 CheckSvg）
   icon?: React.ReactNode | string;
