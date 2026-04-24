@@ -536,6 +536,8 @@ type MemoizedWheelColumnProps = {
   wheelsRef: React.MutableRefObject<Array<WheelColumnHandle | null>>;
 };
 
+type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
+
 // 单列滚轮做一层 memo，避免父组件里其它状态变化时整列重复渲染。
 const MemoizedWheelColumn = React.memo(function MemoizedWheelColumn({
   col,
@@ -591,16 +593,19 @@ const MemoizedWheelColumn = React.memo(function MemoizedWheelColumn({
  *
  * 四、几个最关键的状态
  * 1. `visible`：业务层面“应该打开还是关闭”
- * 2. `sheetMounted`：TrueSheet 是否已经挂到 React 树上
- * 3. `contentMounted`：滚轮内容是否已经真正挂载
- * 4. `backdropMounted`：iOS 自绘背景遮罩是否还保留在树上做淡出动画
+ * 2. `sheetMounted`：TrueSheet 这个 React 宿主是否还保留在树上
+ * 3. `sheetPhaseRef`：TrueSheet 原生层当前处于 idle / presenting / presented / dismissing 哪个阶段
+ * 4. `contentMounted`：滚轮内容是否已经真正挂载
+ * 5. `backdropMounted`：iOS 自绘背景遮罩是否还保留在树上做淡出动画
  *
  * 五、关闭链路
  * 1. 确认 / 取消 / 点背景，本质上最终都会走 `close()`
- * 2. `close()` 只负责：
- *    - 更新 open 状态
- *    - 主动调用原生 dismiss
- * 3. 真正把 `sheetMounted` 设回 false，要等 `onDidDismiss`
+ * 2. `close()` 只负责更新业务 open 状态，并请求关闭原生 sheet
+ * 3. 如果 close 发生在 iOS present 动画完成前，不会立刻调用 dismiss
+ *    - 因为 TrueSheet iOS 原生层在 `viewDidAppear` 前还没有 `isPresented`
+ *    - 这时直接 dismiss 会被原生判断为“已经关闭”
+ *    - 正确做法是记录 pending dismiss，等 `onDidPresent` 后补一次真正的 dismiss
+ * 4. 真正把 `sheetMounted` 设回 false，要等 `onDidDismiss`
  *    - 这样能避免原生动画还没结束就把宿主节点卸掉
  *    - 这是这类原生弹层最容易出时序问题的地方
  *
@@ -611,16 +616,19 @@ const MemoizedWheelColumn = React.memo(function MemoizedWheelColumn({
  *    - `visible` 是业务态
  *    - `sheetMounted` 是原生宿主生命周期
  *    - 两者职责不同，强行合并很容易破坏 present / dismiss 时序
- * 3. 不要在 `close()` 里直接把 `sheetMounted` 设为 `false`
+ * 3. 不要把 `dismiss()` 改回无条件调用
+ *    - iOS present 过程中调用 dismiss 会触发 TrueSheet 的 already dismissed warning
+ *    - 但又必须保留 didPresent 后的补偿 dismiss，才能避免“点了关闭但第一次关不掉”
+ * 4. 不要在 `close()` 里直接把 `sheetMounted` 设为 `false`
  *    - 必须等 TrueSheet 的 `onDidDismiss`
  *    - 否则容易出现原生动画没跑完就被 React 卸载
- * 4. iOS 背景关闭如果要改，只改外层 `Modal + Pressable` 这层
+ * 5. iOS 背景关闭如果要改，只改外层 `Modal + Pressable` 这层
  *    - 不要回头依赖 TrueSheet 自己的原生背景关闭
- * 5. 如果要调整蒙层动画：
+ * 6. 如果要调整蒙层动画：
  *    - 优先改 `backdropOpacity` 的时长和 easing
  *    - 不要让蒙层卸载时机重新依赖 `sheetMounted`
  *    - 否则体感会重新变成“背景退场比点击动作晚很多”
- * 6. 如果要改确认逻辑，保留 `syncDraftFromWheels()`
+ * 7. 如果要改确认逻辑，保留 `syncDraftFromWheels()`
  *    - 这是为了解决滚轮惯性未停就点击确认的情况
  *    - 去掉它会重新引入“视觉停留项和最终提交值不一致”的问题
  */
@@ -691,11 +699,14 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
   const sheetRef = React.useRef<TrueSheet>(null);
 
-  // 记录原生 sheet 是否已经进入 presented 状态。
-  // 这个值不用于渲染，只用于做时序保护：
-  // - 避免还没 dismiss 完又重复 dismiss
-  // - 避免已经 present 了又重复 present
-  const isPresentedRef = React.useRef(false);
+  // 原生层生命周期不参与渲染，但它决定 present / dismiss 命令什么时候能安全发送。
+  const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
+
+  // close 发生在 presenting 阶段时，必须等 onDidPresent 后再补发 dismiss。
+  const pendingDismissRef = React.useRef(false);
+
+  // 记录是否已经进入过一次打开生命周期，用于避免 close() 在本来就关闭时触发完成回调。
+  const activeSheetLifecycleRef = React.useRef(visible);
 
   // 记录最新 visible，专门给异步回调 / requestAnimationFrame / animation 回调读。
   // 否则这些回调非常容易拿到旧闭包里的 visible，造成判断失真。
@@ -705,17 +716,57 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     visibleRef.current = visible;
   }, [visible]);
 
-  // 统一封装 dismiss：
-  // 1. 所有关闭路径都尽量收敛到这里
-  // 2. 内部吞掉原生层偶发的“重复 dismiss”异常
-  //
-  // 之所以要吞，是因为 JS 和原生回调存在天然竞态：
-  // 某些极端情况下，业务上已经要求关闭，但原生层自己也正在 dismiss，
-  // 这时重复调一次 dismiss 只需要“静默忽略”，不值得把异常抛到业务层。
-  const dismissSheet = React.useCallback(() => {
-    const p = sheetRef.current?.dismiss();
-    silentlyCatchPromise(p);
-  }, []);
+  const finishClosedLifecycle = React.useCallback((shouldSyncOpenState: boolean) => {
+    sheetPhaseRef.current = 'idle';
+    pendingDismissRef.current = false;
+
+    if (shouldSyncOpenState) {
+      onOpenChange?.(false);
+      if (!isShowControlled) setInnerShow(false);
+    }
+
+    if (Platform.OS === 'ios' || lazyContent) {
+      setSheetMounted(false);
+    }
+
+    if (activeSheetLifecycleRef.current) {
+      activeSheetLifecycleRef.current = false;
+      onDismissComplete?.();
+    }
+  }, [isShowControlled, lazyContent, onDismissComplete, onOpenChange]);
+
+  // 统一封装关闭原生 sheet：
+  // - idle：没有真正 present 过，直接完成本地生命周期
+  // - presenting：记录 pending，等 onDidPresent 后补 dismiss
+  // - presented：只发一次原生 dismiss
+  // - dismissing：已经在关，忽略重复请求
+  const requestSheetDismiss = React.useCallback(() => {
+    const phase = sheetPhaseRef.current;
+
+    if (phase === 'dismissing') return;
+
+    if (phase === 'presenting') {
+      pendingDismissRef.current = true;
+      return;
+    }
+
+    if (phase === 'presented') {
+      const sheet = sheetRef.current;
+      if (!sheet) {
+        finishClosedLifecycle(true);
+        return;
+      }
+
+      pendingDismissRef.current = false;
+      sheetPhaseRef.current = 'dismissing';
+      silentlyCatchPromise(sheet.dismiss());
+      return;
+    }
+
+    if (activeSheetLifecycleRef.current) {
+      finishClosedLifecycle(true);
+    }
+  }, [finishClosedLifecycle]);
 
   // 当业务要求打开时，先把 TrueSheet 宿主挂上树。
   // 注意这里只做“挂载准备”，不直接 present：
@@ -723,7 +774,12 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // 这样做可以避免“组件还没挂好就调用原生 present”的竞态。
   React.useEffect(() => {
     if (visible && !sheetMounted) {
+      activeSheetLifecycleRef.current = true;
+      pendingDismissRef.current = false;
       setSheetMounted(true);
+    }
+    if (visible && sheetMounted) {
+      activeSheetLifecycleRef.current = true;
     }
   }, [sheetMounted, visible]);
 
@@ -831,8 +887,8 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   //
   // 关闭流程：
   // 1. `visible=false`
-  // 2. 如果当前原生 sheet 还处于 presented，就主动调 `dismiss()`
-  // 3. 但 React 侧不会马上卸载，真正卸载要等 `onDidDismiss`
+  // 2. 按当前原生阶段决定是立即 dismiss，还是等 didPresent 后补 dismiss
+  // 3. React 侧不会马上卸载，真正卸载要等 `onDidDismiss`
   //
   // `present()` 放在 requestAnimationFrame 里，是为了给 React 一帧时间把宿主节点挂好，
   // 否则原生方法有概率调用过早。
@@ -840,16 +896,22 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     if (visible && sheetMounted) {
       const rafId = requestAnimationFrame(() => {
         if (!visibleRef.current) return;
-        if (isPresentedRef.current) return;
-        const p = sheetRef.current?.present();
+        if (sheetPhaseRef.current !== 'idle') return;
+
+        const sheet = sheetRef.current;
+        if (!sheet) return;
+
+        pendingDismissRef.current = false;
+        sheetPhaseRef.current = 'presenting';
+        const p = sheet.present();
         silentlyCatchPromise(p);
       });
       return () => cancelAnimationFrame(rafId);
     }
-    if (!visible && isPresentedRef.current) {
-      dismissSheet();
+    if (!visible && sheetMounted) {
+      requestSheetDismiss();
     }
-  }, [dismissSheet, sheetMounted, visible]);
+  }, [requestSheetDismiss, sheetMounted, visible]);
 
   // 根据已提交 value 推导展示文案。
   const committedLabel = React.useMemo(() => {
@@ -867,15 +929,15 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   //
   // 注意这里刻意不做“直接卸载”：
   // 1. 先把业务 open 状态改成 false
-  // 2. 再主动通知原生 dismiss
+  // 2. 再按原生阶段请求关闭
   // 3. 真正的卸载放到 `onDidDismiss`
   //
   // 也就是说，`close()` 的职责是“发起关闭”，不是“完成关闭”。
   const close = React.useCallback(() => {
     onOpenChange?.(false);
     if (!isShowControlled) setInnerShow(false);
-    dismissSheet();
-  }, [dismissSheet, isShowControlled, onOpenChange]);
+    requestSheetDismiss();
+  }, [isShowControlled, onOpenChange, requestSheetDismiss]);
 
   // 对外统一的打开入口。
   //
@@ -1084,17 +1146,17 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
 
   // TrueSheet 原生弹窗真正展示完成后的回调。
   //
-  // 这里除了做 `isPresentedRef` 标记，还有一个很重要的兜底：
+  // 这里除了推进原生阶段标记，还有一个很重要的兜底：
   // 如果在“挂载 -> present 动画”这段时间里，业务状态又变成了关闭，
   // 那么 onDidPresent 到来后要立刻补一次 dismiss，避免出现：
   // - JS 认为已经关闭
   // - 但原生弹窗此刻才刚展示出来
   const handleSheetDidPresent = React.useCallback(() => {
-    isPresentedRef.current = true;
-    if (!visibleRef.current) {
-      dismissSheet();
+    sheetPhaseRef.current = 'presented';
+    if (pendingDismissRef.current || !visibleRef.current) {
+      requestSheetDismiss();
     }
-  }, [dismissSheet]);
+  }, [requestSheetDismiss]);
 
   // TrueSheet 原生弹窗真正关闭完成后的回调。
   //
@@ -1106,12 +1168,10 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // iOS 这里额外要求一定回收 `sheetMounted`，
   // 因为我们外层还有一层 Modal 壳子，需要跟着 TrueSheet 一起完整卸载。
   const handleSheetDidDismiss = React.useCallback(() => {
-    isPresentedRef.current = false;
-    onOpenChange?.(false);
-    if (!isShowControlled) setInnerShow(false);
-    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
-    onDismissComplete?.();
-  }, [isShowControlled, lazyContent, onDismissComplete, onOpenChange]);
+    const wasProgrammaticDismiss = sheetPhaseRef.current === 'dismissing' || pendingDismissRef.current;
+    const shouldSyncOpenState = !visibleRef.current || !wasProgrammaticDismiss;
+    finishClosedLifecycle(shouldSyncOpenState);
+  }, [finishClosedLifecycle]);
 
   // iOS 背景点击关闭统一走这里。
   //

@@ -37,6 +37,7 @@ const VISIBLE_ITEMS = WHEEL_VISIBLE_ITEMS;
 
 type ModelType = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second';
 type Side = 'start' | 'end';
+type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
 
 type BetweenTimeConfirmPayload = {
   value: string[];
@@ -150,6 +151,13 @@ const STANDARD_INPUT_FORMATS = [
 
 function clampNumber(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+function silentlyCatchPromise(value: unknown) {
+  const maybePromise = value as { catch?: (onRejected: () => void) => unknown } | null | undefined;
+  if (typeof maybePromise?.catch === 'function') {
+    maybePromise.catch(() => {});
+  }
 }
 
 function toIntOrNull(v: string) {
@@ -453,23 +461,68 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   const [sheetMounted, setSheetMounted] = React.useState(visible);
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
   const sheetRef = React.useRef<TrueSheet>(null);
-  const isPresentedRef = React.useRef(false);
-  const visibleRef = React.useRef(visible);
+  const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
+  const pendingDismissRef = React.useRef(false);
+  const activeSheetLifecycleRef = React.useRef(!!visible);
+  const visibleRef = React.useRef(!!visible);
 
   React.useEffect(() => {
-    visibleRef.current = visible;
+    visibleRef.current = !!visible;
   }, [visible]);
 
-  const dismissSheet = React.useCallback(() => {
-    const p = sheetRef.current?.dismiss();
-    if (p && typeof (p as any).catch === 'function') {
-      (p as any).catch(() => {});
+  const finishClosedLifecycle = React.useCallback((shouldSyncOpenState: boolean) => {
+    sheetPhaseRef.current = 'idle';
+    pendingDismissRef.current = false;
+
+    if (shouldSyncOpenState) {
+      onOpenChange?.(false);
+      if (!isOpenControlled) setInnerOpen(false);
     }
-  }, []);
+
+    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
+
+    if (activeSheetLifecycleRef.current) {
+      activeSheetLifecycleRef.current = false;
+      onDismissComplete?.();
+    }
+  }, [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]);
+
+  const requestSheetDismiss = React.useCallback(() => {
+    const phase = sheetPhaseRef.current;
+
+    if (phase === 'dismissing') return;
+
+    if (phase === 'presenting') {
+      pendingDismissRef.current = true;
+      return;
+    }
+
+    if (phase === 'presented') {
+      const sheet = sheetRef.current;
+      if (!sheet) {
+        finishClosedLifecycle(true);
+        return;
+      }
+
+      pendingDismissRef.current = false;
+      sheetPhaseRef.current = 'dismissing';
+      silentlyCatchPromise(sheet.dismiss());
+      return;
+    }
+
+    if (activeSheetLifecycleRef.current) {
+      finishClosedLifecycle(true);
+    }
+  }, [finishClosedLifecycle]);
 
   React.useEffect(() => {
     if (visible && !sheetMounted) {
+      activeSheetLifecycleRef.current = true;
+      pendingDismissRef.current = false;
       setSheetMounted(true);
+    }
+    if (visible && sheetMounted) {
+      activeSheetLifecycleRef.current = true;
     }
   }, [sheetMounted, visible]);
 
@@ -528,8 +581,8 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     if (!isOpenControlled) {
       setInnerOpen(false);
     }
-    dismissSheet();
-  }, [dismissSheet, isOpenControlled, onOpenChange]);
+    requestSheetDismiss();
+  }, [isOpenControlled, onOpenChange, requestSheetDismiss]);
 
   const openPicker = React.useCallback(() => {
     if (disabled) return;
@@ -555,18 +608,21 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     if (visible && sheetMounted) {
       const rafId = requestAnimationFrame(() => {
         if (!visibleRef.current) return;
-        if (isPresentedRef.current) return;
-        const p = sheetRef.current?.present();
-        if (p && typeof (p as any).catch === 'function') {
-          (p as any).catch(() => {});
-        }
+        if (sheetPhaseRef.current !== 'idle') return;
+
+        const sheet = sheetRef.current;
+        if (!sheet) return;
+
+        pendingDismissRef.current = false;
+        sheetPhaseRef.current = 'presenting';
+        silentlyCatchPromise(sheet.present());
       });
       return () => cancelAnimationFrame(rafId);
     }
-    if (!visible && isPresentedRef.current) {
-      dismissSheet();
+    if (!visible && sheetMounted) {
+      requestSheetDismiss();
     }
-  }, [dismissSheet, sheetMounted, visible]);
+  }, [requestSheetDismiss, sheetMounted, visible]);
 
   const columnsCount = React.useMemo(() => getColumnsCount(type), [type]);
   const wheelsRef = React.useRef<Array<WheelColumnHandle | null>>([]);
@@ -729,19 +785,17 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   );
 
   const handleSheetDidPresent = React.useCallback(() => {
-    isPresentedRef.current = true;
-    if (!visibleRef.current) {
-      dismissSheet();
+    sheetPhaseRef.current = 'presented';
+    if (pendingDismissRef.current || !visibleRef.current) {
+      requestSheetDismiss();
     }
-  }, [dismissSheet]);
+  }, [requestSheetDismiss]);
 
   const handleSheetDidDismiss = React.useCallback(() => {
-    isPresentedRef.current = false;
-    onOpenChange?.(false);
-    if (!isOpenControlled) setInnerOpen(false);
-    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
-    onDismissComplete?.();
-  }, [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]);
+    const wasProgrammaticDismiss = sheetPhaseRef.current === 'dismissing' || pendingDismissRef.current;
+    const shouldSyncOpenState = !visibleRef.current || !wasProgrammaticDismiss;
+    finishClosedLifecycle(shouldSyncOpenState);
+  }, [finishClosedLifecycle]);
 
   const handleBackdropPress = React.useCallback(() => {
     if (disabled || !visible) return;

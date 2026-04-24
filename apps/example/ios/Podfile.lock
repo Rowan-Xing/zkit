@@ -2463,7 +2463,7 @@ DEPENDENCIES:
   - "RNReanimated (from `../../../node_modules/.pnpm/react-native-reanimated@4.1.7_react-native-worklets@0.5.1_@babel+core@7.29.0_react-native@0.8_md4me5zg53vn5b5fflsybudmly/node_modules/react-native-reanimated`)"
   - "RNScreens (from `../../../node_modules/.pnpm/react-native-screens@4.16.0_react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/react-native-screens`)"
   - "RNSVG (from `../../../node_modules/.pnpm/react-native-svg@15.12.1_react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/react-native-svg`)"
-  - "RNTrueSheet (from `../../../node_modules/.pnpm/@lodev09+react-native-true-sheet@3.10.0_react-native-reanimated@4.1.7_react-native-worklets@0_qw6favwpnlux6kdfn6mxoblqxi/node_modules/@lodev09/react-native-true-sheet`)"
+  - RNTrueSheet (from `../../../packages/react-native-true-sheet`)
   - "RNWorklets (from `../../../node_modules/.pnpm/react-native-worklets@0.5.1_@babel+core@7.29.0_react-native@0.81.5_@babel+core@7.29.0_@types+_m65wpfmmtxhyywkiqewem6qlny/node_modules/react-native-worklets`)"
   - y2kit-ui (from `../../../packages/ui`)
   - "Yoga (from `../../../node_modules/.pnpm/react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0/node_modules/react-native/ReactCommon/yoga`)"
@@ -2672,7 +2672,7 @@ EXTERNAL SOURCES:
   RNSVG:
     :path: "../../../node_modules/.pnpm/react-native-svg@15.12.1_react-native@0.81.5_@babel+core@7.29.0_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/react-native-svg"
   RNTrueSheet:
-    :path: "../../../node_modules/.pnpm/@lodev09+react-native-true-sheet@3.10.0_react-native-reanimated@4.1.7_react-native-worklets@0_qw6favwpnlux6kdfn6mxoblqxi/node_modules/@lodev09/react-native-true-sheet"
+    :path: "../../../packages/react-native-true-sheet"
   RNWorklets:
     :path: "../../../node_modules/.pnpm/react-native-worklets@0.5.1_@babel+core@7.29.0_react-native@0.81.5_@babel+core@7.29.0_@types+_m65wpfmmtxhyywkiqewem6qlny/node_modules/react-native-worklets"
   y2kit-ui:
@@ -2780,7 +2780,7 @@ SPEC CHECKSUMS:
   RNReanimated: a226bce5862c011c80c0fd526aa9081b4c9e6240
   RNScreens: dd61bc3a3e6f6901ad833efa411917d44827cf51
   RNSVG: 2825ee146e0f6a16221e852299943e4cceef4528
-  RNTrueSheet: 75bb0b30389515bfdb839ebe7a2e199ea6488fbd
+  RNTrueSheet: ae5662d48c233cfb1bf9eda1f210f93716c5b529
   RNWorklets: d752b5d278fd9176540532aa02a479931be3778e
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57

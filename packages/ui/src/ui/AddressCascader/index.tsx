@@ -119,6 +119,7 @@ type AddressDraft = {
 };
 
 type Primitive = string | number;
+type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
 
 const MAX_LEVELS = 3;
 
@@ -298,8 +299,10 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const [sheetMounted, setSheetMounted] = React.useState(visible);
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
   const sheetRef = React.useRef<TrueSheet>(null);
-  const isPresentedRef = React.useRef(false);
-  const visibleRef = React.useRef(visible);
+  const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
+  const pendingDismissRef = React.useRef(false);
+  const activeSheetLifecycleRef = React.useRef(!!visible);
+  const visibleRef = React.useRef(!!visible);
 
   const [innerLabel, setInnerLabel] = React.useState(defaultLabel ?? '');
   const [draft, setDraft] = React.useState(() => createDraft(areaData, value));
@@ -318,7 +321,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   }, [defaultLevelLabels, levelLabels]);
 
   React.useEffect(() => {
-    visibleRef.current = visible;
+    visibleRef.current = !!visible;
   }, [visible]);
 
   React.useEffect(() => {
@@ -336,7 +339,12 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
 
   React.useEffect(() => {
     if (visible && !sheetMounted) {
+      activeSheetLifecycleRef.current = true;
+      pendingDismissRef.current = false;
       setSheetMounted(true);
+    }
+    if (visible && sheetMounted) {
+      activeSheetLifecycleRef.current = true;
     }
   }, [sheetMounted, visible]);
 
@@ -354,15 +362,56 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     [screenH, sheetHeight]
   );
 
-  const dismissSheet = React.useCallback(() => {
-    silentlyCatchPromise(sheetRef.current?.dismiss());
-  }, []);
+  const finishClosedLifecycle = React.useCallback((shouldSyncOpenState: boolean) => {
+    sheetPhaseRef.current = 'idle';
+    pendingDismissRef.current = false;
+
+    if (shouldSyncOpenState) {
+      onOpenChange?.(false);
+      if (!isOpenControlled) setInnerOpen(false);
+    }
+
+    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
+
+    if (activeSheetLifecycleRef.current) {
+      activeSheetLifecycleRef.current = false;
+      onDismissComplete?.();
+    }
+  }, [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]);
+
+  const requestSheetDismiss = React.useCallback(() => {
+    const phase = sheetPhaseRef.current;
+
+    if (phase === 'dismissing') return;
+
+    if (phase === 'presenting') {
+      pendingDismissRef.current = true;
+      return;
+    }
+
+    if (phase === 'presented') {
+      const sheet = sheetRef.current;
+      if (!sheet) {
+        finishClosedLifecycle(true);
+        return;
+      }
+
+      pendingDismissRef.current = false;
+      sheetPhaseRef.current = 'dismissing';
+      silentlyCatchPromise(sheet.dismiss());
+      return;
+    }
+
+    if (activeSheetLifecycleRef.current) {
+      finishClosedLifecycle(true);
+    }
+  }, [finishClosedLifecycle]);
 
   const close = React.useCallback(() => {
     onOpenChange?.(false);
     if (!isOpenControlled) setInnerOpen(false);
-    dismissSheet();
-  }, [dismissSheet, isOpenControlled, onOpenChange]);
+    requestSheetDismiss();
+  }, [isOpenControlled, onOpenChange, requestSheetDismiss]);
 
   const openPicker = React.useCallback(() => {
     if (disabled) return;
@@ -383,15 +432,21 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     if (visible && sheetMounted) {
       const rafId = requestAnimationFrame(() => {
         if (!visibleRef.current) return;
-        if (isPresentedRef.current) return;
-        silentlyCatchPromise(sheetRef.current?.present());
+        if (sheetPhaseRef.current !== 'idle') return;
+
+        const sheet = sheetRef.current;
+        if (!sheet) return;
+
+        pendingDismissRef.current = false;
+        sheetPhaseRef.current = 'presenting';
+        silentlyCatchPromise(sheet.present());
       });
       return () => cancelAnimationFrame(rafId);
     }
-    if (!visible && isPresentedRef.current) {
-      dismissSheet();
+    if (!visible && sheetMounted) {
+      requestSheetDismiss();
     }
-  }, [dismissSheet, sheetMounted, visible]);
+  }, [requestSheetDismiss, sheetMounted, visible]);
 
   const committed = React.useMemo(() => resolvePath(areaData, value), [areaData, value]);
   const committedLabel = React.useMemo(() => buildLabel(committed.labels, separator), [committed.labels, separator]);
@@ -577,19 +632,17 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   ]);
 
   const handleSheetDidPresent = React.useCallback(() => {
-    isPresentedRef.current = true;
-    if (!visibleRef.current) {
-      dismissSheet();
+    sheetPhaseRef.current = 'presented';
+    if (pendingDismissRef.current || !visibleRef.current) {
+      requestSheetDismiss();
     }
-  }, [dismissSheet]);
+  }, [requestSheetDismiss]);
 
   const handleSheetDidDismiss = React.useCallback(() => {
-    isPresentedRef.current = false;
-    onOpenChange?.(false);
-    if (!isOpenControlled) setInnerOpen(false);
-    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
-    onDismissComplete?.();
-  }, [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]);
+    const wasProgrammaticDismiss = sheetPhaseRef.current === 'dismissing' || pendingDismissRef.current;
+    const shouldSyncOpenState = !visibleRef.current || !wasProgrammaticDismiss;
+    finishClosedLifecycle(shouldSyncOpenState);
+  }, [finishClosedLifecycle]);
 
   const handleBackdropPress = React.useCallback(() => {
     if (disabled || !visible) return;
