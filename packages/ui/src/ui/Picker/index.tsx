@@ -3,9 +3,9 @@ import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, useWindowDime
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'y2kit-tools';
-import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
+import { BottomSheet, type BottomSheetRef } from '../BottomSheet';
 import { Button } from '../Button';
 import { Text } from '../Text';
 import {
@@ -697,7 +697,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // `contentMounted` 只管“滚轮内容”本身，不管整个 sheet 宿主。
   // lazy 模式下，第一次真正打开后才挂载滚轮，目的是减少页面初始渲染成本。
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
-  const sheetRef = React.useRef<TrueSheet>(null);
+  const sheetRef = React.useRef<BottomSheetRef>(null);
 
   // 原生层生命周期不参与渲染，但它决定 present / dismiss 命令什么时候能安全发送。
   const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
@@ -1255,7 +1255,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   // 这样可以保证两端的内容、按钮、滚轮逻辑完全一致，
   // 差异只收敛在“是否需要一层手动背景处理”。
   const sheetNode = (
-    <TrueSheet
+    <BottomSheet
       ref={sheetRef}
       detents={detents}
       backgroundColor={theme.colors.surface}
@@ -1393,7 +1393,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
           </View>
         </View>
       </View>
-    </TrueSheet>
+    </BottomSheet>
   );
 
   return (

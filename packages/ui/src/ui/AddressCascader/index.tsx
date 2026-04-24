@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as React from 'react';
 import {
   Animated,
@@ -18,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'y2kit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
+import { BottomSheet, type BottomSheetRef } from '../BottomSheet';
 import { Button } from '../Button';
 import { Text } from '../Text';
 import type { PickerTreeNode } from '../Picker';
@@ -298,7 +298,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const visible = openProp !== undefined ? !!openProp : innerOpen;
   const [sheetMounted, setSheetMounted] = React.useState(visible);
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
-  const sheetRef = React.useRef<TrueSheet>(null);
+  const sheetRef = React.useRef<BottomSheetRef>(null);
   const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
   const pendingDismissRef = React.useRef(false);
   const activeSheetLifecycleRef = React.useRef(!!visible);
@@ -791,7 +791,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   }, [backdropOpacity, useManualIOSBackdrop, visible]);
 
   const sheetNode = (
-    <TrueSheet
+    <BottomSheet
       ref={sheetRef}
       detents={detents}
       backgroundColor={theme.colors.surface}
@@ -898,7 +898,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
           </View>
         </View>
       </View>
-    </TrueSheet>
+    </BottomSheet>
   );
 
   return (

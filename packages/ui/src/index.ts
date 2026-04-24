@@ -31,6 +31,12 @@ export { Text } from './ui/Text/index';
 export type { TextProps } from './ui/Text/index';
 export { TextInput } from './ui/TextInput/index';
 export type { TextInputProps } from './ui/TextInput/index';
+export { BottomSheet } from './ui/BottomSheet/index';
+export type {
+  BottomSheetDetent,
+  BottomSheetProps,
+  BottomSheetRef,
+} from './ui/BottomSheet/index';
 export {
   Accordion,
   AccordionContent,

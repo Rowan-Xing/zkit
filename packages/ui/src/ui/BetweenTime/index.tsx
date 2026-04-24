@@ -10,7 +10,6 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
-import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { LinearGradient } from 'expo-linear-gradient';
 import dayjs, { type Dayjs } from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -18,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'y2kit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
+import { BottomSheet, type BottomSheetRef } from '../BottomSheet';
 import { Button } from '../Button';
 import { Text } from '../Text';
 import {
@@ -460,7 +460,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   const visible = isOpenControlled ? !!openProp : innerOpen;
   const [sheetMounted, setSheetMounted] = React.useState(visible);
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
-  const sheetRef = React.useRef<TrueSheet>(null);
+  const sheetRef = React.useRef<BottomSheetRef>(null);
   const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
   const pendingDismissRef = React.useRef(false);
   const activeSheetLifecycleRef = React.useRef(!!visible);
@@ -838,7 +838,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   }, [backdropOpacity, useManualIOSBackdrop, visible]);
 
   const sheetNode = (
-    <TrueSheet
+    <BottomSheet
       ref={sheetRef}
       detents={detents}
       backgroundColor={theme.colors.surface}
@@ -1026,7 +1026,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
           </View>
         </View>
       </View>
-    </TrueSheet>
+    </BottomSheet>
   );
 
   return (
