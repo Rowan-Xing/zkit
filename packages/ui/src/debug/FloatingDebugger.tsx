@@ -26,7 +26,7 @@ import {
 import { wp } from 'y2kit-tools';
 import { useI18n } from '../i18n/useI18n';
 import { useTheme } from '../theme/useTheme';
-import { cardToast } from '../services/CardToastService';
+import { toast } from '../services/CardToastService';
 import { Text } from '../ui/Text';
 import {
   debugLogManager,
@@ -312,9 +312,9 @@ function FloatingDebuggerPanel({ enableNetworkTab }: { enableNetworkTab: boolean
     async (text: string, successMessage: string) => {
       try {
         await Clipboard.setStringAsync(text);
-        cardToast.showSuccess(successMessage);
+        toast.success(successMessage);
       } catch {
-        cardToast.showError(t('debug.floatingDebugger.copyFailed'));
+        toast.error(t('debug.floatingDebugger.copyFailed'));
       }
     },
     [t]

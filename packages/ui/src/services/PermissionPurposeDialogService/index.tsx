@@ -1,108 +1,342 @@
 /**
  * @file PermissionPurposeDialogService - 权限用途说明 TopSheet
- * @description 在系统权限申请框弹出的同时，在顶部展示一条白底黑字的说明条，
- *   告知用户该权限的使用目的。纯展示，不阻塞流程，无按钮。
- *   支持按权限类型自动填充默认文案，也支持完全自定义。
+ * @description 在系统权限申请框弹出前后，于屏幕顶部展示一条非阻塞说明，
+ *   告知用户该权限的使用目的。纯展示、不拦截交互、无按钮。
+ *   支持按权限自动填充默认文案，也支持完全自定义。
  * @example
  * ```tsx
  * import { permissionPurposeDialog } from 'y2kit-ui';
  *
  * // 展示说明
- * permissionPurposeDialog.show({ permissionType: 'location' });
+ * const purpose = permissionPurposeDialog.show({ permission: 'location' });
  * // ... 发起系统权限请求 ...
  * // 请求完成后关闭
- * permissionPurposeDialog.hide();
+ * purpose.hide();
  * ```
  */
 
 import * as React from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { wp } from 'y2kit-tools';
+import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui/Text';
 
-/** 内置支持的权限类型 */
-export type PermissionPurposeType = 'location' | 'camera' | 'microphone' | 'photos' | 'notification' | 'custom';
+/** 内置支持的权限用途类型 */
+export type PermissionPurpose =
+  | 'location'
+  | 'camera'
+  | 'microphone'
+  | 'photos'
+  | 'notification'
+  | 'contacts'
+  | 'calendar'
+  | 'bluetooth'
+  | 'motion'
+  | 'custom';
+
+/** 历史命名别名，语义等同于 `PermissionPurpose`。 */
+export type PermissionPurposeType = PermissionPurpose;
 
 /** 弹窗配置 */
 export type PermissionPurposeDialogOptions = {
   /** 作用域标识，用于按标识关闭 */
   scopeKey?: string;
-  /** 权限类型，会自动填充默认标题 & 描述 */
+  /** 权限用途，会自动填充默认标题与描述 */
+  permission?: PermissionPurpose;
+  /** @deprecated 请使用 `permission` */
   permissionType?: PermissionPurposeType;
   /** 自定义标题（优先于默认文案） */
   title?: string;
   /** 自定义描述（优先于默认文案） */
   message?: string;
+  /** 自动关闭时长（毫秒）。不传则保持显示，直到显式关闭 */
+  duration?: number;
+  /** 顶部安全区下方额外偏移。默认 `wp(8)` */
+  topOffset?: number;
+};
+
+/** `show()` 返回的句柄，用于精确关闭或更新本次说明。 */
+export type PermissionPurposeDialogHandle = {
+  /** 本次说明的唯一标识。 */
+  id: string;
+  /** 只关闭当前 id 对应的说明，避免旧异步流程误关新说明。 */
+  hide: () => void;
+  /** 只更新当前 id 对应的说明配置。 */
+  update: (patch: Partial<PermissionPurposeDialogOptions>) => void;
+};
+
+type PermissionPurposePreset = Exclude<PermissionPurpose, 'custom'>;
+type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
+
+type PermissionPurposeCopy = {
+  title: string;
+  message: string;
+};
+
+type ResolvedPermissionPurposeDialogOptions = {
+  id: string;
+  scopeKey?: string;
+  permission: PermissionPurpose;
+  title: string;
+  message: string;
+  icon: FeatherIconName;
+  topOffset: number;
 };
 
 type PermissionPurposeDialogState = {
   open: boolean;
-  options: PermissionPurposeDialogOptions;
+  options: ResolvedPermissionPurposeDialogOptions;
 };
 
 /** 各权限类型的默认文案 */
 const DEFAULT_PURPOSE_TEXT: Record<
-  Exclude<PermissionPurposeType, 'custom'>,
-  { title: string; message: string }
+  PermissionPurposePreset,
+  PermissionPurposeCopy
 > = {
   location: {
-    title: '位置信息权限说明',
-    message: '我们需要获取您的位置信息以提供定位相关功能，该权限仅用于当前业务场景，不会用于其他目的。',
+    title: '需要使用位置',
+    message: '用于定位、附近内容或位置相关服务。授权只会在相关功能中使用。',
   },
   camera: {
-    title: '相机权限说明',
-    message: '我们需要使用相机以提供拍照或扫描功能，该权限仅用于当前业务场景，不会用于其他目的。',
+    title: '需要使用相机',
+    message: '用于拍照、扫码或上传现场图片。授权只会在相关功能中使用。',
   },
   microphone: {
-    title: '麦克风权限说明',
-    message: '我们需要使用麦克风以提供语音录制或通话功能，该权限仅用于当前业务场景，不会用于其他目的。',
+    title: '需要使用麦克风',
+    message: '用于录音、语音输入或通话相关功能。授权只会在相关功能中使用。',
   },
   photos: {
-    title: '相册权限说明',
-    message: '我们需要访问相册以选择并上传图片，该权限仅用于当前业务场景，不会用于其他目的。',
+    title: '需要访问相册',
+    message: '用于选择图片或视频，并完成上传、预览等操作。',
   },
   notification: {
-    title: '通知权限说明',
-    message: '我们需要发送通知以便及时推送业务提醒，该权限仅用于当前业务场景，不会用于其他目的。',
+    title: '需要发送通知',
+    message: '用于接收重要提醒和状态更新，你可以随时在系统设置中调整。',
+  },
+  contacts: {
+    title: '需要访问通讯录',
+    message: '用于联系人选择、邀请或信息补全。授权只会在相关功能中使用。',
+  },
+  calendar: {
+    title: '需要访问日历',
+    message: '用于创建、读取或同步日程提醒。授权只会在相关功能中使用。',
+  },
+  bluetooth: {
+    title: '需要使用蓝牙',
+    message: '用于发现、连接或管理附近设备。授权只会在相关功能中使用。',
+  },
+  motion: {
+    title: '需要访问运动数据',
+    message: '用于识别运动状态或完成健康相关功能。授权只会在相关功能中使用。',
   },
 };
+
+const PURPOSE_ICONS: Record<PermissionPurposePreset, FeatherIconName> = {
+  location: 'map-pin',
+  camera: 'camera',
+  microphone: 'mic',
+  photos: 'image',
+  notification: 'bell',
+  contacts: 'users',
+  calendar: 'calendar',
+  bluetooth: 'bluetooth',
+  motion: 'activity',
+};
+
+const DEFAULT_TITLE = '权限申请说明';
+const DEFAULT_PERMISSION: PermissionPurpose = 'custom';
+const DEFAULT_ICON: FeatherIconName = 'shield';
+const DEFAULT_TOP_OFFSET = wp(8);
+const EXIT_DURATION_MS = 180;
+const EXIT_TRANSLATE_Y = wp(8);
+const HOST_PADDING_HORIZONTAL = wp(14);
+const CARD_MAX_WIDTH = wp(380);
+const CARD_RADIUS = wp(18);
+const CARD_BORDER_WIDTH = wp(1);
+const CARD_PADDING_HORIZONTAL = wp(14);
+const CARD_PADDING_VERTICAL = wp(13);
+const ACCENT_WIDTH = wp(3);
+const ICON_FRAME_SIZE = wp(36);
+const ICON_FRAME_RADIUS = wp(12);
+const ICON_SIZE = wp(18);
+const ICON_MARGIN_RIGHT = wp(12);
+const TITLE_FONT_SIZE = wp(15);
+const TITLE_LINE_HEIGHT = wp(20);
+const MESSAGE_MARGIN_TOP = wp(4);
+const MESSAGE_FONT_SIZE = wp(13);
+const MESSAGE_LINE_HEIGHT = wp(18);
+const SHADOW_OFFSET_Y = wp(8);
+const SHADOW_RADIUS = wp(18);
+const ANDROID_CARD_ELEVATION = wp(8);
+const PERMISSION_HOST_Z_INDEX = 9000;
+
+function isPresetPermission(permission: string): permission is PermissionPurposePreset {
+  return Object.prototype.hasOwnProperty.call(DEFAULT_PURPOSE_TEXT, permission);
+}
+
+function normalizeText(value: string | undefined) {
+  if (typeof value !== 'string') return undefined;
+  return value.trim();
+}
+
+function normalizeDuration(value: number | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return undefined;
+  return value;
+}
+
+function normalizeTopOffset(value: number | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_TOP_OFFSET;
+  return Math.max(0, value);
+}
+
+function resolveOptions(
+  options: PermissionPurposeDialogOptions,
+  id: string
+): ResolvedPermissionPurposeDialogOptions {
+  const rawPermission = options.permission ?? options.permissionType ?? DEFAULT_PERMISSION;
+  const permission: PermissionPurpose =
+    rawPermission === 'custom' || isPresetPermission(rawPermission) ? rawPermission : DEFAULT_PERMISSION;
+  const preset = isPresetPermission(permission) ? DEFAULT_PURPOSE_TEXT[permission] : null;
+  const title = normalizeText(options.title) || preset?.title || DEFAULT_TITLE;
+  const message = normalizeText(options.message) ?? preset?.message ?? '';
+  const icon = isPresetPermission(permission) ? PURPOSE_ICONS[permission] : DEFAULT_ICON;
+
+  return {
+    id,
+    scopeKey: options.scopeKey,
+    permission,
+    title,
+    message,
+    icon,
+    topOffset: normalizeTopOffset(options.topOffset),
+  };
+}
 
 /**
  * 权限用途说明弹窗服务类
  * @internal
  */
 class PermissionPurposeDialogServiceClass {
+  private mounted = false;
+  private idSeed = 0;
+  private activeId: string | null = null;
+  private activeOptions: PermissionPurposeDialogOptions | null = null;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private setState: React.Dispatch<React.SetStateAction<PermissionPurposeDialogState>> | null = null;
 
   /** @internal */
-  setStateUpdater(updater: React.Dispatch<React.SetStateAction<PermissionPurposeDialogState>>) {
+  setMounted(mounted: boolean) {
+    this.mounted = mounted;
+    if (!mounted) {
+      this.activeId = null;
+      this.activeOptions = null;
+      this.clearHideTimer();
+    }
+  }
+
+  /** @internal */
+  setStateUpdater(updater: React.Dispatch<React.SetStateAction<PermissionPurposeDialogState>> | null) {
     this.setState = updater;
   }
 
   /** 展示权限用途说明 */
-  show(options: PermissionPurposeDialogOptions = {}) {
-    if (!this.setState) {
+  show(options: PermissionPurposeDialogOptions = {}): PermissionPurposeDialogHandle {
+    const id = this.createId();
+
+    if (!this.mounted || !this.setState) {
       console.warn('[permissionPurposeDialog] Provider not mounted');
-      return;
+      return this.createHandle(id);
     }
-    this.setState({ open: true, options });
+
+    this.openWithOptions(id, options);
+    return this.createHandle(id);
   }
 
   /** 关闭说明 */
   hide() {
-    this.setState?.((prev) => ({ ...prev, open: false }));
+    this.hideInternal();
   }
 
   /** 按 scopeKey 关闭 */
   hideByScope(scopeKey?: string) {
     if (!scopeKey) return;
-    this.setState?.((prev) => {
-      if (prev.open && prev.options.scopeKey === scopeKey) {
-        return { ...prev, open: false };
-      }
-      return prev;
+    if (this.activeOptions?.scopeKey !== scopeKey) return;
+    this.hideById(this.activeId);
+  }
+
+  /** @internal 清理所有定时器 */
+  clearAllTimers() {
+    this.clearHideTimer();
+  }
+
+  private openWithOptions(id: string, options: PermissionPurposeDialogOptions) {
+    this.clearHideTimer();
+    this.activeId = id;
+    this.activeOptions = options;
+
+    const resolvedOptions = resolveOptions(options, id);
+    this.setState?.({ open: true, options: resolvedOptions });
+
+    const duration = normalizeDuration(options.duration);
+    if (duration != null) {
+      this.hideTimer = setTimeout(() => {
+        this.hideById(id);
+      }, duration);
+    }
+  }
+
+  private hideInternal(id?: string) {
+    if (id && id !== this.activeId) return;
+
+    const closingId = this.activeId;
+    this.activeId = null;
+    this.activeOptions = null;
+    this.clearHideTimer();
+
+    if (!this.mounted || !this.setState) return;
+
+    this.setState((prev) => {
+      if (closingId && prev.options.id !== closingId) return prev;
+      if (!prev.open) return prev;
+      return { ...prev, open: false };
     });
+  }
+
+  /** 只关闭指定 id 的说明，避免旧流程误关新说明。 */
+  private hideById(id?: string | null) {
+    if (!id || id !== this.activeId) return;
+    this.hideInternal(id);
+  }
+
+  /** 只更新指定 id 的说明。 */
+  private updateById(id: string, patch: Partial<PermissionPurposeDialogOptions>) {
+    if (!id || id !== this.activeId || !this.activeOptions || !this.mounted || !this.setState) {
+      return;
+    }
+
+    this.openWithOptions(id, { ...this.activeOptions, ...patch });
+  }
+
+  private createId() {
+    this.idSeed += 1;
+    return `permission_purpose_${Date.now()}_${this.idSeed}`;
+  }
+
+  private createHandle(id: string): PermissionPurposeDialogHandle {
+    return {
+      id,
+      hide: () => this.hideById(id),
+      update: (patch) => this.updateById(id, patch),
+    };
+  }
+
+  private clearHideTimer() {
+    if (this.hideTimer) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
   }
 }
 
@@ -111,7 +345,7 @@ export const permissionPurposeDialog = new PermissionPurposeDialogServiceClass()
 
 const initialState: PermissionPurposeDialogState = {
   open: false,
-  options: {},
+  options: resolveOptions({}, '__initial__'),
 };
 
 /** TopSheet 纯展示卡片 */
@@ -120,51 +354,114 @@ function PermissionPurposeCard({
   options,
 }: {
   open: boolean;
-  options: PermissionPurposeDialogOptions;
+  options: ResolvedPermissionPurposeDialogOptions;
 }) {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const anim = React.useRef(new Animated.Value(0)).current;
+  const progress = React.useRef(new Animated.Value(open ? 1 : 0)).current;
   const [visible, setVisible] = React.useState(open);
 
-  const type = options.permissionType ?? 'custom';
-  const preset = type === 'custom' ? null : DEFAULT_PURPOSE_TEXT[type];
-  const title = options.title ?? preset?.title ?? '权限申请说明';
-  const message = options.message ?? preset?.message ?? '';
+  const accessibilityLabel = React.useMemo(() => {
+    if (!options.message) return options.title;
+    return `${options.title}，${options.message}`;
+  }, [options.message, options.title]);
 
   React.useEffect(() => {
-    anim.stopAnimation();
+    return () => {
+      progress.stopAnimation();
+    };
+  }, [progress]);
+
+  React.useEffect(() => {
+    progress.stopAnimation();
+
     if (open) {
       setVisible(true);
-      // 入场：直接设为 1，不做动画。
+      // 入场直接显示，不做过渡。
       // 因为 Android 系统权限弹框弹出后会冻结 App 动画线程，
-      // 如果用 Animated.timing 做入场动画，动画会卡在中间状态（低透明度）。
-      anim.setValue(1);
+      // 若此处做动画，权限说明可能停在半透明状态，反而损害稳定性。
+      progress.setValue(1);
       return;
     }
+
     if (!visible) return;
+
     // 退场：系统权限框关闭后 App 恢复正常，可以正常跑退出动画
-    Animated.timing(anim, {
+    Animated.timing(progress, {
       toValue: 0,
-      duration: 200,
+      duration: EXIT_DURATION_MS,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished) setVisible(false);
     });
-  }, [anim, open, visible]);
+  }, [open, options.id, progress, visible]);
+
+  const animatedStyle = React.useMemo(
+    () => ({
+      opacity: progress,
+      transform: [
+        {
+          translateY: progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-EXIT_TRANSLATE_Y, 0],
+          }),
+        },
+        {
+          scale: progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.985, 1],
+          }),
+        },
+      ],
+    }),
+    [progress]
+  );
 
   if (!visible) return null;
 
   return (
-    <View pointerEvents="none" style={[styles.host, { top: (insets.top || 0) + wp(8) }]}>
+    <View pointerEvents="none" style={[styles.host, { top: (insets.top || 0) + options.topOffset }]}>
       <Animated.View
+        accessible={open}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityLiveRegion="polite"
+        accessibilityRole="alert"
+        importantForAccessibility={open ? 'yes' : 'no-hide-descendants'}
+        renderToHardwareTextureAndroid={Platform.OS === 'android'}
+        shouldRasterizeIOS={Platform.OS === 'ios'}
         style={[
           styles.sheet,
-          { opacity: anim },
+          animatedStyle,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+          },
         ]}
       >
+        <View style={[styles.accent, { backgroundColor: theme.colors.primary }]} />
         <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+          <View style={[styles.iconFrame, { backgroundColor: theme.colors.secondary }]}>
+            <Feather name={options.icon} size={ICON_SIZE} color={theme.colors.primary} />
+          </View>
+          <View style={styles.copy}>
+            <Text
+              ellipsizeMode="tail"
+              numberOfLines={2}
+              style={[styles.title, { color: theme.colors.onSurface }]}
+            >
+              {options.title}
+            </Text>
+            {options.message ? (
+              <Text
+                ellipsizeMode="tail"
+                numberOfLines={4}
+                style={[styles.message, { color: theme.colors.muted }]}
+              >
+                {options.message}
+              </Text>
+            ) : null}
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -179,7 +476,13 @@ export function PermissionPurposeDialogProvider({ children }: { children: React.
   const [state, setState] = React.useState<PermissionPurposeDialogState>(initialState);
 
   React.useEffect(() => {
+    permissionPurposeDialog.setMounted(true);
     permissionPurposeDialog.setStateUpdater(setState);
+    return () => {
+      permissionPurposeDialog.clearAllTimers();
+      permissionPurposeDialog.setStateUpdater(null);
+      permissionPurposeDialog.setMounted(false);
+    };
   }, []);
 
   return (
@@ -193,37 +496,65 @@ export function PermissionPurposeDialogProvider({ children }: { children: React.
 const styles = StyleSheet.create({
   host: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: wp(0),
+    right: wp(0),
     alignItems: 'center',
-    zIndex: 9999,
-    elevation: Platform.OS === 'android' ? 9999 : 0,
+    paddingHorizontal: HOST_PADDING_HORIZONTAL,
+    zIndex: PERMISSION_HOST_Z_INDEX,
+    elevation: PERMISSION_HOST_Z_INDEX,
   },
   sheet: {
-    width: wp(340),
-    maxWidth: '94%',
-    borderRadius: wp(12),
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: wp(4) },
-    shadowRadius: wp(12),
-    elevation: 8,
+    width: '100%',
+    maxWidth: CARD_MAX_WIDTH,
+    borderWidth: CARD_BORDER_WIDTH,
+    borderRadius: CARD_RADIUS,
+    overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.14,
+    shadowOffset: { width: wp(0), height: SHADOW_OFFSET_Y },
+    shadowRadius: SHADOW_RADIUS,
+    ...Platform.select({
+      android: {
+        elevation: ANDROID_CARD_ELEVATION,
+      },
+    }),
+  },
+  accent: {
+    position: 'absolute',
+    left: wp(0),
+    top: CARD_PADDING_VERTICAL,
+    bottom: CARD_PADDING_VERTICAL,
+    width: ACCENT_WIDTH,
+    borderTopRightRadius: ACCENT_WIDTH,
+    borderBottomRightRadius: ACCENT_WIDTH,
   },
   content: {
-    paddingHorizontal: wp(16),
-    paddingVertical: wp(14),
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: CARD_PADDING_HORIZONTAL,
+    paddingVertical: CARD_PADDING_VERTICAL,
+  },
+  iconFrame: {
+    width: ICON_FRAME_SIZE,
+    height: ICON_FRAME_SIZE,
+    marginRight: ICON_MARGIN_RIGHT,
+    borderRadius: ICON_FRAME_RADIUS,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  copy: {
+    flex: 1,
+    minWidth: wp(0),
   },
   title: {
-    fontSize: wp(15),
-    lineHeight: wp(20),
+    fontSize: TITLE_FONT_SIZE,
+    lineHeight: TITLE_LINE_HEIGHT,
     fontWeight: '600',
-    color: '#111111',
   },
   message: {
-    marginTop: wp(6),
-    fontSize: wp(13),
-    lineHeight: wp(18),
-    color: '#333333',
+    marginTop: MESSAGE_MARGIN_TOP,
+    fontSize: MESSAGE_FONT_SIZE,
+    lineHeight: MESSAGE_LINE_HEIGHT,
   },
 });

@@ -133,8 +133,14 @@ export type {
   PickBetweenTimeOptions,
   PickerResult,
 } from './services/PickerService/index';
-export { cardToast, CardToastProvider } from './services/CardToastService/index';
-export type { ToastOptions, ToastType } from './services/CardToastService/index';
+export { toast, cardToast, CardToastProvider } from './services/CardToastService/index';
+export type {
+  ToastMessageOptions,
+  ToastOptions,
+  ToastShortcutOptions,
+  ToastTone,
+  ToastType,
+} from './services/CardToastService/index';
 export { actionDialog, ActionDialogProvider } from './services/ActionDialogService/index';
 export type {
   ActionDialogAction,
@@ -170,6 +176,8 @@ export {
   PermissionPurposeDialogProvider,
 } from './services/PermissionPurposeDialogService/index';
 export type {
+  PermissionPurpose,
+  PermissionPurposeDialogHandle,
   PermissionPurposeDialogOptions,
   PermissionPurposeType,
 } from './services/PermissionPurposeDialogService/index';

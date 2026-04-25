@@ -35,11 +35,11 @@ import {
   Text,
   TextInput,
   actionDialog,
-  cardToast,
   imagePreview,
   loading,
   permissionPurposeDialog,
   pickerService,
+  toast,
   useTheme,
   type PickerModelValue,
   type SliderCaptchaChallenge,
@@ -168,7 +168,7 @@ function Playground() {
 
     if (!result) return;
     setServiceChoice(String(result.label || result.value));
-    cardToast.showInfo(`Selected ${result.label}`, 1200);
+    toast.info(`Selected ${result.label}`, 1200);
   }, [serviceChoice]);
 
   const handleDialog = React.useCallback(async () => {
@@ -181,7 +181,7 @@ function Playground() {
     });
 
     if (confirmed) {
-      cardToast.showSuccess('Action confirmed', 1200);
+      toast.success('Action confirmed', 1200);
     }
   }, []);
 
@@ -216,15 +216,15 @@ function Playground() {
   }, [centerBusy]);
 
   const handlePermissionPurpose = React.useCallback(() => {
-    permissionPurposeDialog.show({
-      permissionType: 'camera',
+    const purpose = permissionPurposeDialog.show({
+      permission: 'camera',
       title: 'Camera access',
       message: 'Used by image capture and crop flows in this app.',
       scopeKey: 'example-camera',
     });
 
     setTimeout(() => {
-      permissionPurposeDialog.hideByScope('example-camera');
+      purpose.hide();
     }, 2600);
   }, []);
 
@@ -255,14 +255,14 @@ function Playground() {
 
         <Section title="Buttons">
           <View style={styles.buttonGrid}>
-            <Button icon={icon('zap', '#FFFFFF')} onPress={() => cardToast.showSuccess('Primary')}>
+            <Button icon={icon('zap', '#FFFFFF')} onPress={() => toast.success('Primary')}>
               Primary
             </Button>
             <Button
               variant="soft"
               tone="warning"
               icon={icon('alert-triangle', '#92400E')}
-              onPress={() => cardToast.showWarning('Soft warning')}
+              onPress={() => toast.warning('Soft warning')}
             >
               Warning
             </Button>
@@ -270,7 +270,7 @@ function Playground() {
               variant="outline"
               tone="danger"
               icon={icon('trash-2', '#DC2626')}
-              onPress={() => cardToast.showError('Danger action')}
+              onPress={() => toast.error('Danger action')}
             >
               Danger
             </Button>
@@ -278,7 +278,7 @@ function Playground() {
               variant="ghost"
               tone="neutral"
               icon={icon('send', theme.colors.onSurface)}
-              onPress={() => cardToast.showInfo('Ghost action')}
+              onPress={() => toast.info('Ghost action')}
             >
               Ghost
             </Button>
@@ -287,7 +287,7 @@ function Playground() {
               shape="pill"
               accessibilityLabel="Refresh"
               icon={icon('refresh-cw', '#FFFFFF')}
-              onPress={() => cardToast.showInfo('Refreshed')}
+              onPress={() => toast.info('Refreshed')}
             />
             <Button loading={busy} onPress={handleBusyDemo}>
               Sync
@@ -454,7 +454,7 @@ function Playground() {
           <View style={styles.buttonGrid}>
             <Button
               icon={icon('message-square', '#FFFFFF')}
-              onPress={() => cardToast.showSuccess('Saved with cardToast', 1400)}
+              onPress={() => toast.success('Saved with toast', 1400)}
             >
               Toast
             </Button>
@@ -502,7 +502,7 @@ function Playground() {
         }}
         onVerified={() => {
           setCaptchaVisible(false);
-          cardToast.showSuccess('Captcha verified', 1200);
+          toast.success('Captcha verified', 1200);
         }}
         texts={{
           title: 'Slide captcha',

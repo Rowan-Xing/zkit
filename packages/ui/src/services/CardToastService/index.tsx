@@ -1,18 +1,18 @@
 /**
  * @file CardToastService - 命令式卡片 Toast 服务
- * @description 提供 showSuccess、showError、showWarning、showInfo 等方法
+ * @description 提供 success、error、warning、info 等语义化方法
  * @example
  * ```tsx
- * import { cardToast } from 'y2kit-ui';
+ * import { toast } from 'y2kit-ui';
  *
- * cardToast.showSuccess('操作成功');
- * cardToast.showError('操作失败');
+ * toast.success('操作成功');
+ * toast.error('操作失败');
  * ```
  */
 
 import * as React from 'react';
-import { Image } from 'expo-image';
-import { Animated as RNAnimated, Easing as RNEasing, Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -27,73 +27,116 @@ import { wp } from 'y2kit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui/Text';
 
-/** Toast 类型 */
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+/** Toast 语义色 */
+export type ToastTone = 'success' | 'error' | 'warning' | 'info';
+
+/** @deprecated 请使用 ToastTone */
+export type ToastType = ToastTone;
 
 /** Toast 配置选项 */
 export type ToastOptions = {
   /** Toast 唯一标识，不传则自动生成 */
   id?: string;
-  /** 提示类型 */
-  type?: ToastType;
+  /** Toast 语义色，默认 info */
+  tone?: ToastTone;
+  /** 标题，适合强调结果 */
+  title?: unknown;
   /** 提示内容，支持字符串、数字、Error 对象 */
   message?: unknown;
-  /** 显示时长（毫秒），默认 1000 */
+  /** 显示时长（毫秒）。传 0 时不自动关闭，默认 1800 */
   duration?: number;
 };
 
-/** 默认显示时长 */
-const DEFAULT_DURATION = 1000;
-/** 最大同时显示数量 */
-const MAX_VISIBLE_TOASTS = 1;
-/** 默认顶部偏移 */
-const DEFAULT_TOP_OFFSET = wp(35);
-/** Toast 宿主层级：高于 ActionDialog，低于 Loading / ImagePreview 等强覆盖层。 */
-const TOAST_HOST_Z_INDEX = 5000;
+/** 消息入参后追加的配置选项 */
+export type ToastMessageOptions = Omit<ToastOptions, 'message'>;
 
-const TOAST_ICON_SUCCESS = require('../../assets/icons/toast/success.webp');
-const TOAST_ICON_ERROR = require('../../assets/icons/toast/error.webp');
-const TOAST_ICON_WARNING = require('../../assets/icons/toast/warning.webp');
+/** 语义快捷方法的配置选项 */
+export type ToastShortcutOptions = Omit<ToastOptions, 'tone' | 'message'>;
 
-const IOS_TOAST_ENTER_OFFSET = wp(22);
-const IOS_TOAST_EXIT_OFFSET = wp(14);
-const IOS_TOAST_CONTENT_OFFSET = wp(6);
-const IOS_TOAST_SHADOW_RADIUS = wp(18);
-const IOS_TOAST_ENTER_EASING = Easing.bezier(0.22, 1, 0.36, 1);
-const IOS_TOAST_EXIT_EASING = Easing.bezier(0.4, 0, 1, 1);
-const IOS_TOAST_ENTER_SPRING = {
-  damping: 18,
-  stiffness: 260,
-  mass: 0.78,
-};
-const IOS_TOAST_SCALE_SPRING = {
-  damping: 16,
-  stiffness: 280,
-  mass: 0.72,
-};
-const IOS_TOAST_SQUASH_SPRING = {
-  damping: 15,
-  stiffness: 240,
-  mass: 0.68,
+type LegacyToastOptions = ToastOptions & {
+  type?: ToastTone;
 };
 
-type ToastSlot = {
-  id: string;
-  type: ToastType;
+type ResolvedToastOptions = {
+  id?: string;
+  tone: ToastTone;
+  title: string;
   message: string;
-  visible: boolean;
+  duration: number;
+};
+
+type ToastItem = ResolvedToastOptions & {
+  id: string;
+  open: boolean;
   updatedAt: number;
 };
 
 type ToastState = {
-  slots: ToastSlot[];
+  toast: ToastItem | null;
 };
 
-/** 标准化消息内容 */
+const DEFAULT_DURATION = 1800;
+const DEFAULT_TOP_OFFSET = wp(30);
+const TOAST_HOST_Z_INDEX = 5000;
+const TOAST_OPTION_KEYS = new Set(['id', 'tone', 'type', 'title', 'message', 'duration']);
+
+const TOAST_ENTER_OFFSET = wp(18);
+const TOAST_EXIT_OFFSET = wp(10);
+const TOAST_ENTER_EASING = Easing.bezier(0.22, 1, 0.36, 1);
+const TOAST_EXIT_EASING = Easing.bezier(0.4, 0, 1, 1);
+const TOAST_ENTER_SPRING = {
+  damping: 24,
+  stiffness: 330,
+  mass: 0.72,
+};
+const TOAST_SCALE_SPRING = {
+  damping: 22,
+  stiffness: 360,
+  mass: 0.68,
+};
+
+type ToastToneConfig = {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  iconColor: string;
+  iconBackgroundColor: string;
+  borderColor: string;
+};
+
+const TOAST_TONE_CONFIG: Record<ToastTone, ToastToneConfig> = {
+  success: {
+    icon: 'check-circle',
+    iconColor: '#15803D',
+    iconBackgroundColor: '#DCFCE7',
+    borderColor: '#BBF7D0',
+  },
+  error: {
+    icon: 'x-circle',
+    iconColor: '#DC2626',
+    iconBackgroundColor: '#FEE2E2',
+    borderColor: '#FECACA',
+  },
+  warning: {
+    icon: 'alert-triangle',
+    iconColor: '#B45309',
+    iconBackgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+  },
+  info: {
+    icon: 'info',
+    iconColor: '#2563EB',
+    iconBackgroundColor: '#DBEAFE',
+    borderColor: '#BFDBFE',
+  },
+};
+
+const initialState: ToastState = {
+  toast: null,
+};
+
 function normalizeMessage(message: unknown) {
   if (message == null) return '';
   if (typeof message === 'string') return message.trim();
-  if (typeof message === 'number') return String(message);
+  if (typeof message === 'number' || typeof message === 'boolean') return String(message);
   if (message instanceof Error) return message.message?.trim?.() || String(message);
   try {
     return JSON.stringify(message);
@@ -102,15 +145,53 @@ function normalizeMessage(message: unknown) {
   }
 }
 
-/** 根据类型获取样式配置 */
-function pickTypeConfig(type: ToastType) {
-  if (type === 'success') {
-    return { bgColor: '#EEF7F2', borderColor: '#CFE1D9', iconSource: TOAST_ICON_SUCCESS };
+function normalizeDuration(value: number | undefined) {
+  if (value == null) return DEFAULT_DURATION;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_DURATION;
+  return Math.max(0, Math.round(value));
+}
+
+function isOptionsObject(value: unknown): value is LegacyToastOptions {
+  if (!value || typeof value !== 'object' || value instanceof Error || React.isValidElement(value)) {
+    return false;
   }
-  if (type === 'error') {
-    return { bgColor: '#FBEEF0', borderColor: '#E7D1D8', iconSource: TOAST_ICON_ERROR };
+
+  return Object.keys(value).some((key) => TOAST_OPTION_KEYS.has(key));
+}
+
+function resolveMessageOptions(
+  options: ToastMessageOptions | ToastShortcutOptions | number | undefined
+): Partial<ToastOptions> {
+  if (typeof options === 'number') {
+    return { duration: options } satisfies ToastMessageOptions;
   }
-  return { bgColor: '#FDF7ED', borderColor: '#F7E0B3', iconSource: TOAST_ICON_WARNING };
+  return options ?? {};
+}
+
+function resolveToastOptions(
+  input: unknown,
+  options: ToastMessageOptions | ToastShortcutOptions | number | undefined,
+  forcedTone?: ToastTone
+): ResolvedToastOptions {
+  const optionInput = isOptionsObject(input) ? input : undefined;
+  const messageOptions = resolveMessageOptions(options);
+  const toneOverride = 'tone' in messageOptions ? messageOptions.tone : undefined;
+  const tone = forcedTone ?? toneOverride ?? optionInput?.tone ?? optionInput?.type ?? 'info';
+  const title = normalizeMessage(messageOptions.title ?? optionInput?.title);
+  const message = normalizeMessage(optionInput ? optionInput.message : input);
+
+  return {
+    id: messageOptions.id ?? optionInput?.id,
+    tone,
+    title,
+    message,
+    duration: normalizeDuration(messageOptions.duration ?? optionInput?.duration),
+  };
+}
+
+function getAccessibilityLabel(toast: ToastItem) {
+  if (toast.title && toast.message) return `${toast.title}，${toast.message}`;
+  return toast.title || toast.message;
 }
 
 /**
@@ -119,13 +200,17 @@ function pickTypeConfig(type: ToastType) {
  */
 class ToastServiceClass {
   private mounted = false;
+  private activeId: string | null = null;
   private idSeed = 0;
   private setState: React.Dispatch<React.SetStateAction<ToastState>> | null = null;
-  private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** @internal 设置挂载状态 */
   setMounted(mounted: boolean) {
     this.mounted = mounted;
+    if (!mounted) {
+      this.activeId = null;
+    }
   }
 
   /** @internal 设置状态更新函数 */
@@ -134,308 +219,231 @@ class ToastServiceClass {
   }
 
   /** 显示 Toast */
-  show(options: ToastOptions = {}) {
-    const normalizedMessage = normalizeMessage(options.message);
-    if (!normalizedMessage) return '';
-
-    if (!this.mounted) {
-      console.warn('[CardToast] Provider not mounted');
-      return '';
-    }
-
-    const id = options.id ?? `toast_${Date.now()}_${(this.idSeed += 1)}`;
-    const duration = options.duration ?? DEFAULT_DURATION;
-    const type = options.type ?? 'info';
-    const now = Date.now();
-
-    if (!this.setState) return '';
-    this.setState((prev) => {
-      const slots = prev.slots;
-      let targetIndex = slots.findIndex((s) => !s.visible);
-      if (targetIndex < 0) {
-        targetIndex = 0;
-        for (let i = 1; i < slots.length; i += 1) {
-          if (slots[i].updatedAt < slots[targetIndex].updatedAt) targetIndex = i;
-        }
-      }
-
-      const prevId = slots[targetIndex]?.id;
-      if (prevId) this.clearTimer(prevId);
-
-      const nextSlots = slots.slice();
-      nextSlots[targetIndex] = {
-        id,
-        type,
-        message: normalizedMessage,
-        visible: true,
-        updatedAt: now,
-      };
-
-      return { slots: nextSlots };
-    });
-
-    this.clearTimer(id);
-    this.timers.set(
-      id,
-      setTimeout(() => {
-        this.dismiss(id);
-      }, duration)
-    );
-    return id;
+  show(options?: ToastOptions): string;
+  show(message: unknown, options?: ToastMessageOptions | number): string;
+  show(input: unknown = {}, options?: ToastMessageOptions | number) {
+    return this.showResolved(resolveToastOptions(input, options));
   }
 
   /** 显示成功提示 */
-  showSuccess(message: unknown, duration?: number) {
-    return this.show({ type: 'success', message, duration });
+  success(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.showResolved(resolveToastOptions(message, options, 'success'));
   }
 
   /** 显示错误提示 */
-  showError(message: unknown, duration?: number) {
-    return this.show({ type: 'error', message, duration });
+  error(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.showResolved(resolveToastOptions(message, options, 'error'));
   }
 
   /** 显示警告提示 */
-  showWarning(message: unknown, duration?: number) {
-    return this.show({ type: 'warning', message, duration });
+  warning(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.showResolved(resolveToastOptions(message, options, 'warning'));
   }
 
   /** 显示信息提示 */
-  showInfo(message: unknown, duration?: number) {
-    return this.show({ type: 'info', message, duration });
+  info(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.showResolved(resolveToastOptions(message, options, 'info'));
   }
 
-  /** 关闭指定 Toast */
-  dismiss(id: string) {
-    if (!id) return;
-    this.clearTimer(id);
-    if (!this.mounted || !this.setState) return;
+  /** @deprecated 请使用 success */
+  showSuccess(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.success(message, options);
+  }
+
+  /** @deprecated 请使用 error */
+  showError(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.error(message, options);
+  }
+
+  /** @deprecated 请使用 warning */
+  showWarning(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.warning(message, options);
+  }
+
+  /** @deprecated 请使用 info */
+  showInfo(message: unknown, options?: ToastShortcutOptions | number) {
+    return this.info(message, options);
+  }
+
+  /** 关闭当前或指定 Toast */
+  dismiss(id?: string) {
+    if (id && id !== this.activeId) return;
+    this.clearTimer();
+
+    if (!this.mounted || !this.setState) {
+      this.activeId = null;
+      return;
+    }
+
     this.setState((prev) => {
-      const idx = prev.slots.findIndex((s) => s.id === id);
-      if (idx < 0) return prev;
-      const slot = prev.slots[idx];
-      if (!slot.visible) return prev;
-      const nextSlots = prev.slots.slice();
-      nextSlots[idx] = { ...slot, visible: false, updatedAt: Date.now() };
-      return { slots: nextSlots };
+      if (!prev.toast) return prev;
+      if (id && prev.toast.id !== id) return prev;
+      if (!prev.toast.open) return prev;
+      return {
+        toast: {
+          ...prev.toast,
+          open: false,
+          updatedAt: Date.now(),
+        },
+      };
     });
+
+    this.activeId = null;
   }
 
   /** 关闭所有 Toast */
   dismissAll() {
-    for (const key of this.timers.keys()) this.clearTimer(key);
-    if (!this.mounted || !this.setState) return;
-    this.setState((prev) => {
-      const nextSlots = prev.slots.map((s) => (s.visible ? { ...s, visible: false, updatedAt: Date.now() } : s));
-      return { slots: nextSlots };
-    });
+    this.dismiss();
+  }
+
+  /** 关闭当前 Toast */
+  hide() {
+    this.dismiss();
   }
 
   /** @internal 清理所有定时器 */
   clearAllTimers() {
-    for (const key of this.timers.keys()) {
-      this.clearTimer(key);
-    }
+    this.clearTimer();
   }
 
-  private clearTimer(id: string) {
-    const t = this.timers.get(id);
-    if (t) clearTimeout(t);
-    this.timers.delete(id);
+  private showResolved(options: ResolvedToastOptions) {
+    if (!options.title && !options.message) return '';
+
+    if (!this.mounted) {
+      console.warn('[toast] Provider not mounted');
+      return '';
+    }
+
+    if (!this.setState) return '';
+
+    const id = options.id ?? `toast_${Date.now()}_${(this.idSeed += 1)}`;
+    const toast: ToastItem = {
+      ...options,
+      id,
+      open: true,
+      updatedAt: Date.now(),
+    };
+
+    this.activeId = id;
+    this.clearTimer();
+    this.setState({ toast });
+    this.scheduleDismiss(id, options.duration);
+
+    return id;
+  }
+
+  private scheduleDismiss(id: string, duration: number) {
+    if (duration <= 0) return;
+    this.hideTimer = setTimeout(() => {
+      this.dismiss(id);
+    }, duration);
+  }
+
+  private clearTimer() {
+    if (!this.hideTimer) return;
+    clearTimeout(this.hideTimer);
+    this.hideTimer = null;
   }
 }
 
 /** Toast 服务实例 */
-export const cardToast = new ToastServiceClass();
+export const toast = new ToastServiceClass();
+
+/** @deprecated 请使用 toast */
+export const cardToast = toast;
 
 type ToastCardProps = {
-  type: ToastType;
-  message: string;
-  visible: boolean;
+  toast: ToastItem;
 };
 
-function ToastCardBody({
-  type,
-  message,
-  style,
-  children,
-}: Pick<ToastCardProps, 'type' | 'message'> & { style?: StyleProp<ViewStyle>; children?: React.ReactNode }) {
+const ToastCardBody = React.memo(function ToastCardBody({ toast }: ToastCardProps) {
   const theme = useTheme();
-  const { bgColor, borderColor, iconSource } = pickTypeConfig(type);
+  const config = TOAST_TONE_CONFIG[toast.tone];
+  const hasTitle = Boolean(toast.title);
 
   return (
-    <View style={[styles.toastContent, style, { backgroundColor: bgColor, borderColor }]}>
-      {children}
-      <View style={styles.row}>
-        <Image source={iconSource} style={styles.iconImage} contentFit="contain" />
-        <View style={styles.content}>
-          <Text style={[styles.message, { color: theme.colors.onSurface }]} numberOfLines={3}>
-            {message}
+    <View style={[styles.toastSurface, { borderColor: config.borderColor, backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.iconFrame, { backgroundColor: config.iconBackgroundColor }]}>
+        <Feather name={config.icon} size={wp(18)} color={config.iconColor} />
+      </View>
+      <View style={styles.copy}>
+        {hasTitle ? (
+          <Text style={[styles.title, { color: theme.colors.onSurface }]} numberOfLines={1}>
+            {toast.title}
           </Text>
-        </View>
+        ) : null}
+        {toast.message ? (
+          <Text
+            style={[
+              hasTitle ? styles.message : styles.messageStrong,
+              { color: hasTitle ? theme.colors.muted : theme.colors.onSurface },
+            ]}
+            numberOfLines={hasTitle ? 2 : 3}
+          >
+            {toast.message}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
-}
+});
 
-function IOSToastCard({ type, message, visible }: ToastCardProps) {
-  const opacity = useSharedValue(visible ? 1 : 0);
-  const translateY = useSharedValue(visible ? 0 : -IOS_TOAST_EXIT_OFFSET);
-  const scale = useSharedValue(visible ? 1 : 0.975);
-  const squash = useSharedValue(0);
-  const contentProgress = useSharedValue(visible ? 1 : 0);
-  const sheenOpacity = useSharedValue(visible ? 0.08 : 0);
+const ToastCard = React.memo(function ToastCard({ toast }: ToastCardProps) {
+  const progress = useSharedValue(toast.open ? 1 : 0);
+  const translateY = useSharedValue(toast.open ? 0 : -TOAST_EXIT_OFFSET);
+  const scale = useSharedValue(toast.open ? 1 : 0.98);
 
   React.useEffect(() => {
     return () => {
-      cancelAnimation(opacity);
+      cancelAnimation(progress);
       cancelAnimation(translateY);
       cancelAnimation(scale);
-      cancelAnimation(squash);
-      cancelAnimation(contentProgress);
-      cancelAnimation(sheenOpacity);
     };
-  }, [contentProgress, opacity, scale, sheenOpacity, squash, translateY]);
+  }, [progress, scale, translateY]);
 
   React.useEffect(() => {
-    cancelAnimation(opacity);
+    cancelAnimation(progress);
     cancelAnimation(translateY);
     cancelAnimation(scale);
-    cancelAnimation(squash);
-    cancelAnimation(contentProgress);
-    cancelAnimation(sheenOpacity);
 
-    if (visible) {
-      opacity.value = 0;
-      translateY.value = -IOS_TOAST_ENTER_OFFSET;
-      scale.value = 0.955;
-      squash.value = 1;
-      contentProgress.value = 0;
-      sheenOpacity.value = 0.14;
+    if (toast.open) {
+      progress.value = 0;
+      translateY.value = -TOAST_ENTER_OFFSET;
+      scale.value = 0.96;
 
-      opacity.value = withTiming(1, { duration: 220, easing: IOS_TOAST_ENTER_EASING });
-      translateY.value = withSpring(0, IOS_TOAST_ENTER_SPRING);
-      scale.value = withSpring(1, IOS_TOAST_SCALE_SPRING);
-      squash.value = withSpring(0, IOS_TOAST_SQUASH_SPRING);
-      contentProgress.value = withTiming(1, { duration: 260, easing: IOS_TOAST_ENTER_EASING });
-      sheenOpacity.value = withTiming(0.06, { duration: 340, easing: IOS_TOAST_ENTER_EASING });
+      progress.value = withTiming(1, { duration: 180, easing: TOAST_ENTER_EASING });
+      translateY.value = withSpring(0, TOAST_ENTER_SPRING);
+      scale.value = withSpring(1, TOAST_SCALE_SPRING);
       return;
     }
 
-    opacity.value = withTiming(0, { duration: 160, easing: IOS_TOAST_EXIT_EASING });
-    translateY.value = withTiming(-IOS_TOAST_EXIT_OFFSET, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
-    scale.value = withTiming(0.975, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
-    squash.value = withTiming(0.32, { duration: 120, easing: IOS_TOAST_EXIT_EASING });
-    contentProgress.value = withTiming(0, { duration: 120, easing: IOS_TOAST_EXIT_EASING });
-    sheenOpacity.value = withTiming(0, { duration: 110, easing: IOS_TOAST_EXIT_EASING });
-  }, [contentProgress, opacity, scale, sheenOpacity, squash, translateY, visible]);
+    progress.value = withTiming(0, { duration: 150, easing: TOAST_EXIT_EASING });
+    translateY.value = withTiming(-TOAST_EXIT_OFFSET, { duration: 160, easing: TOAST_EXIT_EASING });
+    scale.value = withTiming(0.98, { duration: 160, easing: TOAST_EXIT_EASING });
+  }, [progress, scale, toast.open, toast.updatedAt, translateY]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const scaleX = scale.value * interpolate(squash.value, [0, 1], [1, 1.028]);
-    const scaleY = scale.value * interpolate(squash.value, [0, 1], [1, 0.942]);
-    return {
-      opacity: opacity.value,
-      transform: [{ translateY: translateY.value }, { scaleX }, { scaleY }],
-      shadowOpacity: interpolate(opacity.value, [0, 1], [0, 0.16]),
-      shadowRadius: interpolate(opacity.value, [0, 1], [0, IOS_TOAST_SHADOW_RADIUS]),
-    };
-  });
-
-  const contentAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(contentProgress.value, [0, 1], [0.7, 1]),
-    transform: [
-      { translateY: interpolate(contentProgress.value, [0, 1], [IOS_TOAST_CONTENT_OFFSET, 0]) },
-      { scale: interpolate(contentProgress.value, [0, 1], [0.985, 1]) },
-    ],
-  }));
-
-  const sheenAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: sheenOpacity.value,
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    shadowOpacity: interpolate(progress.value, [0, 1], [0, 0.14]),
+    shadowRadius: interpolate(progress.value, [0, 1], [0, wp(18)]),
   }));
 
   return (
     <Animated.View
       pointerEvents="none"
-      shouldRasterizeIOS
-      style={[styles.toast, styles.toastIOS, animatedStyle]}
-    >
-      <Animated.View style={contentAnimatedStyle}>
-        <ToastCardBody type={type} message={message} style={styles.toastContentIOS}>
-          <Animated.View pointerEvents="none" style={[styles.toastSheen, sheenAnimatedStyle]} />
-        </ToastCardBody>
-      </Animated.View>
-    </Animated.View>
-  );
-}
-
-function DefaultToastCard({ type, message, visible }: ToastCardProps) {
-  const anim = React.useRef(new RNAnimated.Value(0)).current;
-  const lastVisibleRef = React.useRef<boolean>(false);
-
-  // 组件卸载时停止动画，防止内存泄漏
-  React.useEffect(() => {
-    return () => {
-      anim.stopAnimation();
-    };
-  }, [anim]);
-
-  React.useEffect(() => {
-    if (visible && !lastVisibleRef.current) {
-      anim.stopAnimation();
-      anim.setValue(0);
-      RNAnimated.timing(anim, {
-        toValue: 1,
-        duration: 160,
-        easing: RNEasing.out(RNEasing.cubic),
-        useNativeDriver: true,
-      }).start();
-      lastVisibleRef.current = true;
-      return;
-    }
-
-    if (!visible && lastVisibleRef.current) {
-      anim.stopAnimation();
-      RNAnimated.timing(anim, {
-        toValue: 0,
-        duration: 140,
-        easing: RNEasing.out(RNEasing.cubic),
-        useNativeDriver: true,
-      }).start(() => {
-        lastVisibleRef.current = false;
-      });
-    }
-  }, [anim, visible]);
-
-  const animatedStyle = React.useMemo(
-    () => ({
-      opacity: anim,
-      transform: [
-        {
-          translateY: anim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-wp(6), 0],
-          }),
-        },
-      ],
-    }),
-    [anim]
-  );
-
-  return (
-    <RNAnimated.View
+      accessible
+      accessibilityRole="alert"
+      accessibilityLabel={getAccessibilityLabel(toast)}
+      accessibilityLiveRegion="polite"
       renderToHardwareTextureAndroid={Platform.OS === 'android'}
       shouldRasterizeIOS={Platform.OS === 'ios'}
-      pointerEvents="none"
       style={[styles.toast, animatedStyle]}
     >
-      <ToastCardBody type={type} message={message} />
-    </RNAnimated.View>
+      <ToastCardBody toast={toast} />
+    </Animated.View>
   );
-}
-
-function ToastCard(props: ToastCardProps) {
-  if (Platform.OS === 'ios') return <IOSToastCard {...props} />;
-  return <DefaultToastCard {...props} />;
-}
+});
 
 /**
  * Toast 服务 Provider
@@ -444,24 +452,15 @@ function ToastCard(props: ToastCardProps) {
 export function CardToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   const offset = React.useMemo(() => (insets.top || 0) + DEFAULT_TOP_OFFSET, [insets.top]);
-  const [state, setState] = React.useState<ToastState>(() => ({
-    slots: Array.from({ length: MAX_VISIBLE_TOASTS }, (_, i) => ({
-      id: `__empty_${i}`,
-      type: 'info' as const,
-      message: '',
-      visible: false,
-      updatedAt: 0,
-    })),
-  }));
+  const [state, setState] = React.useState<ToastState>(initialState);
 
   React.useEffect(() => {
-    cardToast.setMounted(true);
-    cardToast.setStateUpdater(setState);
+    toast.setMounted(true);
+    toast.setStateUpdater(setState);
     return () => {
-      // 先清理所有定时器，防止卸载后触发 setState
-      cardToast.clearAllTimers();
-      cardToast.setStateUpdater(null);
-      cardToast.setMounted(false);
+      toast.clearAllTimers();
+      toast.setStateUpdater(null);
+      toast.setMounted(false);
     };
   }, []);
 
@@ -469,13 +468,7 @@ export function CardToastProvider({ children }: { children: React.ReactNode }) {
     <>
       {children}
       <View pointerEvents="box-none" style={[styles.host, { top: offset }]}>
-        <View pointerEvents="box-none" style={styles.stack}>
-          {state.slots.map((slot) => (
-            <View key={slot.id} pointerEvents="box-none" style={styles.slot}>
-              <ToastCard type={slot.type} message={slot.message} visible={slot.visible} />
-            </View>
-          ))}
-        </View>
+        {state.toast ? <ToastCard key={state.toast.id} toast={state.toast} /> : null}
       </View>
     </>
   );
@@ -484,66 +477,57 @@ export function CardToastProvider({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   host: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: wp(0),
+    right: wp(0),
     alignItems: 'center',
     zIndex: TOAST_HOST_Z_INDEX,
     elevation: TOAST_HOST_Z_INDEX,
   },
-  stack: {
-    width: '100%',
-    alignItems: 'center',
-    rowGap: wp(10),
-  },
-  slot: {
-    width: '100%',
-    alignItems: 'center',
-  },
   toast: {
-    width: wp(320),
-    maxWidth: '92%',
+    minWidth: wp(172),
+    maxWidth: '90%',
     alignSelf: 'center',
     shadowColor: '#000000',
-    shadowOffset: { width: wp(0), height: wp(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: wp(8),
-    elevation: wp(3),
+    shadowOffset: { width: wp(0), height: wp(10) },
+    shadowOpacity: 0.14,
+    shadowRadius: wp(18),
+    elevation: wp(8),
   },
-  toastIOS: {
-    borderRadius: wp(10),
-    shadowOffset: { width: 0, height: wp(10) },
-    shadowOpacity: 0.16,
-    shadowRadius: wp(20),
-  },
-  toastContent: {
-    borderRadius: wp(10),
-    padding: wp(12),
-    borderWidth: wp(1),
-  },
-  toastContentIOS: {
-    borderRadius: wp(10),
-    overflow: 'hidden',
-  },
-  toastSheen: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFFFFF',
-    borderRadius: wp(10),
-  },
-  row: {
+  toastSurface: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: wp(1),
+    borderRadius: wp(16),
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(12),
     columnGap: wp(10),
+    overflow: 'hidden',
   },
-  iconImage: {
-    width: wp(24),
-    height: wp(24),
+  iconFrame: {
+    width: wp(32),
+    height: wp(32),
+    borderRadius: wp(16),
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
-  content: {
+  copy: {
     flex: 1,
+    maxWidth: wp(236),
+  },
+  title: {
+    fontSize: wp(14),
+    lineHeight: wp(19),
+    fontWeight: '600',
   },
   message: {
+    marginTop: wp(2),
     fontSize: wp(13),
     lineHeight: wp(18),
+  },
+  messageStrong: {
+    fontSize: wp(14),
+    lineHeight: wp(19),
+    fontWeight: '500',
   },
 });
