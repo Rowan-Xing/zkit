@@ -64,7 +64,7 @@ toast.dismissAll();
 | tone | 'success' \| 'error' \| 'warning' \| 'info' | - | Toast 语义色，默认 'info' |
 | title | unknown | - | 标题 |
 | message | unknown | - | 提示内容，支持字符串、数字、boolean、Error 对象 |
-| duration | number | - | 显示时长（毫秒），默认 1800；传 0 时不自动关闭 |
+| duration | number | - | 显示时长（毫秒），默认 1000；传 0 时不自动关闭 |
 
 ### toast.success/error/warning/info(message, options?)
 

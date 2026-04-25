@@ -1,6 +1,6 @@
 /**
  * @file PermissionPurposeDialogService - 权限用途说明 TopSheet
- * @description 在系统权限申请框弹出前后，于屏幕顶部展示一条非阻塞说明，
+ * @description 在系统权限申请框弹出前后，于屏幕顶部展示一条白底黑字的非阻塞说明条，
  *   告知用户该权限的使用目的。纯展示、不拦截交互、无按钮。
  *   支持按权限自动填充默认文案，也支持完全自定义。
  * @example
@@ -16,11 +16,9 @@
  */
 
 import * as React from 'react';
-import { Feather } from '@expo/vector-icons';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { wp } from 'y2kit-tools';
-import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui/Text';
 
 /** 内置支持的权限用途类型 */
@@ -68,7 +66,6 @@ export type PermissionPurposeDialogHandle = {
 };
 
 type PermissionPurposePreset = Exclude<PermissionPurpose, 'custom'>;
-type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
 type PermissionPurposeCopy = {
   title: string;
@@ -81,7 +78,6 @@ type ResolvedPermissionPurposeDialogOptions = {
   permission: PermissionPurpose;
   title: string;
   message: string;
-  icon: FeatherIconName;
   topOffset: number;
 };
 
@@ -133,44 +129,11 @@ const DEFAULT_PURPOSE_TEXT: Record<
   },
 };
 
-const PURPOSE_ICONS: Record<PermissionPurposePreset, FeatherIconName> = {
-  location: 'map-pin',
-  camera: 'camera',
-  microphone: 'mic',
-  photos: 'image',
-  notification: 'bell',
-  contacts: 'users',
-  calendar: 'calendar',
-  bluetooth: 'bluetooth',
-  motion: 'activity',
-};
-
 const DEFAULT_TITLE = '权限申请说明';
 const DEFAULT_PERMISSION: PermissionPurpose = 'custom';
-const DEFAULT_ICON: FeatherIconName = 'shield';
 const DEFAULT_TOP_OFFSET = wp(8);
-const EXIT_DURATION_MS = 180;
-const EXIT_TRANSLATE_Y = wp(8);
-const HOST_PADDING_HORIZONTAL = wp(14);
-const CARD_MAX_WIDTH = wp(380);
-const CARD_RADIUS = wp(18);
-const CARD_BORDER_WIDTH = wp(1);
-const CARD_PADDING_HORIZONTAL = wp(14);
-const CARD_PADDING_VERTICAL = wp(13);
-const ACCENT_WIDTH = wp(3);
-const ICON_FRAME_SIZE = wp(36);
-const ICON_FRAME_RADIUS = wp(12);
-const ICON_SIZE = wp(18);
-const ICON_MARGIN_RIGHT = wp(12);
-const TITLE_FONT_SIZE = wp(15);
-const TITLE_LINE_HEIGHT = wp(20);
-const MESSAGE_MARGIN_TOP = wp(4);
-const MESSAGE_FONT_SIZE = wp(13);
-const MESSAGE_LINE_HEIGHT = wp(18);
-const SHADOW_OFFSET_Y = wp(8);
-const SHADOW_RADIUS = wp(18);
-const ANDROID_CARD_ELEVATION = wp(8);
-const PERMISSION_HOST_Z_INDEX = 9000;
+const EXIT_DURATION_MS = 200;
+const PERMISSION_HOST_Z_INDEX = 9999;
 
 function isPresetPermission(permission: string): permission is PermissionPurposePreset {
   return Object.prototype.hasOwnProperty.call(DEFAULT_PURPOSE_TEXT, permission);
@@ -201,7 +164,6 @@ function resolveOptions(
   const preset = isPresetPermission(permission) ? DEFAULT_PURPOSE_TEXT[permission] : null;
   const title = normalizeText(options.title) || preset?.title || DEFAULT_TITLE;
   const message = normalizeText(options.message) ?? preset?.message ?? '';
-  const icon = isPresetPermission(permission) ? PURPOSE_ICONS[permission] : DEFAULT_ICON;
 
   return {
     id,
@@ -209,7 +171,6 @@ function resolveOptions(
     permission,
     title,
     message,
-    icon,
     topOffset: normalizeTopOffset(options.topOffset),
   };
 }
@@ -356,7 +317,6 @@ function PermissionPurposeCard({
   open: boolean;
   options: ResolvedPermissionPurposeDialogOptions;
 }) {
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const progress = React.useRef(new Animated.Value(open ? 1 : 0)).current;
   const [visible, setVisible] = React.useState(open);
@@ -400,20 +360,6 @@ function PermissionPurposeCard({
   const animatedStyle = React.useMemo(
     () => ({
       opacity: progress,
-      transform: [
-        {
-          translateY: progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-EXIT_TRANSLATE_Y, 0],
-          }),
-        },
-        {
-          scale: progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0.985, 1],
-          }),
-        },
-      ],
     }),
     [progress]
   );
@@ -433,35 +379,11 @@ function PermissionPurposeCard({
         style={[
           styles.sheet,
           animatedStyle,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-          },
         ]}
       >
-        <View style={[styles.accent, { backgroundColor: theme.colors.primary }]} />
         <View style={styles.content}>
-          <View style={[styles.iconFrame, { backgroundColor: theme.colors.secondary }]}>
-            <Feather name={options.icon} size={ICON_SIZE} color={theme.colors.primary} />
-          </View>
-          <View style={styles.copy}>
-            <Text
-              ellipsizeMode="tail"
-              numberOfLines={2}
-              style={[styles.title, { color: theme.colors.onSurface }]}
-            >
-              {options.title}
-            </Text>
-            {options.message ? (
-              <Text
-                ellipsizeMode="tail"
-                numberOfLines={4}
-                style={[styles.message, { color: theme.colors.muted }]}
-              >
-                {options.message}
-              </Text>
-            ) : null}
-          </View>
+          <Text style={styles.title}>{options.title}</Text>
+          {options.message ? <Text style={styles.message}>{options.message}</Text> : null}
         </View>
       </Animated.View>
     </View>
@@ -499,62 +421,34 @@ const styles = StyleSheet.create({
     left: wp(0),
     right: wp(0),
     alignItems: 'center',
-    paddingHorizontal: HOST_PADDING_HORIZONTAL,
     zIndex: PERMISSION_HOST_Z_INDEX,
-    elevation: PERMISSION_HOST_Z_INDEX,
+    elevation: Platform.OS === 'android' ? PERMISSION_HOST_Z_INDEX : 0,
   },
   sheet: {
-    width: '100%',
-    maxWidth: CARD_MAX_WIDTH,
-    borderWidth: CARD_BORDER_WIDTH,
-    borderRadius: CARD_RADIUS,
-    overflow: 'hidden',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.14,
-    shadowOffset: { width: wp(0), height: SHADOW_OFFSET_Y },
-    shadowRadius: SHADOW_RADIUS,
-    ...Platform.select({
-      android: {
-        elevation: ANDROID_CARD_ELEVATION,
-      },
-    }),
-  },
-  accent: {
-    position: 'absolute',
-    left: wp(0),
-    top: CARD_PADDING_VERTICAL,
-    bottom: CARD_PADDING_VERTICAL,
-    width: ACCENT_WIDTH,
-    borderTopRightRadius: ACCENT_WIDTH,
-    borderBottomRightRadius: ACCENT_WIDTH,
+    width: wp(340),
+    maxWidth: '94%',
+    borderRadius: wp(12),
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: wp(0), height: wp(4) },
+    shadowRadius: wp(12),
+    elevation: 8,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: CARD_PADDING_HORIZONTAL,
-    paddingVertical: CARD_PADDING_VERTICAL,
-  },
-  iconFrame: {
-    width: ICON_FRAME_SIZE,
-    height: ICON_FRAME_SIZE,
-    marginRight: ICON_MARGIN_RIGHT,
-    borderRadius: ICON_FRAME_RADIUS,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  copy: {
-    flex: 1,
-    minWidth: wp(0),
+    paddingHorizontal: wp(16),
+    paddingVertical: wp(14),
   },
   title: {
-    fontSize: TITLE_FONT_SIZE,
-    lineHeight: TITLE_LINE_HEIGHT,
+    fontSize: wp(15),
+    lineHeight: wp(20),
     fontWeight: '600',
+    color: '#111111',
   },
   message: {
-    marginTop: MESSAGE_MARGIN_TOP,
-    fontSize: MESSAGE_FONT_SIZE,
-    lineHeight: MESSAGE_LINE_HEIGHT,
+    marginTop: wp(6),
+    fontSize: wp(13),
+    lineHeight: wp(18),
+    color: '#333333',
   },
 });

@@ -11,8 +11,8 @@
  */
 
 import * as React from 'react';
-import { Feather } from '@expo/vector-icons';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Animated as RNAnimated, Easing as RNEasing, Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -43,7 +43,7 @@ export type ToastOptions = {
   title?: unknown;
   /** 提示内容，支持字符串、数字、Error 对象 */
   message?: unknown;
-  /** 显示时长（毫秒）。传 0 时不自动关闭，默认 1800 */
+  /** 显示时长（毫秒）。传 0 时不自动关闭，默认 1000 */
   duration?: number;
 };
 
@@ -75,58 +75,35 @@ type ToastState = {
   toast: ToastItem | null;
 };
 
-const DEFAULT_DURATION = 1800;
-const DEFAULT_TOP_OFFSET = wp(30);
+const DEFAULT_DURATION = 1000;
+const DEFAULT_TOP_OFFSET = wp(35);
 const TOAST_HOST_Z_INDEX = 5000;
 const TOAST_OPTION_KEYS = new Set(['id', 'tone', 'type', 'title', 'message', 'duration']);
 
-const TOAST_ENTER_OFFSET = wp(18);
-const TOAST_EXIT_OFFSET = wp(10);
-const TOAST_ENTER_EASING = Easing.bezier(0.22, 1, 0.36, 1);
-const TOAST_EXIT_EASING = Easing.bezier(0.4, 0, 1, 1);
-const TOAST_ENTER_SPRING = {
-  damping: 24,
-  stiffness: 330,
+const TOAST_ICON_SUCCESS = require('../../assets/icons/toast/success.webp');
+const TOAST_ICON_ERROR = require('../../assets/icons/toast/error.webp');
+const TOAST_ICON_WARNING = require('../../assets/icons/toast/warning.webp');
+
+const IOS_TOAST_ENTER_OFFSET = wp(22);
+const IOS_TOAST_EXIT_OFFSET = wp(14);
+const IOS_TOAST_CONTENT_OFFSET = wp(6);
+const IOS_TOAST_SHADOW_RADIUS = wp(18);
+const IOS_TOAST_ENTER_EASING = Easing.bezier(0.22, 1, 0.36, 1);
+const IOS_TOAST_EXIT_EASING = Easing.bezier(0.4, 0, 1, 1);
+const IOS_TOAST_ENTER_SPRING = {
+  damping: 18,
+  stiffness: 260,
+  mass: 0.78,
+};
+const IOS_TOAST_SCALE_SPRING = {
+  damping: 16,
+  stiffness: 280,
   mass: 0.72,
 };
-const TOAST_SCALE_SPRING = {
-  damping: 22,
-  stiffness: 360,
+const IOS_TOAST_SQUASH_SPRING = {
+  damping: 15,
+  stiffness: 240,
   mass: 0.68,
-};
-
-type ToastToneConfig = {
-  icon: React.ComponentProps<typeof Feather>['name'];
-  iconColor: string;
-  iconBackgroundColor: string;
-  borderColor: string;
-};
-
-const TOAST_TONE_CONFIG: Record<ToastTone, ToastToneConfig> = {
-  success: {
-    icon: 'check-circle',
-    iconColor: '#15803D',
-    iconBackgroundColor: '#DCFCE7',
-    borderColor: '#BBF7D0',
-  },
-  error: {
-    icon: 'x-circle',
-    iconColor: '#DC2626',
-    iconBackgroundColor: '#FEE2E2',
-    borderColor: '#FECACA',
-  },
-  warning: {
-    icon: 'alert-triangle',
-    iconColor: '#B45309',
-    iconBackgroundColor: '#FEF3C7',
-    borderColor: '#FDE68A',
-  },
-  info: {
-    icon: 'info',
-    iconColor: '#2563EB',
-    iconBackgroundColor: '#DBEAFE',
-    borderColor: '#BFDBFE',
-  },
 };
 
 const initialState: ToastState = {
@@ -149,6 +126,16 @@ function normalizeDuration(value: number | undefined) {
   if (value == null) return DEFAULT_DURATION;
   if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_DURATION;
   return Math.max(0, Math.round(value));
+}
+
+function pickToneConfig(tone: ToastTone) {
+  if (tone === 'success') {
+    return { bgColor: '#EEF7F2', borderColor: '#CFE1D9', iconSource: TOAST_ICON_SUCCESS };
+  }
+  if (tone === 'error') {
+    return { bgColor: '#FBEEF0', borderColor: '#E7D1D8', iconSource: TOAST_ICON_ERROR };
+  }
+  return { bgColor: '#FDF7ED', borderColor: '#F7E0B3', iconSource: TOAST_ICON_WARNING };
 }
 
 function isOptionsObject(value: unknown): value is LegacyToastOptions {
@@ -191,6 +178,11 @@ function resolveToastOptions(
 
 function getAccessibilityLabel(toast: ToastItem) {
   if (toast.title && toast.message) return `${toast.title}，${toast.message}`;
+  return toast.title || toast.message;
+}
+
+function getDisplayMessage(toast: ToastItem) {
+  if (toast.title && toast.message) return `${toast.title} ${toast.message}`;
   return toast.title || toast.message;
 }
 
@@ -353,80 +345,109 @@ export const toast = new ToastServiceClass();
 export const cardToast = toast;
 
 type ToastCardProps = {
-  toast: ToastItem;
+  tone: ToastTone;
+  message: string;
+  visible: boolean;
+  accessibilityLabel: string;
 };
 
-const ToastCardBody = React.memo(function ToastCardBody({ toast }: ToastCardProps) {
+function ToastCardBody({
+  tone,
+  message,
+  style,
+  children,
+}: Pick<ToastCardProps, 'tone' | 'message'> & { style?: StyleProp<ViewStyle>; children?: React.ReactNode }) {
   const theme = useTheme();
-  const config = TOAST_TONE_CONFIG[toast.tone];
-  const hasTitle = Boolean(toast.title);
+  const { bgColor, borderColor, iconSource } = pickToneConfig(tone);
 
   return (
-    <View style={[styles.toastSurface, { borderColor: config.borderColor, backgroundColor: theme.colors.surface }]}>
-      <View style={[styles.iconFrame, { backgroundColor: config.iconBackgroundColor }]}>
-        <Feather name={config.icon} size={wp(18)} color={config.iconColor} />
-      </View>
-      <View style={styles.copy}>
-        {hasTitle ? (
-          <Text style={[styles.title, { color: theme.colors.onSurface }]} numberOfLines={1}>
-            {toast.title}
+    <View style={[styles.toastContent, style, { backgroundColor: bgColor, borderColor }]}>
+      {children}
+      <View style={styles.row}>
+        <Image source={iconSource} style={styles.iconImage} contentFit="contain" />
+        <View style={styles.content}>
+          <Text style={[styles.message, { color: theme.colors.onSurface }]} numberOfLines={3}>
+            {message}
           </Text>
-        ) : null}
-        {toast.message ? (
-          <Text
-            style={[
-              hasTitle ? styles.message : styles.messageStrong,
-              { color: hasTitle ? theme.colors.muted : theme.colors.onSurface },
-            ]}
-            numberOfLines={hasTitle ? 2 : 3}
-          >
-            {toast.message}
-          </Text>
-        ) : null}
+        </View>
       </View>
     </View>
   );
-});
+}
 
-const ToastCard = React.memo(function ToastCard({ toast }: ToastCardProps) {
-  const progress = useSharedValue(toast.open ? 1 : 0);
-  const translateY = useSharedValue(toast.open ? 0 : -TOAST_EXIT_OFFSET);
-  const scale = useSharedValue(toast.open ? 1 : 0.98);
+function IOSToastCard({ tone, message, visible, accessibilityLabel }: ToastCardProps) {
+  const opacity = useSharedValue(visible ? 1 : 0);
+  const translateY = useSharedValue(visible ? 0 : -IOS_TOAST_EXIT_OFFSET);
+  const scale = useSharedValue(visible ? 1 : 0.975);
+  const squash = useSharedValue(0);
+  const contentProgress = useSharedValue(visible ? 1 : 0);
+  const sheenOpacity = useSharedValue(visible ? 0.08 : 0);
 
   React.useEffect(() => {
     return () => {
-      cancelAnimation(progress);
+      cancelAnimation(opacity);
       cancelAnimation(translateY);
       cancelAnimation(scale);
+      cancelAnimation(squash);
+      cancelAnimation(contentProgress);
+      cancelAnimation(sheenOpacity);
     };
-  }, [progress, scale, translateY]);
+  }, [contentProgress, opacity, scale, sheenOpacity, squash, translateY]);
 
   React.useEffect(() => {
-    cancelAnimation(progress);
+    cancelAnimation(opacity);
     cancelAnimation(translateY);
     cancelAnimation(scale);
+    cancelAnimation(squash);
+    cancelAnimation(contentProgress);
+    cancelAnimation(sheenOpacity);
 
-    if (toast.open) {
-      progress.value = 0;
-      translateY.value = -TOAST_ENTER_OFFSET;
-      scale.value = 0.96;
+    if (visible) {
+      opacity.value = 0;
+      translateY.value = -IOS_TOAST_ENTER_OFFSET;
+      scale.value = 0.955;
+      squash.value = 1;
+      contentProgress.value = 0;
+      sheenOpacity.value = 0.14;
 
-      progress.value = withTiming(1, { duration: 180, easing: TOAST_ENTER_EASING });
-      translateY.value = withSpring(0, TOAST_ENTER_SPRING);
-      scale.value = withSpring(1, TOAST_SCALE_SPRING);
+      opacity.value = withTiming(1, { duration: 220, easing: IOS_TOAST_ENTER_EASING });
+      translateY.value = withSpring(0, IOS_TOAST_ENTER_SPRING);
+      scale.value = withSpring(1, IOS_TOAST_SCALE_SPRING);
+      squash.value = withSpring(0, IOS_TOAST_SQUASH_SPRING);
+      contentProgress.value = withTiming(1, { duration: 260, easing: IOS_TOAST_ENTER_EASING });
+      sheenOpacity.value = withTiming(0.06, { duration: 340, easing: IOS_TOAST_ENTER_EASING });
       return;
     }
 
-    progress.value = withTiming(0, { duration: 150, easing: TOAST_EXIT_EASING });
-    translateY.value = withTiming(-TOAST_EXIT_OFFSET, { duration: 160, easing: TOAST_EXIT_EASING });
-    scale.value = withTiming(0.98, { duration: 160, easing: TOAST_EXIT_EASING });
-  }, [progress, scale, toast.open, toast.updatedAt, translateY]);
+    opacity.value = withTiming(0, { duration: 160, easing: IOS_TOAST_EXIT_EASING });
+    translateY.value = withTiming(-IOS_TOAST_EXIT_OFFSET, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
+    scale.value = withTiming(0.975, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
+    squash.value = withTiming(0.32, { duration: 120, easing: IOS_TOAST_EXIT_EASING });
+    contentProgress.value = withTiming(0, { duration: 120, easing: IOS_TOAST_EXIT_EASING });
+    sheenOpacity.value = withTiming(0, { duration: 110, easing: IOS_TOAST_EXIT_EASING });
+  }, [contentProgress, opacity, scale, sheenOpacity, squash, translateY, visible]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: translateY.value }, { scale: scale.value }],
-    shadowOpacity: interpolate(progress.value, [0, 1], [0, 0.14]),
-    shadowRadius: interpolate(progress.value, [0, 1], [0, wp(18)]),
+  const animatedStyle = useAnimatedStyle(() => {
+    const scaleX = scale.value * interpolate(squash.value, [0, 1], [1, 1.028]);
+    const scaleY = scale.value * interpolate(squash.value, [0, 1], [1, 0.942]);
+    return {
+      opacity: opacity.value,
+      transform: [{ translateY: translateY.value }, { scaleX }, { scaleY }],
+      shadowOpacity: interpolate(opacity.value, [0, 1], [0, 0.16]),
+      shadowRadius: interpolate(opacity.value, [0, 1], [0, IOS_TOAST_SHADOW_RADIUS]),
+    };
+  });
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(contentProgress.value, [0, 1], [0.7, 1]),
+    transform: [
+      { translateY: interpolate(contentProgress.value, [0, 1], [IOS_TOAST_CONTENT_OFFSET, 0]) },
+      { scale: interpolate(contentProgress.value, [0, 1], [0.985, 1]) },
+    ],
+  }));
+
+  const sheenAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: sheenOpacity.value,
   }));
 
   return (
@@ -434,16 +455,92 @@ const ToastCard = React.memo(function ToastCard({ toast }: ToastCardProps) {
       pointerEvents="none"
       accessible
       accessibilityRole="alert"
-      accessibilityLabel={getAccessibilityLabel(toast)}
+      accessibilityLabel={accessibilityLabel}
       accessibilityLiveRegion="polite"
-      renderToHardwareTextureAndroid={Platform.OS === 'android'}
-      shouldRasterizeIOS={Platform.OS === 'ios'}
-      style={[styles.toast, animatedStyle]}
+      shouldRasterizeIOS
+      style={[styles.toast, styles.toastIOS, animatedStyle]}
     >
-      <ToastCardBody toast={toast} />
+      <Animated.View style={contentAnimatedStyle}>
+        <ToastCardBody tone={tone} message={message} style={styles.toastContentIOS}>
+          <Animated.View pointerEvents="none" style={[styles.toastSheen, sheenAnimatedStyle]} />
+        </ToastCardBody>
+      </Animated.View>
     </Animated.View>
   );
-});
+}
+
+function DefaultToastCard({ tone, message, visible, accessibilityLabel }: ToastCardProps) {
+  const anim = React.useRef(new RNAnimated.Value(0)).current;
+  const lastVisibleRef = React.useRef<boolean>(false);
+
+  React.useEffect(() => {
+    return () => {
+      anim.stopAnimation();
+    };
+  }, [anim]);
+
+  React.useEffect(() => {
+    if (visible && !lastVisibleRef.current) {
+      anim.stopAnimation();
+      anim.setValue(0);
+      RNAnimated.timing(anim, {
+        toValue: 1,
+        duration: 160,
+        easing: RNEasing.out(RNEasing.cubic),
+        useNativeDriver: true,
+      }).start();
+      lastVisibleRef.current = true;
+      return;
+    }
+
+    if (!visible && lastVisibleRef.current) {
+      anim.stopAnimation();
+      RNAnimated.timing(anim, {
+        toValue: 0,
+        duration: 140,
+        easing: RNEasing.out(RNEasing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        lastVisibleRef.current = false;
+      });
+    }
+  }, [anim, visible]);
+
+  const animatedStyle = React.useMemo(
+    () => ({
+      opacity: anim,
+      transform: [
+        {
+          translateY: anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-wp(6), 0],
+          }),
+        },
+      ],
+    }),
+    [anim]
+  );
+
+  return (
+    <RNAnimated.View
+      renderToHardwareTextureAndroid={Platform.OS === 'android'}
+      shouldRasterizeIOS={Platform.OS === 'ios'}
+      pointerEvents="none"
+      accessible
+      accessibilityRole="alert"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityLiveRegion="polite"
+      style={[styles.toast, animatedStyle]}
+    >
+      <ToastCardBody tone={tone} message={message} />
+    </RNAnimated.View>
+  );
+}
+
+function ToastCard(props: ToastCardProps) {
+  if (Platform.OS === 'ios') return <IOSToastCard {...props} />;
+  return <DefaultToastCard {...props} />;
+}
 
 /**
  * Toast 服务 Provider
@@ -468,7 +565,15 @@ export function CardToastProvider({ children }: { children: React.ReactNode }) {
     <>
       {children}
       <View pointerEvents="box-none" style={[styles.host, { top: offset }]}>
-        {state.toast ? <ToastCard key={state.toast.id} toast={state.toast} /> : null}
+        {state.toast ? (
+          <ToastCard
+            key={state.toast.id}
+            tone={state.toast.tone}
+            message={getDisplayMessage(state.toast)}
+            visible={state.toast.open}
+            accessibilityLabel={getAccessibilityLabel(state.toast)}
+          />
+        ) : null}
       </View>
     </>
   );
@@ -484,50 +589,50 @@ const styles = StyleSheet.create({
     elevation: TOAST_HOST_Z_INDEX,
   },
   toast: {
-    minWidth: wp(172),
-    maxWidth: '90%',
+    width: wp(320),
+    maxWidth: '92%',
     alignSelf: 'center',
     shadowColor: '#000000',
-    shadowOffset: { width: wp(0), height: wp(10) },
-    shadowOpacity: 0.14,
-    shadowRadius: wp(18),
-    elevation: wp(8),
+    shadowOffset: { width: wp(0), height: wp(2) },
+    shadowOpacity: 0.1,
+    shadowRadius: wp(8),
+    elevation: wp(3),
   },
-  toastSurface: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  toastIOS: {
+    borderRadius: wp(10),
+    shadowOffset: { width: wp(0), height: wp(10) },
+    shadowOpacity: 0.16,
+    shadowRadius: wp(20),
+  },
+  toastContent: {
+    borderRadius: wp(10),
+    padding: wp(12),
     borderWidth: wp(1),
-    borderRadius: wp(16),
-    paddingHorizontal: wp(14),
-    paddingVertical: wp(12),
-    columnGap: wp(10),
+  },
+  toastContentIOS: {
+    borderRadius: wp(10),
     overflow: 'hidden',
   },
-  iconFrame: {
-    width: wp(32),
-    height: wp(32),
-    borderRadius: wp(16),
+  toastSheen: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    borderRadius: wp(10),
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    columnGap: wp(10),
+  },
+  iconImage: {
+    width: wp(24),
+    height: wp(24),
     flexShrink: 0,
   },
-  copy: {
+  content: {
     flex: 1,
-    maxWidth: wp(236),
-  },
-  title: {
-    fontSize: wp(14),
-    lineHeight: wp(19),
-    fontWeight: '600',
   },
   message: {
-    marginTop: wp(2),
     fontSize: wp(13),
     lineHeight: wp(18),
-  },
-  messageStrong: {
-    fontSize: wp(14),
-    lineHeight: wp(19),
-    fontWeight: '500',
   },
 });

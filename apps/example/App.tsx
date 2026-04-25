@@ -136,7 +136,7 @@ function wait(ms: number) {
   });
 }
 
-function icon(name: FeatherIconName, color: string, size = wp(17)) {
+function icon(name: FeatherIconName, color: string, size = 17) {
   return <Feather name={name} color={color} size={size} />;
 }
 
@@ -283,7 +283,7 @@ function Playground() {
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <View style={[styles.logo, { backgroundColor: theme.colors.primary }]}>
-              {icon('box', theme.colors.onPrimary, wp(20))}
+              {icon('box', theme.colors.onPrimary, 20)}
             </View>
             <View style={styles.headerCopy}>
               <Text style={[styles.eyebrow, { color: theme.colors.muted }]}>@y2kit/example</Text>
