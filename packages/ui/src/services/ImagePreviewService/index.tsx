@@ -53,6 +53,7 @@ const VELOCITY_THRESHOLD = 520;
 const DISMISS_VELOCITY_THRESHOLD = 900;
 const MODE_LOCK_DISTANCE = wp(8);
 const EDGE_RESISTANCE = 0.34;
+const TAP_SUPPRESSION_RELEASE_DURATION = 320;
 
 const SPRING_CONFIG = { damping: 28, stiffness: 280, mass: 0.62 };
 const ENTER_DURATION = { duration: 260 };
@@ -74,8 +75,6 @@ export type ImagePreviewOptions = {
   onClose?: () => void;
   /** 单击任意位置关闭预览，默认 true */
   tapToClose?: boolean;
-  /** 输出手势调试日志，默认 false */
-  debug?: boolean;
 };
 
 type PreviewState = {
@@ -92,8 +91,6 @@ type ImageSize = {
   width: number;
   height: number;
 };
-
-type ImagePreviewDebugPayload = Record<string, number | string | boolean>;
 
 // ─── Service ─────────────────────────────────────────────────────────────────
 
@@ -133,11 +130,6 @@ function toUri(img: ImagePreviewImage): string {
 function clampV(v: number, min: number, max: number): number {
   'worklet';
   return Math.min(Math.max(v, min), max);
-}
-
-function debugNumber(v: number): number {
-  'worklet';
-  return Math.round(v * 1000) / 1000;
 }
 
 function rubberClampV(v: number, min: number, max: number): number {
@@ -246,7 +238,6 @@ function ZoomableImage({
   onDismiss,
   onTapClose,
   tapToClose,
-  debug,
 }: {
   uri: string;
   index: number;
@@ -259,7 +250,6 @@ function ZoomableImage({
   onDismiss: () => void;
   onTapClose: () => void;
   tapToClose: boolean;
-  debug: boolean;
 }) {
   const [naturalSize, setNaturalSize] = React.useState<ImageSize | null>(null);
   const contentSize = React.useMemo(
@@ -285,9 +275,10 @@ function ZoomableImage({
   const gestureTranslateY = useSharedValue(0);
   const gestureFocalX = useSharedValue(0);
   const gestureFocalY = useSharedValue(0);
+  const gestureBoundX = useSharedValue(0);
+  const gestureBoundY = useSharedValue(0);
   const currentFocalX = useSharedValue(0);
   const currentFocalY = useSharedValue(0);
-  const ignoredPinchUpdateLogged = useSharedValue(0);
 
   React.useEffect(() => {
     contentWidth.value = contentSize.width;
@@ -316,36 +307,11 @@ function ZoomableImage({
       setNaturalSize((prev) =>
         prev?.width === width && prev.height === height ? prev : { width, height }
       );
-      if (debug) {
-        console.log('[imagePreview]', 'image:load', {
-          index,
-          naturalWidth: width,
-          naturalHeight: height,
-          viewportWidth: viewport.width,
-          viewportHeight: viewport.height,
-        });
-      }
     }
-  }, [debug, index, viewport.height, viewport.width]);
-
-  const logDebug = React.useCallback(
-    (stage: string, payload: ImagePreviewDebugPayload) => {
-      if (!debug) return;
-      console.log('[imagePreview]', stage, payload);
-    },
-    [debug]
-  );
+  }, []);
 
   const resetImageTransform = () => {
     'worklet';
-    if (debug) {
-      scheduleOnRN(logDebug, 'image:reset', {
-        index,
-        scale: debugNumber(scale.value),
-        x: debugNumber(translateX.value),
-        y: debugNumber(translateY.value),
-      });
-    }
     cancelAnimation(scale);
     cancelAnimation(translateX);
     cancelAnimation(translateY);
@@ -362,26 +328,11 @@ function ZoomableImage({
 
   const releaseTap = () => {
     'worklet';
-    tapSuppression.value = withTiming(0, { duration: 160 });
+    tapSuppression.value = withTiming(0, { duration: TAP_SUPPRESSION_RELEASE_DURATION });
   };
 
   const settleImageTransform = () => {
     'worklet';
-    if (debug) {
-      scheduleOnRN(logDebug, 'settle:start', {
-        index,
-        mode: mode.value,
-        scale: debugNumber(scale.value),
-        x: debugNumber(translateX.value),
-        y: debugNumber(translateY.value),
-        focalX: debugNumber(currentFocalX.value),
-        focalY: debugNumber(currentFocalY.value),
-        contentWidth: debugNumber(contentWidth.value),
-        contentHeight: debugNumber(contentHeight.value),
-        viewportWidth: debugNumber(viewport.width),
-        viewportHeight: debugNumber(viewport.height),
-      });
-    }
     cancelAnimation(scale);
     cancelAnimation(translateX);
     cancelAnimation(translateY);
@@ -389,15 +340,6 @@ function ZoomableImage({
     let targetScale = clampV(scale.value, MIN_SCALE, MAX_SCALE);
     if (targetScale <= MIN_SCALE + SCALE_EPSILON) {
       targetScale = MIN_SCALE;
-      if (debug) {
-        scheduleOnRN(logDebug, 'settle:target', {
-          index,
-          targetScale,
-          targetX: 0,
-          targetY: 0,
-          reason: 'min-scale',
-        });
-      }
       scale.value = withSpring(targetScale, SPRING_CONFIG);
       translateX.value = withSpring(0, SPRING_CONFIG);
       translateY.value = withSpring(0, SPRING_CONFIG);
@@ -434,20 +376,6 @@ function ZoomableImage({
       y: clampV(targetY, -bounds.maxY, bounds.maxY),
     };
 
-    if (debug) {
-      scheduleOnRN(logDebug, 'settle:target', {
-        index,
-        targetScale: debugNumber(targetScale),
-        rawX: debugNumber(targetX),
-        rawY: debugNumber(targetY),
-        targetX: debugNumber(clamped.x),
-        targetY: debugNumber(clamped.y),
-        boundX: debugNumber(bounds.maxX),
-        boundY: debugNumber(bounds.maxY),
-        reason: 'bounds',
-      });
-    }
-
     scale.value = withSpring(targetScale, SPRING_CONFIG);
     translateX.value = withSpring(clamped.x, SPRING_CONFIG);
     translateY.value = withSpring(clamped.y, SPRING_CONFIG);
@@ -468,7 +396,7 @@ function ZoomableImage({
   const singleTap = Gesture.Tap()
     .numberOfTaps(1)
     .maxDuration(200)
-    .onEnd((e) => {
+    .onEnd(() => {
       'worklet';
       if (currentIndexSV.value !== index) return;
       if (mode.value !== 'none') return;
@@ -492,14 +420,6 @@ function ZoomableImage({
       cancelAnimation(translateY);
 
       if (scale.value > 1.05) {
-        if (debug) {
-          scheduleOnRN(logDebug, 'tap:double-reset', {
-            index,
-            scale: debugNumber(scale.value),
-            x: debugNumber(translateX.value),
-            y: debugNumber(translateY.value),
-          });
-        }
         resetImageTransform();
       } else {
         const targetScale = Math.min(DOUBLE_TAP_SCALE, MAX_SCALE);
@@ -519,16 +439,6 @@ function ZoomableImage({
 
         currentFocalX.value = focalX;
         currentFocalY.value = focalY;
-        if (debug) {
-          scheduleOnRN(logDebug, 'tap:double-zoom', {
-            index,
-            focalX: debugNumber(focalX),
-            focalY: debugNumber(focalY),
-            targetScale: debugNumber(targetScale),
-            targetX: debugNumber(clamped.x),
-            targetY: debugNumber(clamped.y),
-          });
-        }
         scale.value = withTiming(targetScale, RESET_DURATION);
         translateX.value = withTiming(clamped.x, RESET_DURATION);
         translateY.value = withTiming(clamped.y, RESET_DURATION);
@@ -542,7 +452,6 @@ function ZoomableImage({
       if (currentIndexSV.value !== index) return;
       blockTap();
       mode.value = 'pinch';
-      ignoredPinchUpdateLogged.value = 0;
       cancelAnimation(scale);
       cancelAnimation(translateX);
       cancelAnimation(translateY);
@@ -559,34 +468,11 @@ function ZoomableImage({
       gestureFocalY.value = e.focalY - viewport.height / 2;
       currentFocalX.value = gestureFocalX.value;
       currentFocalY.value = gestureFocalY.value;
-      if (debug) {
-        scheduleOnRN(logDebug, 'pinch:start', {
-          index,
-          scale: debugNumber(gestureScale.value),
-          x: debugNumber(gestureTranslateX.value),
-          y: debugNumber(gestureTranslateY.value),
-          focalX: debugNumber(gestureFocalX.value),
-          focalY: debugNumber(gestureFocalY.value),
-          pointers: e.numberOfPointers,
-        });
-      }
     })
     .onUpdate((e) => {
       'worklet';
       if (currentIndexSV.value !== index) return;
-      if (e.numberOfPointers < 2) {
-        if (debug && ignoredPinchUpdateLogged.value === 0) {
-          ignoredPinchUpdateLogged.value = 1;
-          scheduleOnRN(logDebug, 'pinch:update-ignored', {
-            index,
-            pointers: e.numberOfPointers,
-            focalX: debugNumber(e.focalX - viewport.width / 2),
-            focalY: debugNumber(e.focalY - viewport.height / 2),
-            scale: debugNumber(gestureScale.value * e.scale),
-          });
-        }
-        return;
-      }
+      if (e.numberOfPointers < 2) return;
       const nextScale = clampV(gestureScale.value * e.scale, PINCH_MIN_SCALE, PINCH_MAX_SCALE);
       const focalX = e.focalX - viewport.width / 2;
       const focalY = e.focalY - viewport.height / 2;
@@ -613,20 +499,9 @@ function ZoomableImage({
       translateX.value = rubberClampV(nextX, -bounds.maxX, bounds.maxX);
       translateY.value = rubberClampV(nextY, -bounds.maxY, bounds.maxY);
     })
-    .onEnd((e) => {
+    .onEnd(() => {
       'worklet';
       if (currentIndexSV.value !== index) return;
-      if (debug) {
-        scheduleOnRN(logDebug, 'pinch:end', {
-          index,
-          scale: debugNumber(scale.value),
-          x: debugNumber(translateX.value),
-          y: debugNumber(translateY.value),
-          focalX: debugNumber(currentFocalX.value),
-          focalY: debugNumber(currentFocalY.value),
-          pointers: e.numberOfPointers,
-        });
-      }
       settleImageTransform();
       mode.value = 'none';
       releaseTap();
@@ -634,14 +509,6 @@ function ZoomableImage({
     .onFinalize(() => {
       'worklet';
       if (mode.value === 'pinch') {
-        if (debug) {
-          scheduleOnRN(logDebug, 'pinch:finalize', {
-            index,
-            scale: debugNumber(scale.value),
-            x: debugNumber(translateX.value),
-            y: debugNumber(translateY.value),
-          });
-        }
         settleImageTransform();
         mode.value = 'none';
         releaseTap();
@@ -667,19 +534,19 @@ function ZoomableImage({
 
       gestureTranslateX.value = translateX.value;
       gestureTranslateY.value = translateY.value;
+      const bounds = getPanBounds(
+        scale.value,
+        contentWidth.value,
+        contentHeight.value,
+        viewport.width,
+        viewport.height
+      );
+      gestureBoundX.value = bounds.maxX;
+      gestureBoundY.value = bounds.maxY;
       pageTranslateX.value = 0;
       dismissY.value = 0;
       backdropOpacity.value = withSpring(1, SPRING_CONFIG);
       mode.value = scale.value > MIN_SCALE + SCALE_EPSILON ? 'drag' : 'undecided';
-      if (debug) {
-        scheduleOnRN(logDebug, 'pan:start', {
-          index,
-          mode: mode.value,
-          scale: debugNumber(scale.value),
-          x: debugNumber(gestureTranslateX.value),
-          y: debugNumber(gestureTranslateY.value),
-        });
-      }
     })
     .onUpdate((e) => {
       'worklet';
@@ -700,15 +567,8 @@ function ZoomableImage({
       if (mode.value === 'drag') {
         const nextX = gestureTranslateX.value + deltaX;
         const nextY = gestureTranslateY.value + deltaY;
-        const bounds = getPanBounds(
-          scale.value,
-          contentWidth.value,
-          contentHeight.value,
-          viewport.width,
-          viewport.height
-        );
-        translateX.value = rubberClampV(nextX, -bounds.maxX, bounds.maxX);
-        translateY.value = rubberClampV(nextY, -bounds.maxY, bounds.maxY);
+        translateX.value = rubberClampV(nextX, -gestureBoundX.value, gestureBoundX.value);
+        translateY.value = rubberClampV(nextY, -gestureBoundY.value, gestureBoundY.value);
       } else if (mode.value === 'swipe') {
         let tx = deltaX;
         const canNext = currentIndexSV.value < totalCount - 1;
@@ -740,22 +600,10 @@ function ZoomableImage({
 
       const deltaX = e.translationX;
       const deltaY = e.translationY;
-      if (debug) {
-        scheduleOnRN(logDebug, 'pan:end', {
-          index,
-          mode: mode.value,
-          scale: debugNumber(scale.value),
-          x: debugNumber(translateX.value),
-          y: debugNumber(translateY.value),
-          deltaX: debugNumber(deltaX),
-          deltaY: debugNumber(deltaY),
-          velocityX: debugNumber(e.velocityX),
-          velocityY: debugNumber(e.velocityY),
-        });
-      }
 
       if (mode.value === 'drag') {
         settleImageTransform();
+        releaseTap();
       } else if (mode.value === 'swipe') {
         const canNext = currentIndexSV.value < totalCount - 1;
         const canPrev = currentIndexSV.value > 0;
@@ -767,42 +615,31 @@ function ZoomableImage({
 
         if (goNext) {
           const target = currentIndexSV.value + 1;
-          if (debug) {
-            scheduleOnRN(logDebug, 'page:next', {
-              index,
-              target,
-              deltaX: debugNumber(deltaX),
-              velocityX: debugNumber(e.velocityX),
-            });
-          }
           pageTranslateX.value = withSpring(-viewport.width, SPRING_CONFIG, (fin) => {
             'worklet';
             if (fin) {
               currentIndexSV.value = target;
               pageTranslateX.value = 0;
+              releaseTap();
               scheduleOnRN(onPageChange, target);
             }
           });
         } else if (goPrev) {
           const target = currentIndexSV.value - 1;
-          if (debug) {
-            scheduleOnRN(logDebug, 'page:prev', {
-              index,
-              target,
-              deltaX: debugNumber(deltaX),
-              velocityX: debugNumber(e.velocityX),
-            });
-          }
           pageTranslateX.value = withSpring(viewport.width, SPRING_CONFIG, (fin) => {
             'worklet';
             if (fin) {
               currentIndexSV.value = target;
               pageTranslateX.value = 0;
+              releaseTap();
               scheduleOnRN(onPageChange, target);
             }
           });
         } else {
-          pageTranslateX.value = withSpring(0, SPRING_CONFIG);
+          pageTranslateX.value = withSpring(0, SPRING_CONFIG, (fin) => {
+            'worklet';
+            if (fin) releaseTap();
+          });
         }
       } else if (mode.value === 'dismiss') {
         const dismissThreshold = viewport.height * 0.12;
@@ -810,13 +647,6 @@ function ZoomableImage({
           deltaY > dismissThreshold ||
           e.velocityY > DISMISS_VELOCITY_THRESHOLD
         ) {
-          if (debug) {
-            scheduleOnRN(logDebug, 'dismiss:commit', {
-              index,
-              deltaY: debugNumber(deltaY),
-              velocityY: debugNumber(e.velocityY),
-            });
-          }
           dismissY.value = withTiming(viewport.height, EXIT_DURATION);
           backdropOpacity.value = withTiming(0, EXIT_DURATION, () => {
             scheduleOnRN(onDismiss);
@@ -824,24 +654,16 @@ function ZoomableImage({
         } else {
           dismissY.value = withSpring(0, SPRING_CONFIG);
           backdropOpacity.value = withSpring(1, SPRING_CONFIG);
+          releaseTap();
         }
       }
 
       mode.value = 'none';
-      releaseTap();
     })
     .onFinalize(() => {
       'worklet';
       if (mode.value === 'pinch') return;
-      if (debug && mode.value !== 'none') {
-        scheduleOnRN(logDebug, 'pan:finalize', {
-          index,
-          mode: mode.value,
-          scale: debugNumber(scale.value),
-          x: debugNumber(translateX.value),
-          y: debugNumber(translateY.value),
-        });
-      }
+      if (mode.value === 'none') return;
       if (mode.value === 'drag') {
         settleImageTransform();
       } else if (mode.value === 'swipe') {
@@ -1028,7 +850,6 @@ function ImagePreviewOverlay({
           onDismiss={handleDismiss}
           onTapClose={handleClose}
           tapToClose={options?.tapToClose ?? true}
-          debug={options?.debug ?? false}
         />
       ))}
 
@@ -1093,6 +914,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
     elevation: Platform.OS === 'android' ? 99 : 0,
+    overflow: 'hidden',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
