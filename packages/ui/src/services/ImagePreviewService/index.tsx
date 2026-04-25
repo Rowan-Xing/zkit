@@ -20,10 +20,10 @@ import * as React from 'react';
 import {
   View,
   StyleSheet,
-  Dimensions,
   Platform,
   BackHandler,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -38,25 +38,26 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Image } from 'expo-image';
+import { Image, type ImageLoadEventData } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { wp } from 'y2kit-tools';
 import { Text } from '../../ui/Text';
 
-const SCREEN_W = Dimensions.get('window').width;
-const SCREEN_H = Dimensions.get('window').height;
-
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
+const PINCH_MIN_SCALE = 0.72;
+const PINCH_MAX_SCALE = MAX_SCALE * 1.14;
 const DOUBLE_TAP_SCALE = 2.5;
-const SWIPE_THRESHOLD = SCREEN_W * 0.25;
-const VELOCITY_THRESHOLD = 500;
-const DISMISS_THRESHOLD = SCREEN_H * 0.12;
-const MODE_LOCK_DISTANCE = 8;
+const SCALE_EPSILON = 0.02;
+const VELOCITY_THRESHOLD = 520;
+const DISMISS_VELOCITY_THRESHOLD = 900;
+const MODE_LOCK_DISTANCE = wp(8);
+const EDGE_RESISTANCE = 0.34;
 
-const SPRING_CONFIG = { damping: 25, stiffness: 300, mass: 0.5 };
+const SPRING_CONFIG = { damping: 28, stiffness: 280, mass: 0.62 };
 const ENTER_DURATION = { duration: 260 };
 const EXIT_DURATION = { duration: 200 };
+const RESET_DURATION = { duration: 220 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -73,12 +74,26 @@ export type ImagePreviewOptions = {
   onClose?: () => void;
   /** 单击任意位置关闭预览，默认 true */
   tapToClose?: boolean;
+  /** 输出手势调试日志，默认 false */
+  debug?: boolean;
 };
 
 type PreviewState = {
   visible: boolean;
   options: ImagePreviewOptions | null;
 };
+
+type Viewport = {
+  width: number;
+  height: number;
+};
+
+type ImageSize = {
+  width: number;
+  height: number;
+};
+
+type ImagePreviewDebugPayload = Record<string, number | string | boolean>;
 
 // ─── Service ─────────────────────────────────────────────────────────────────
 
@@ -120,6 +135,83 @@ function clampV(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max);
 }
 
+function debugNumber(v: number): number {
+  'worklet';
+  return Math.round(v * 1000) / 1000;
+}
+
+function rubberClampV(v: number, min: number, max: number): number {
+  'worklet';
+  if (v < min) return min + (v - min) * EDGE_RESISTANCE;
+  if (v > max) return max + (v - max) * EDGE_RESISTANCE;
+  return v;
+}
+
+function resolveContainedSize(image: ImageSize | null, viewport: Viewport): ImageSize {
+  if (!image?.width || !image.height || !viewport.width || !viewport.height) {
+    return viewport;
+  }
+
+  const ratio = Math.min(viewport.width / image.width, viewport.height / image.height);
+  return {
+    width: image.width * ratio,
+    height: image.height * ratio,
+  };
+}
+
+function getPanBounds(
+  nextScale: number,
+  contentWidth: number,
+  contentHeight: number,
+  viewportWidth: number,
+  viewportHeight: number
+) {
+  'worklet';
+  return {
+    maxX: Math.max(0, (contentWidth * nextScale - viewportWidth) / 2),
+    maxY: Math.max(0, (contentHeight * nextScale - viewportHeight) / 2),
+  };
+}
+
+function clampTranslation(
+  x: number,
+  y: number,
+  nextScale: number,
+  contentWidth: number,
+  contentHeight: number,
+  viewportWidth: number,
+  viewportHeight: number
+) {
+  'worklet';
+  const bounds = getPanBounds(
+    nextScale,
+    contentWidth,
+    contentHeight,
+    viewportWidth,
+    viewportHeight
+  );
+  return {
+    x: clampV(x, -bounds.maxX, bounds.maxX),
+    y: clampV(y, -bounds.maxY, bounds.maxY),
+  };
+}
+
+function scaleAroundFocal(
+  startTranslate: number,
+  startScale: number,
+  nextScale: number,
+  focal: number
+): number {
+  'worklet';
+  if (startScale <= 0) return startTranslate;
+  return startTranslate + (1 - nextScale / startScale) * (focal - startTranslate);
+}
+
+function normalizeIndex(index: number | undefined, total: number): number {
+  if (total <= 0) return 0;
+  return Math.min(Math.max(index ?? 0, 0), total - 1);
+}
+
 // ─── CloseButton ─────────────────────────────────────────────────────────────
 
 function CloseButton({ onPress, top }: { onPress: () => void; top: number }) {
@@ -140,11 +232,12 @@ function CloseButton({ onPress, top }: { onPress: () => void; top: number }) {
 
 // ─── ZoomableImage ───────────────────────────────────────────────────────────
 
-type GestureMode = 'none' | 'drag' | 'swipe' | 'dismiss' | 'undecided';
+type GestureMode = 'none' | 'drag' | 'swipe' | 'dismiss' | 'pinch' | 'undecided';
 
 function ZoomableImage({
   uri,
   index,
+  viewport,
   currentIndexSV,
   pageTranslateX,
   backdropOpacity,
@@ -153,9 +246,11 @@ function ZoomableImage({
   onDismiss,
   onTapClose,
   tapToClose,
+  debug,
 }: {
   uri: string;
   index: number;
+  viewport: Viewport;
   currentIndexSV: SharedValue<number>;
   pageTranslateX: SharedValue<number>;
   backdropOpacity: SharedValue<number>;
@@ -164,34 +259,206 @@ function ZoomableImage({
   onDismiss: () => void;
   onTapClose: () => void;
   tapToClose: boolean;
+  debug: boolean;
 }) {
+  const [naturalSize, setNaturalSize] = React.useState<ImageSize | null>(null);
+  const contentSize = React.useMemo(
+    () => resolveContainedSize(naturalSize, viewport),
+    [naturalSize, viewport]
+  );
+  const viewportStyle = React.useMemo(
+    () => ({ width: viewport.width, height: viewport.height }),
+    [viewport.height, viewport.width]
+  );
+
   const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
   const dismissY = useSharedValue(0);
   const mode = useSharedValue<GestureMode>('none');
+  const tapSuppression = useSharedValue(0);
 
-  const isPinching = useSharedValue(false);
-  const pinchFocalX = useSharedValue(0);
-  const pinchFocalY = useSharedValue(0);
-  const panOffsetX = useSharedValue(0);
-  const panOffsetY = useSharedValue(0);
+  const contentWidth = useSharedValue(contentSize.width);
+  const contentHeight = useSharedValue(contentSize.height);
+  const gestureScale = useSharedValue(1);
+  const gestureTranslateX = useSharedValue(0);
+  const gestureTranslateY = useSharedValue(0);
+  const gestureFocalX = useSharedValue(0);
+  const gestureFocalY = useSharedValue(0);
+  const currentFocalX = useSharedValue(0);
+  const currentFocalY = useSharedValue(0);
+  const ignoredPinchUpdateLogged = useSharedValue(0);
+
+  React.useEffect(() => {
+    contentWidth.value = contentSize.width;
+    contentHeight.value = contentSize.height;
+
+    if (mode.value !== 'none') return;
+
+    const clamped = clampTranslation(
+      translateX.value,
+      translateY.value,
+      scale.value,
+      contentSize.width,
+      contentSize.height,
+      viewport.width,
+      viewport.height
+    );
+
+    translateX.value = withSpring(clamped.x, SPRING_CONFIG);
+    translateY.value = withSpring(clamped.y, SPRING_CONFIG);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentSize.height, contentSize.width, viewport.height, viewport.width]);
+
+  const handleImageLoad = React.useCallback((event: ImageLoadEventData) => {
+    const { height, width } = event.source;
+    if (width > 0 && height > 0) {
+      setNaturalSize((prev) =>
+        prev?.width === width && prev.height === height ? prev : { width, height }
+      );
+      if (debug) {
+        console.log('[imagePreview]', 'image:load', {
+          index,
+          naturalWidth: width,
+          naturalHeight: height,
+          viewportWidth: viewport.width,
+          viewportHeight: viewport.height,
+        });
+      }
+    }
+  }, [debug, index, viewport.height, viewport.width]);
+
+  const logDebug = React.useCallback(
+    (stage: string, payload: ImagePreviewDebugPayload) => {
+      if (!debug) return;
+      console.log('[imagePreview]', stage, payload);
+    },
+    [debug]
+  );
+
+  const resetImageTransform = () => {
+    'worklet';
+    if (debug) {
+      scheduleOnRN(logDebug, 'image:reset', {
+        index,
+        scale: debugNumber(scale.value),
+        x: debugNumber(translateX.value),
+        y: debugNumber(translateY.value),
+      });
+    }
+    cancelAnimation(scale);
+    cancelAnimation(translateX);
+    cancelAnimation(translateY);
+    scale.value = withTiming(MIN_SCALE, RESET_DURATION);
+    translateX.value = withTiming(0, RESET_DURATION);
+    translateY.value = withTiming(0, RESET_DURATION);
+  };
+
+  const blockTap = () => {
+    'worklet';
+    cancelAnimation(tapSuppression);
+    tapSuppression.value = 1;
+  };
+
+  const releaseTap = () => {
+    'worklet';
+    tapSuppression.value = withTiming(0, { duration: 160 });
+  };
+
+  const settleImageTransform = () => {
+    'worklet';
+    if (debug) {
+      scheduleOnRN(logDebug, 'settle:start', {
+        index,
+        mode: mode.value,
+        scale: debugNumber(scale.value),
+        x: debugNumber(translateX.value),
+        y: debugNumber(translateY.value),
+        focalX: debugNumber(currentFocalX.value),
+        focalY: debugNumber(currentFocalY.value),
+        contentWidth: debugNumber(contentWidth.value),
+        contentHeight: debugNumber(contentHeight.value),
+        viewportWidth: debugNumber(viewport.width),
+        viewportHeight: debugNumber(viewport.height),
+      });
+    }
+    cancelAnimation(scale);
+    cancelAnimation(translateX);
+    cancelAnimation(translateY);
+
+    let targetScale = clampV(scale.value, MIN_SCALE, MAX_SCALE);
+    if (targetScale <= MIN_SCALE + SCALE_EPSILON) {
+      targetScale = MIN_SCALE;
+      if (debug) {
+        scheduleOnRN(logDebug, 'settle:target', {
+          index,
+          targetScale,
+          targetX: 0,
+          targetY: 0,
+          reason: 'min-scale',
+        });
+      }
+      scale.value = withSpring(targetScale, SPRING_CONFIG);
+      translateX.value = withSpring(0, SPRING_CONFIG);
+      translateY.value = withSpring(0, SPRING_CONFIG);
+      return;
+    }
+
+    let targetX = translateX.value;
+    let targetY = translateY.value;
+
+    if (targetScale !== scale.value) {
+      targetX = scaleAroundFocal(
+        translateX.value,
+        scale.value,
+        targetScale,
+        currentFocalX.value
+      );
+      targetY = scaleAroundFocal(
+        translateY.value,
+        scale.value,
+        targetScale,
+        currentFocalY.value
+      );
+    }
+
+    const bounds = getPanBounds(
+      targetScale,
+      contentWidth.value,
+      contentHeight.value,
+      viewport.width,
+      viewport.height
+    );
+    const clamped = {
+      x: clampV(targetX, -bounds.maxX, bounds.maxX),
+      y: clampV(targetY, -bounds.maxY, bounds.maxY),
+    };
+
+    if (debug) {
+      scheduleOnRN(logDebug, 'settle:target', {
+        index,
+        targetScale: debugNumber(targetScale),
+        rawX: debugNumber(targetX),
+        rawY: debugNumber(targetY),
+        targetX: debugNumber(clamped.x),
+        targetY: debugNumber(clamped.y),
+        boundX: debugNumber(bounds.maxX),
+        boundY: debugNumber(bounds.maxY),
+        reason: 'bounds',
+      });
+    }
+
+    scale.value = withSpring(targetScale, SPRING_CONFIG);
+    translateX.value = withSpring(clamped.x, SPRING_CONFIG);
+    translateY.value = withSpring(clamped.y, SPRING_CONFIG);
+  };
 
   useAnimatedReaction(
     () => currentIndexSV.value,
     (curr, prev) => {
       if (prev !== null && prev === index && curr !== index) {
-        scale.value = withTiming(1, { duration: 200 });
-        savedScale.value = 1;
-        translateX.value = withTiming(0, { duration: 200 });
-        translateY.value = withTiming(0, { duration: 200 });
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
+        resetImageTransform();
         dismissY.value = 0;
-        isPinching.value = false;
         mode.value = 'none';
       }
     }
@@ -201,9 +468,11 @@ function ZoomableImage({
   const singleTap = Gesture.Tap()
     .numberOfTaps(1)
     .maxDuration(200)
-    .onEnd(() => {
+    .onEnd((e) => {
       'worklet';
       if (currentIndexSV.value !== index) return;
+      if (mode.value !== 'none') return;
+      if (tapSuppression.value > 0.01) return;
       if (!tapToClose) return;
       if (scale.value > 1.05) return;
       scheduleOnRN(onTapClose);
@@ -216,25 +485,53 @@ function ZoomableImage({
     .onEnd((e) => {
       'worklet';
       if (currentIndexSV.value !== index) return;
+      if (mode.value !== 'none') return;
+      if (tapSuppression.value > 0.01) return;
+      cancelAnimation(scale);
+      cancelAnimation(translateX);
+      cancelAnimation(translateY);
 
       if (scale.value > 1.05) {
-        scale.value = withTiming(1, { duration: 280 });
-        savedScale.value = 1;
-        translateX.value = withTiming(0, { duration: 280 });
-        translateY.value = withTiming(0, { duration: 280 });
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
+        if (debug) {
+          scheduleOnRN(logDebug, 'tap:double-reset', {
+            index,
+            scale: debugNumber(scale.value),
+            x: debugNumber(translateX.value),
+            y: debugNumber(translateY.value),
+          });
+        }
+        resetImageTransform();
       } else {
-        const fX = e.x - SCREEN_W / 2;
-        const fY = e.y - SCREEN_H / 2;
-        const tx = -fX * (DOUBLE_TAP_SCALE - 1);
-        const ty = -fY * (DOUBLE_TAP_SCALE - 1);
-        scale.value = withTiming(DOUBLE_TAP_SCALE, { duration: 280 });
-        savedScale.value = DOUBLE_TAP_SCALE;
-        translateX.value = withTiming(tx, { duration: 280 });
-        translateY.value = withTiming(ty, { duration: 280 });
-        savedTranslateX.value = tx;
-        savedTranslateY.value = ty;
+        const targetScale = Math.min(DOUBLE_TAP_SCALE, MAX_SCALE);
+        const focalX = e.x - viewport.width / 2;
+        const focalY = e.y - viewport.height / 2;
+        const targetX = scaleAroundFocal(0, MIN_SCALE, targetScale, focalX);
+        const targetY = scaleAroundFocal(0, MIN_SCALE, targetScale, focalY);
+        const clamped = clampTranslation(
+          targetX,
+          targetY,
+          targetScale,
+          contentWidth.value,
+          contentHeight.value,
+          viewport.width,
+          viewport.height
+        );
+
+        currentFocalX.value = focalX;
+        currentFocalY.value = focalY;
+        if (debug) {
+          scheduleOnRN(logDebug, 'tap:double-zoom', {
+            index,
+            focalX: debugNumber(focalX),
+            focalY: debugNumber(focalY),
+            targetScale: debugNumber(targetScale),
+            targetX: debugNumber(clamped.x),
+            targetY: debugNumber(clamped.y),
+          });
+        }
+        scale.value = withTiming(targetScale, RESET_DURATION);
+        translateX.value = withTiming(clamped.x, RESET_DURATION);
+        translateY.value = withTiming(clamped.y, RESET_DURATION);
       }
     });
 
@@ -243,121 +540,152 @@ function ZoomableImage({
     .onStart((e) => {
       'worklet';
       if (currentIndexSV.value !== index) return;
-      isPinching.value = true;
-      savedScale.value = scale.value;
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-      pinchFocalX.value = e.focalX - SCREEN_W / 2;
-      pinchFocalY.value = e.focalY - SCREEN_H / 2;
+      blockTap();
+      mode.value = 'pinch';
+      ignoredPinchUpdateLogged.value = 0;
       cancelAnimation(scale);
       cancelAnimation(translateX);
       cancelAnimation(translateY);
+      cancelAnimation(pageTranslateX);
+      cancelAnimation(dismissY);
+      pageTranslateX.value = 0;
+      dismissY.value = 0;
+      backdropOpacity.value = withSpring(1, SPRING_CONFIG);
+
+      gestureScale.value = scale.value;
+      gestureTranslateX.value = translateX.value;
+      gestureTranslateY.value = translateY.value;
+      gestureFocalX.value = e.focalX - viewport.width / 2;
+      gestureFocalY.value = e.focalY - viewport.height / 2;
+      currentFocalX.value = gestureFocalX.value;
+      currentFocalY.value = gestureFocalY.value;
+      if (debug) {
+        scheduleOnRN(logDebug, 'pinch:start', {
+          index,
+          scale: debugNumber(gestureScale.value),
+          x: debugNumber(gestureTranslateX.value),
+          y: debugNumber(gestureTranslateY.value),
+          focalX: debugNumber(gestureFocalX.value),
+          focalY: debugNumber(gestureFocalY.value),
+          pointers: e.numberOfPointers,
+        });
+      }
     })
     .onUpdate((e) => {
       'worklet';
       if (currentIndexSV.value !== index) return;
-      const newScale = clampV(savedScale.value * e.scale, 0.5, MAX_SCALE + 1);
-      scale.value = newScale;
-      translateX.value =
-        savedTranslateX.value +
-        (savedScale.value - newScale) * pinchFocalX.value;
-      translateY.value =
-        savedTranslateY.value +
-        (savedScale.value - newScale) * pinchFocalY.value;
-    })
-    .onEnd(() => {
-      'worklet';
-      if (currentIndexSV.value !== index) return;
-      isPinching.value = false;
-      mode.value = 'none';
-
-      let targetScale = scale.value;
-
-      if (targetScale < MIN_SCALE) {
-        scale.value = withSpring(MIN_SCALE, SPRING_CONFIG);
-        translateX.value = withSpring(0, SPRING_CONFIG);
-        translateY.value = withSpring(0, SPRING_CONFIG);
-        savedScale.value = MIN_SCALE;
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
+      if (e.numberOfPointers < 2) {
+        if (debug && ignoredPinchUpdateLogged.value === 0) {
+          ignoredPinchUpdateLogged.value = 1;
+          scheduleOnRN(logDebug, 'pinch:update-ignored', {
+            index,
+            pointers: e.numberOfPointers,
+            focalX: debugNumber(e.focalX - viewport.width / 2),
+            focalY: debugNumber(e.focalY - viewport.height / 2),
+            scale: debugNumber(gestureScale.value * e.scale),
+          });
+        }
         return;
       }
+      const nextScale = clampV(gestureScale.value * e.scale, PINCH_MIN_SCALE, PINCH_MAX_SCALE);
+      const focalX = e.focalX - viewport.width / 2;
+      const focalY = e.focalY - viewport.height / 2;
+      const ratio = nextScale / gestureScale.value;
+      const nextX =
+        gestureTranslateX.value +
+        (focalX - gestureFocalX.value) +
+        (1 - ratio) * (gestureFocalX.value - gestureTranslateX.value);
+      const nextY =
+        gestureTranslateY.value +
+        (focalY - gestureFocalY.value) +
+        (1 - ratio) * (gestureFocalY.value - gestureTranslateY.value);
+      const bounds = getPanBounds(
+        nextScale,
+        contentWidth.value,
+        contentHeight.value,
+        viewport.width,
+        viewport.height
+      );
 
-      if (targetScale > MAX_SCALE) {
-        targetScale = MAX_SCALE;
-        scale.value = withSpring(MAX_SCALE, SPRING_CONFIG);
+      currentFocalX.value = focalX;
+      currentFocalY.value = focalY;
+      scale.value = nextScale;
+      translateX.value = rubberClampV(nextX, -bounds.maxX, bounds.maxX);
+      translateY.value = rubberClampV(nextY, -bounds.maxY, bounds.maxY);
+    })
+    .onEnd((e) => {
+      'worklet';
+      if (currentIndexSV.value !== index) return;
+      if (debug) {
+        scheduleOnRN(logDebug, 'pinch:end', {
+          index,
+          scale: debugNumber(scale.value),
+          x: debugNumber(translateX.value),
+          y: debugNumber(translateY.value),
+          focalX: debugNumber(currentFocalX.value),
+          focalY: debugNumber(currentFocalY.value),
+          pointers: e.numberOfPointers,
+        });
       }
-
-      const targetTx =
-        savedTranslateX.value +
-        (savedScale.value - targetScale) * pinchFocalX.value;
-      const targetTy =
-        savedTranslateY.value +
-        (savedScale.value - targetScale) * pinchFocalY.value;
-
-      const maxTX = Math.max(0, (SCREEN_W * (targetScale - 1)) / 2);
-      const maxTY = Math.max(0, (SCREEN_H * (targetScale - 1)) / 2);
-      const cx = clampV(targetTx, -maxTX, maxTX);
-      const cy = clampV(targetTy, -maxTY, maxTY);
-
-      if (cx !== translateX.value || cy !== translateY.value) {
-        translateX.value = withSpring(cx, SPRING_CONFIG);
-        translateY.value = withSpring(cy, SPRING_CONFIG);
+      settleImageTransform();
+      mode.value = 'none';
+      releaseTap();
+    })
+    .onFinalize(() => {
+      'worklet';
+      if (mode.value === 'pinch') {
+        if (debug) {
+          scheduleOnRN(logDebug, 'pinch:finalize', {
+            index,
+            scale: debugNumber(scale.value),
+            x: debugNumber(translateX.value),
+            y: debugNumber(translateY.value),
+          });
+        }
+        settleImageTransform();
+        mode.value = 'none';
+        releaseTap();
       }
-
-      savedScale.value = targetScale;
-      savedTranslateX.value = cx;
-      savedTranslateY.value = cy;
     });
 
   // ── Pan: drag (zoomed) / page swipe / dismiss ──
   const pan = Gesture.Pan()
     .minPointers(1)
-    .onStart((e) => {
+    .maxPointers(1)
+    .minDistance(1)
+    .averageTouches(true)
+    .onStart(() => {
       'worklet';
       if (currentIndexSV.value !== index) return;
+      blockTap();
 
       cancelAnimation(translateX);
       cancelAnimation(translateY);
       cancelAnimation(pageTranslateX);
       cancelAnimation(dismissY);
+      cancelAnimation(backdropOpacity);
 
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-      panOffsetX.value = 0;
-      panOffsetY.value = 0;
-
-      if (e.numberOfPointers >= 2 || isPinching.value) {
-        mode.value = 'none';
-      } else if (scale.value > 1.05) {
-        mode.value = 'drag';
-      } else {
-        mode.value = 'undecided';
+      gestureTranslateX.value = translateX.value;
+      gestureTranslateY.value = translateY.value;
+      pageTranslateX.value = 0;
+      dismissY.value = 0;
+      backdropOpacity.value = withSpring(1, SPRING_CONFIG);
+      mode.value = scale.value > MIN_SCALE + SCALE_EPSILON ? 'drag' : 'undecided';
+      if (debug) {
+        scheduleOnRN(logDebug, 'pan:start', {
+          index,
+          mode: mode.value,
+          scale: debugNumber(scale.value),
+          x: debugNumber(gestureTranslateX.value),
+          y: debugNumber(gestureTranslateY.value),
+        });
       }
     })
     .onUpdate((e) => {
       'worklet';
       if (currentIndexSV.value !== index) return;
-
-      if (isPinching.value) {
-        panOffsetX.value = e.translationX;
-        panOffsetY.value = e.translationY;
-        return;
-      }
-
-      if (mode.value === 'none') {
-        cancelAnimation(translateX);
-        cancelAnimation(translateY);
-        savedTranslateX.value = translateX.value;
-        savedTranslateY.value = translateY.value;
-        panOffsetX.value = e.translationX;
-        panOffsetY.value = e.translationY;
-        mode.value = scale.value > 1.05 ? 'drag' : 'undecided';
-        return;
-      }
-
-      const deltaX = e.translationX - panOffsetX.value;
-      const deltaY = e.translationY - panOffsetY.value;
+      const deltaX = e.translationX;
+      const deltaY = e.translationY;
 
       if (mode.value === 'undecided') {
         const aX = Math.abs(deltaX);
@@ -370,56 +698,84 @@ function ZoomableImage({
       }
 
       if (mode.value === 'drag') {
-        translateX.value = savedTranslateX.value + deltaX;
-        translateY.value = savedTranslateY.value + deltaY;
+        const nextX = gestureTranslateX.value + deltaX;
+        const nextY = gestureTranslateY.value + deltaY;
+        const bounds = getPanBounds(
+          scale.value,
+          contentWidth.value,
+          contentHeight.value,
+          viewport.width,
+          viewport.height
+        );
+        translateX.value = rubberClampV(nextX, -bounds.maxX, bounds.maxX);
+        translateY.value = rubberClampV(nextY, -bounds.maxY, bounds.maxY);
       } else if (mode.value === 'swipe') {
         let tx = deltaX;
         const canNext = currentIndexSV.value < totalCount - 1;
         const canPrev = currentIndexSV.value > 0;
         if ((!canPrev && tx > 0) || (!canNext && tx < 0)) {
-          tx *= 0.3;
+          tx *= EDGE_RESISTANCE;
         }
         pageTranslateX.value = tx;
       } else if (mode.value === 'dismiss') {
-        dismissY.value = deltaY;
-        const progress = Math.abs(deltaY) / (SCREEN_H * 0.4);
-        backdropOpacity.value = interpolate(progress, [0, 1], [1, 0.1], Extrapolation.CLAMP);
+        const dragY = Math.max(0, deltaY);
+        dismissY.value = dragY;
+        const progress = dragY / (viewport.height * 0.42);
+        backdropOpacity.value = interpolate(
+          progress,
+          [0, 1],
+          [1, 0.1],
+          Extrapolation.CLAMP
+        );
       }
     })
     .onEnd((e) => {
       'worklet';
       if (currentIndexSV.value !== index) return;
 
-      if (mode.value === 'none' || isPinching.value) {
+      if (mode.value === 'none') {
         mode.value = 'none';
         return;
       }
 
-      const deltaX = e.translationX - panOffsetX.value;
-      const deltaY = e.translationY - panOffsetY.value;
+      const deltaX = e.translationX;
+      const deltaY = e.translationY;
+      if (debug) {
+        scheduleOnRN(logDebug, 'pan:end', {
+          index,
+          mode: mode.value,
+          scale: debugNumber(scale.value),
+          x: debugNumber(translateX.value),
+          y: debugNumber(translateY.value),
+          deltaX: debugNumber(deltaX),
+          deltaY: debugNumber(deltaY),
+          velocityX: debugNumber(e.velocityX),
+          velocityY: debugNumber(e.velocityY),
+        });
+      }
 
       if (mode.value === 'drag') {
-        const maxTX = Math.max(0, (SCREEN_W * (scale.value - 1)) / 2);
-        const maxTY = Math.max(0, (SCREEN_H * (scale.value - 1)) / 2);
-        const cx = clampV(translateX.value, -maxTX, maxTX);
-        const cy = clampV(translateY.value, -maxTY, maxTY);
-        if (cx !== translateX.value || cy !== translateY.value) {
-          translateX.value = withSpring(cx, SPRING_CONFIG);
-          translateY.value = withSpring(cy, SPRING_CONFIG);
-        }
-        savedTranslateX.value = cx;
-        savedTranslateY.value = cy;
+        settleImageTransform();
       } else if (mode.value === 'swipe') {
         const canNext = currentIndexSV.value < totalCount - 1;
         const canPrev = currentIndexSV.value > 0;
+        const swipeThreshold = viewport.width * 0.23;
         const goNext =
-          canNext && (deltaX < -SWIPE_THRESHOLD || e.velocityX < -VELOCITY_THRESHOLD);
+          canNext && (deltaX < -swipeThreshold || e.velocityX < -VELOCITY_THRESHOLD);
         const goPrev =
-          canPrev && (deltaX > SWIPE_THRESHOLD || e.velocityX > VELOCITY_THRESHOLD);
+          canPrev && (deltaX > swipeThreshold || e.velocityX > VELOCITY_THRESHOLD);
 
         if (goNext) {
           const target = currentIndexSV.value + 1;
-          pageTranslateX.value = withSpring(-SCREEN_W, SPRING_CONFIG, (fin) => {
+          if (debug) {
+            scheduleOnRN(logDebug, 'page:next', {
+              index,
+              target,
+              deltaX: debugNumber(deltaX),
+              velocityX: debugNumber(e.velocityX),
+            });
+          }
+          pageTranslateX.value = withSpring(-viewport.width, SPRING_CONFIG, (fin) => {
             'worklet';
             if (fin) {
               currentIndexSV.value = target;
@@ -429,7 +785,15 @@ function ZoomableImage({
           });
         } else if (goPrev) {
           const target = currentIndexSV.value - 1;
-          pageTranslateX.value = withSpring(SCREEN_W, SPRING_CONFIG, (fin) => {
+          if (debug) {
+            scheduleOnRN(logDebug, 'page:prev', {
+              index,
+              target,
+              deltaX: debugNumber(deltaX),
+              velocityX: debugNumber(e.velocityX),
+            });
+          }
+          pageTranslateX.value = withSpring(viewport.width, SPRING_CONFIG, (fin) => {
             'worklet';
             if (fin) {
               currentIndexSV.value = target;
@@ -441,12 +805,19 @@ function ZoomableImage({
           pageTranslateX.value = withSpring(0, SPRING_CONFIG);
         }
       } else if (mode.value === 'dismiss') {
+        const dismissThreshold = viewport.height * 0.12;
         if (
-          Math.abs(deltaY) > DISMISS_THRESHOLD ||
-          Math.abs(e.velocityY) > 800
+          deltaY > dismissThreshold ||
+          e.velocityY > DISMISS_VELOCITY_THRESHOLD
         ) {
-          const dir = deltaY > 0 ? 1 : -1;
-          dismissY.value = withTiming(dir * SCREEN_H, EXIT_DURATION);
+          if (debug) {
+            scheduleOnRN(logDebug, 'dismiss:commit', {
+              index,
+              deltaY: debugNumber(deltaY),
+              velocityY: debugNumber(e.velocityY),
+            });
+          }
+          dismissY.value = withTiming(viewport.height, EXIT_DURATION);
           backdropOpacity.value = withTiming(0, EXIT_DURATION, () => {
             scheduleOnRN(onDismiss);
           });
@@ -457,6 +828,30 @@ function ZoomableImage({
       }
 
       mode.value = 'none';
+      releaseTap();
+    })
+    .onFinalize(() => {
+      'worklet';
+      if (mode.value === 'pinch') return;
+      if (debug && mode.value !== 'none') {
+        scheduleOnRN(logDebug, 'pan:finalize', {
+          index,
+          mode: mode.value,
+          scale: debugNumber(scale.value),
+          x: debugNumber(translateX.value),
+          y: debugNumber(translateY.value),
+        });
+      }
+      if (mode.value === 'drag') {
+        settleImageTransform();
+      } else if (mode.value === 'swipe') {
+        pageTranslateX.value = withSpring(0, SPRING_CONFIG);
+      } else if (mode.value === 'dismiss') {
+        dismissY.value = withSpring(0, SPRING_CONFIG);
+        backdropOpacity.value = withSpring(1, SPRING_CONFIG);
+      }
+      mode.value = 'none';
+      releaseTap();
     });
 
   const tapGestures = Gesture.Exclusive(doubleTap, singleTap);
@@ -465,27 +860,42 @@ function ZoomableImage({
     Gesture.Simultaneous(pinch, pan)
   );
 
-  const animStyle = useAnimatedStyle(() => {
-    const pageX = (index - currentIndexSV.value) * SCREEN_W + pageTranslateX.value;
+  const pageStyle = useAnimatedStyle(() => {
+    const pageX = (index - currentIndexSV.value) * viewport.width + pageTranslateX.value;
     return {
       opacity: backdropOpacity.value,
       transform: [
-        { translateX: pageX + translateX.value },
-        { translateY: translateY.value + dismissY.value },
-        { scale: scale.value },
+        { translateX: pageX },
+        { translateY: dismissY.value },
       ],
     };
   });
 
+  const imageTranslateStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+  }));
+
+  const imageScaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
     <GestureDetector gesture={composed}>
-      <Animated.View style={[styles.imagePage, animStyle]}>
-        <Image
-          source={{ uri }}
-          style={styles.fullImage}
-          contentFit="contain"
-          recyclingKey={uri}
-        />
+      <Animated.View style={[styles.imagePage, viewportStyle, pageStyle]}>
+        <Animated.View style={[styles.imageTransformLayer, viewportStyle, imageTranslateStyle]}>
+          <Animated.View style={[styles.imageTransformLayer, viewportStyle, imageScaleStyle]}>
+            <Image
+              source={{ uri }}
+              style={viewportStyle}
+              contentFit="contain"
+              recyclingKey={uri}
+              onLoad={handleImageLoad}
+            />
+          </Animated.View>
+        </Animated.View>
       </Animated.View>
     </GestureDetector>
   );
@@ -503,12 +913,20 @@ function ImagePreviewOverlay({
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const window = useWindowDimensions();
   const [mounted, setMounted] = React.useState(false);
+  const [closing, setClosing] = React.useState(false);
   const [renderIndex, setRenderIndex] = React.useState(0);
+  const closingRef = React.useRef(false);
 
   const backdropOpacity = useSharedValue(0);
   const pageTranslateX = useSharedValue(0);
   const currentIndexSV = useSharedValue(0);
+
+  const viewport = React.useMemo(
+    () => ({ width: window.width, height: window.height }),
+    [window.height, window.width]
+  );
 
   const images = React.useMemo(
     () => (options?.images ?? []).map(toUri),
@@ -517,8 +935,10 @@ function ImagePreviewOverlay({
   const total = images.length;
 
   React.useEffect(() => {
-    if (visible && options) {
-      const idx = options.initialIndex ?? 0;
+    if (visible && options && total > 0) {
+      const idx = normalizeIndex(options.initialIndex, total);
+      closingRef.current = false;
+      setClosing(false);
       currentIndexSV.value = idx;
       setRenderIndex(idx);
       pageTranslateX.value = 0;
@@ -530,7 +950,7 @@ function ImagePreviewOverlay({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [options, total, visible]);
 
   useAnimatedReaction(
     () => currentIndexSV.value,
@@ -548,6 +968,9 @@ function ImagePreviewOverlay({
   }, [mounted]);
 
   const handleClose = React.useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
     backdropOpacity.value = withTiming(0, EXIT_DURATION, (fin) => {
       if (fin) {
         scheduleOnRN(setMounted, false);
@@ -566,18 +989,11 @@ function ImagePreviewOverlay({
   );
 
   const handleDismiss = React.useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
     setMounted(false);
     onClose();
-  }, [onClose]);
-
-  const handleTapClose = React.useCallback(() => {
-    backdropOpacity.value = withTiming(0, EXIT_DURATION, (fin) => {
-      if (fin) {
-        scheduleOnRN(setMounted, false);
-        scheduleOnRN(onClose);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onClose]);
 
   const backdropStyle = useAnimatedStyle(() => ({
@@ -595,7 +1011,7 @@ function ImagePreviewOverlay({
   );
 
   return (
-    <View style={styles.root} pointerEvents={mounted ? 'auto' : 'none'}>
+    <View style={styles.root} pointerEvents={mounted && !closing ? 'auto' : 'none'}>
       <Animated.View style={[styles.backdrop, backdropStyle]} />
 
       {renderRange.map((idx) => (
@@ -603,14 +1019,16 @@ function ImagePreviewOverlay({
           key={idx}
           uri={images[idx]}
           index={idx}
+          viewport={viewport}
           currentIndexSV={currentIndexSV}
           pageTranslateX={pageTranslateX}
           backdropOpacity={backdropOpacity}
           totalCount={total}
           onPageChange={handlePageChange}
           onDismiss={handleDismiss}
-          onTapClose={handleTapClose}
+          onTapClose={handleClose}
           tapToClose={options?.tapToClose ?? true}
+          debug={options?.debug ?? false}
         />
       ))}
 
@@ -682,14 +1100,13 @@ const styles = StyleSheet.create({
   },
   imagePage: {
     position: 'absolute',
-    width: SCREEN_W,
-    height: SCREEN_H,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  fullImage: {
-    width: SCREEN_W,
-    height: SCREEN_H,
+  imageTransformLayer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeBtnWrap: {
     position: 'absolute',

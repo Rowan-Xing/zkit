@@ -474,7 +474,7 @@ function Playground() {
               variant="outline"
               tone="neutral"
               icon={icon('image', theme.colors.onSurface)}
-              onPress={() => imagePreview.show({ images: previewImages })}
+              onPress={() => imagePreview.show({ images: previewImages, debug: true })}
             >
               Preview
             </Button>
