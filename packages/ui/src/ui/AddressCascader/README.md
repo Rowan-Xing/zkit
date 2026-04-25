@@ -102,7 +102,7 @@ export function Demo() {
 | title | string | - | '选择地址' | 弹窗标题 |
 | separator | string | - | ' / ' | 标签拼接分隔符 |
 | levelLabels | string[] | - | ['省份', '城市', '区县'] | 步骤路径占位文案 |
-| lazyContent | boolean | - | true | 是否延迟渲染选择器内容 |
+| lazyContent | boolean | - | true | 是否仅在弹层打开期间渲染选择器内容 |
 | drawerSize | string \| number | - | 自动计算 | 弹窗高度 |
 | disabled | boolean | - | false | 是否禁用 |
 
@@ -112,7 +112,7 @@ export function Demo() {
 |------|------|------|
 | onCancel | () => void | 点击取消按钮时触发 |
 | onConfirm | (payload: AddressCascaderConfirmPayload) => void | 点击确认按钮时触发 |
-| onChange | (payload: AddressCascaderChangePayload) => void | 滚轮滚动选中项变更时触发 |
+| onChange | (payload: AddressCascaderChangePayload) => void | 步骤路径选中项变更时触发 |
 
 ### 触发器
 

@@ -35,27 +35,42 @@ function getAreaData(): PickerTreeNode[] {
   if (cachedAreaData) return cachedAreaData;
 
   const { province_list, city_list, county_list } = areaList;
-  const provinces: PickerTreeNode[] = [];
 
-  for (const [pCode, pName] of Object.entries(province_list)) {
-    const cities: PickerTreeNode[] = [];
-    const pPrefix = pCode.slice(0, 2);
+  const countiesByCity = new Map<string, PickerTreeNode[]>();
+  for (const [countyCode, countyName] of Object.entries(county_list)) {
+    const cityPrefix = countyCode.slice(0, 4);
+    const county = { value: countyCode, text: String(countyName) };
+    const counties = countiesByCity.get(cityPrefix);
 
-    for (const [cCode, cName] of Object.entries(city_list)) {
-      if (!cCode.startsWith(pPrefix)) continue;
-      const counties: PickerTreeNode[] = [];
-      const cPrefix = cCode.slice(0, 4);
-
-      for (const [dCode, dName] of Object.entries(county_list)) {
-        if (!dCode.startsWith(cPrefix)) continue;
-        counties.push({ value: dCode, text: dName as string });
-      }
-
-      cities.push({ value: cCode, text: cName as string, children: counties });
+    if (counties) {
+      counties.push(county);
+    } else {
+      countiesByCity.set(cityPrefix, [county]);
     }
-
-    provinces.push({ value: pCode, text: pName as string, children: cities });
   }
+
+  const citiesByProvince = new Map<string, PickerTreeNode[]>();
+  for (const [cityCode, cityName] of Object.entries(city_list)) {
+    const provincePrefix = cityCode.slice(0, 2);
+    const children = countiesByCity.get(cityCode.slice(0, 4));
+    const city: PickerTreeNode = children?.length
+      ? { value: cityCode, text: String(cityName), children }
+      : { value: cityCode, text: String(cityName) };
+    const cities = citiesByProvince.get(provincePrefix);
+
+    if (cities) {
+      cities.push(city);
+    } else {
+      citiesByProvince.set(provincePrefix, [city]);
+    }
+  }
+
+  const provinces: PickerTreeNode[] = Object.entries(province_list).map(([provinceCode, provinceName]) => {
+    const children = citiesByProvince.get(provinceCode.slice(0, 2));
+    return children?.length
+      ? { value: provinceCode, text: String(provinceName), children }
+      : { value: provinceCode, text: String(provinceName) };
+  });
 
   cachedAreaData = provinces;
   return provinces;
@@ -118,10 +133,22 @@ type AddressDraft = {
   activeLevel: number;
 };
 
+type AddressOption = {
+  item: PickerTreeNode;
+  index: number;
+  level: number;
+  value: string;
+  text: string;
+  disabled: boolean;
+  hasChildren: boolean;
+};
+
 type Primitive = string | number;
 type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
 
 const MAX_LEVELS = 3;
+const LEVELS = Array.from({ length: MAX_LEVELS }, (_, level) => level);
+const LIST_TRANSITION_OFFSET = wp(14);
 
 function clampNumber(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -259,6 +286,66 @@ function composeTrigger(
   );
 }
 
+type AddressOptionRowProps = {
+  option: AddressOption;
+  selected: boolean;
+  disabled: boolean;
+  primaryColor: string;
+  onSurfaceColor: string;
+  mutedColor: string;
+  onPress: (item: PickerTreeNode, index: number, level: number) => void;
+};
+
+const AddressOptionRow = React.memo(function AddressOptionRow({
+  option,
+  selected,
+  disabled,
+  primaryColor,
+  onSurfaceColor,
+  mutedColor,
+  onPress,
+}: AddressOptionRowProps) {
+  const handlePress = React.useCallback(() => {
+    onPress(option.item, option.index, option.level);
+  }, [onPress, option]);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled || option.disabled}
+      onPress={handlePress}
+      style={({ pressed }) => [
+        styles.optionRow,
+        {
+          opacity: option.disabled ? 0.46 : pressed ? 0.78 : 1,
+        },
+      ]}
+    >
+      <View style={styles.optionMain}>
+        <Text
+          numberOfLines={2}
+          style={[
+            styles.optionText,
+            {
+              color: selected ? primaryColor : onSurfaceColor,
+              fontWeight: selected ? '700' : '500',
+            },
+          ]}
+        >
+          {option.text}
+        </Text>
+      </View>
+      <View style={styles.optionMark}>
+        {selected ? (
+          <Feather name="check" size={wp(19)} color={primaryColor} />
+        ) : option.hasChildren ? (
+          <Feather name="chevron-right" size={wp(18)} color={mutedColor} />
+        ) : null}
+      </View>
+    </Pressable>
+  );
+});
+
 export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCascaderProps>(function AddressCascader({
   list,
   value: valueProp,
@@ -297,7 +384,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const isOpenControlled = openProp !== undefined;
   const visible = openProp !== undefined ? !!openProp : innerOpen;
   const [sheetMounted, setSheetMounted] = React.useState(visible);
-  const [contentMounted, setContentMounted] = React.useState(!lazyContent);
+  const [contentMounted, setContentMounted] = React.useState(() => !lazyContent || visible);
   const sheetRef = React.useRef<BottomSheetRef>(null);
   const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
   const pendingDismissRef = React.useRef(false);
@@ -306,6 +393,8 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
 
   const [innerLabel, setInnerLabel] = React.useState(defaultLabel ?? '');
   const [draft, setDraft] = React.useState(() => createDraft(areaData, value));
+  const draftRef = React.useRef(draft);
+  draftRef.current = draft;
 
   const defaultLevelLabels = React.useMemo(
     () => [
@@ -325,15 +414,19 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   }, [visible]);
 
   React.useEffect(() => {
-    setDraft(createDraft(areaData, value));
+    const nextDraft = createDraft(areaData, value);
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
   }, [areaData, value]);
 
   React.useEffect(() => {
     if (visible) {
-      setDraft(createDraft(areaData, value));
-      if (lazyContent && !contentMounted) setContentMounted(true);
+      const nextDraft = createDraft(areaData, value);
+      draftRef.current = nextDraft;
+      setDraft(nextDraft);
+      if (lazyContent) setContentMounted(true);
     }
-    // 这里只希望在进入打开态时重置草稿和懒加载内容。
+    // 这里只希望在进入打开态时重置草稿和挂载懒加载内容。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -371,6 +464,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
       if (!isOpenControlled) setInnerOpen(false);
     }
 
+    if (lazyContent) setContentMounted(false);
     if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
 
     if (activeSheetLifecycleRef.current) {
@@ -419,9 +513,11 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
       if (!isOpenControlled) setInnerOpen(true);
       onOpenChange?.(true);
     }
-    setDraft(createDraft(areaData, value));
-    if (lazyContent && !contentMounted) setContentMounted(true);
-  }, [areaData, contentMounted, disabled, isOpenControlled, lazyContent, onOpenChange, value, visible]);
+    const nextDraft = createDraft(areaData, value);
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
+    if (lazyContent) setContentMounted(true);
+  }, [areaData, disabled, isOpenControlled, lazyContent, onOpenChange, value, visible]);
 
   React.useImperativeHandle(ref, () => ({
     open: openPicker,
@@ -465,24 +561,35 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     () => getListForLevel(areaData, draft.items, draft.activeLevel),
     [areaData, draft.activeLevel, draft.items]
   );
+  const currentOptions = React.useMemo<AddressOption[]>(
+    () =>
+      currentList.map((item, index) => ({
+        item,
+        index,
+        level: draft.activeLevel,
+        value: pickValue(item, index),
+        text: pickText(item),
+        disabled: !!item.disabled,
+        hasChildren: hasNextLevel(item, draft.activeLevel),
+      })),
+    [currentList, draft.activeLevel]
+  );
   const activeSelectedValue = draft.value[draft.activeLevel];
   const activeSelectedIndex = React.useMemo(
-    () => currentList.findIndex((item, index) => pickValue(item, index) === activeSelectedValue),
-    [activeSelectedValue, currentList]
+    () => currentOptions.findIndex((item) => item.value === activeSelectedValue),
+    [activeSelectedValue, currentOptions]
   );
   const confirmDisabled = disabled || !isCompleteDraft(draft);
   const stepsScrollRef = React.useRef<ScrollView>(null);
-  const listRef = React.useRef<FlatList<PickerTreeNode>>(null);
-  const listOpacity = React.useRef(new Animated.Value(1)).current;
+  const listRef = React.useRef<FlatList<AddressOption>>(null);
   const listTranslateX = React.useRef(new Animated.Value(0)).current;
   const previousActiveLevelRef = React.useRef(draft.activeLevel);
 
   const listAnimatedStyle = React.useMemo(
     () => ({
-      opacity: listOpacity,
       transform: [{ translateX: listTranslateX }],
     }),
-    [listOpacity, listTranslateX]
+    [listTranslateX]
   );
 
   React.useEffect(() => {
@@ -499,7 +606,6 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   React.useEffect(() => {
     if (!visible || !contentMounted) {
       previousActiveLevelRef.current = draft.activeLevel;
-      listOpacity.setValue(1);
       listTranslateX.setValue(0);
       return;
     }
@@ -509,26 +615,19 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     previousActiveLevelRef.current = draft.activeLevel;
 
     const direction = draft.activeLevel > previous ? 1 : -1;
-    listOpacity.stopAnimation();
     listTranslateX.stopAnimation();
-    listOpacity.setValue(0);
-    listTranslateX.setValue(direction * wp(10));
+    listTranslateX.setValue(direction * LIST_TRANSITION_OFFSET);
 
-    Animated.parallel([
-      Animated.timing(listOpacity, {
-        toValue: 1,
-        duration: 160,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(listTranslateX, {
-        toValue: 0,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [contentMounted, draft.activeLevel, listOpacity, listTranslateX, visible]);
+    Animated.spring(listTranslateX, {
+      toValue: 0,
+      stiffness: 360,
+      damping: 38,
+      mass: 1,
+      restDisplacementThreshold: 0.1,
+      restSpeedThreshold: 0.1,
+      useNativeDriver: true,
+    }).start();
+  }, [contentMounted, draft.activeLevel, listTranslateX, visible]);
 
   React.useEffect(() => {
     if (!visible || !contentMounted) return;
@@ -565,35 +664,43 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const handleLevelPress = React.useCallback(
     (level: number) => {
       if (disabled) return;
-      if (level === 0 || draft.items[level - 1]) {
-        setDraft((prev) => ({ ...prev, activeLevel: level }));
-      }
+      setDraft((prev) => {
+        if (level !== 0 && !prev.items[level - 1]) return prev;
+        if (prev.activeLevel === level) return prev;
+        const nextDraft = { ...prev, activeLevel: level };
+        draftRef.current = nextDraft;
+        return nextDraft;
+      });
     },
-    [disabled, draft.items]
+    [disabled]
   );
 
   const handleItemPress = React.useCallback(
-    (item: PickerTreeNode, index: number) => {
+    (item: PickerTreeNode, index: number, level: number) => {
       if (disabled || item.disabled) return;
-      const nextItems = draft.items.slice(0, draft.activeLevel);
-      const nextLabels = draft.labels.slice(0, draft.activeLevel);
-      const nextValue = draft.value.slice(0, draft.activeLevel);
+      const prevDraft = draftRef.current;
+      if (level !== prevDraft.activeLevel) return;
 
-      nextItems[draft.activeLevel] = item;
-      nextLabels[draft.activeLevel] = pickText(item);
-      nextValue[draft.activeLevel] = pickValue(item, index);
+      const nextItems = prevDraft.items.slice(0, level);
+      const nextLabels = prevDraft.labels.slice(0, level);
+      const nextValue = prevDraft.value.slice(0, level);
+
+      nextItems[level] = item;
+      nextLabels[level] = pickText(item);
+      nextValue[level] = pickValue(item, index);
 
       const nextDraft: AddressDraft = {
         value: nextValue,
         labels: nextLabels,
         items: nextItems,
-        activeLevel: hasNextLevel(item, draft.activeLevel) ? draft.activeLevel + 1 : draft.activeLevel,
+        activeLevel: hasNextLevel(item, level) ? level + 1 : level,
       };
 
+      draftRef.current = nextDraft;
       setDraft(nextDraft);
       emitDraftChange(nextDraft);
     },
-    [disabled, draft.activeLevel, draft.items, draft.labels, draft.value, emitDraftChange]
+    [disabled, emitDraftChange]
   );
 
   const handleCancel = React.useCallback(() => {
@@ -699,57 +806,28 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
       theme.colors.border,
       theme.colors.muted,
       theme.colors.onSurface,
-      theme.colors.primary,
       theme.colors.secondary,
       theme.colors.surface,
     ]
   );
 
   const renderItem = React.useCallback(
-    ({ item, index }: ListRenderItemInfo<PickerTreeNode>) => {
-      const itemValue = pickValue(item, index);
-      const selected = itemValue === activeSelectedValue;
-      const hasChildren = hasNextLevel(item, draft.activeLevel);
+    ({ item }: ListRenderItemInfo<AddressOption>) => {
       return (
-        <Pressable
-          accessibilityRole="button"
-          disabled={disabled || item.disabled}
-          onPress={() => handleItemPress(item, index)}
-          style={({ pressed }) => [
-            styles.optionRow,
-            {
-              opacity: item.disabled ? 0.46 : pressed ? 0.78 : 1,
-            },
-          ]}
-        >
-          <View style={styles.optionMain}>
-            <Text
-              numberOfLines={2}
-              style={[
-                styles.optionText,
-                {
-                  color: selected ? theme.colors.primary : theme.colors.onSurface,
-                  fontWeight: selected ? '700' : '500',
-                },
-              ]}
-            >
-              {pickText(item)}
-            </Text>
-          </View>
-          <View style={styles.optionMark}>
-            {selected ? (
-              <Feather name="check" size={wp(19)} color={theme.colors.primary} />
-            ) : hasChildren ? (
-              <Feather name="chevron-right" size={wp(18)} color={theme.colors.muted} />
-            ) : null}
-          </View>
-        </Pressable>
+        <AddressOptionRow
+          option={item}
+          selected={item.value === activeSelectedValue}
+          disabled={disabled}
+          primaryColor={theme.colors.primary}
+          onSurfaceColor={theme.colors.onSurface}
+          mutedColor={theme.colors.muted}
+          onPress={handleItemPress}
+        />
       );
     },
     [
       activeSelectedValue,
       disabled,
-      draft.activeLevel,
       handleItemPress,
       theme.colors.muted,
       theme.colors.onSurface,
@@ -757,7 +835,11 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     ]
   );
 
-  const keyExtractor = React.useCallback((item: PickerTreeNode, index: number) => `${pickValue(item, index)}-${index}`, []);
+  const keyExtractor = React.useCallback((item: AddressOption) => `${item.value}-${item.index}`, []);
+  const renderSeparator = React.useCallback(
+    () => <View style={[styles.separatorLine, { backgroundColor: theme.colors.border }]} />,
+    [theme.colors.border]
+  );
   const useManualIOSBackdrop = Platform.OS === 'ios';
   const backdropOpacity = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [backdropMounted, setBackdropMounted] = React.useState(useManualIOSBackdrop && visible);
@@ -831,26 +913,25 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
               contentContainerStyle={styles.stepsContent}
               style={styles.stepsScroll}
             >
-              {Array.from({ length: MAX_LEVELS }, (_, level) => renderStep(level))}
+              {LEVELS.map(renderStep)}
             </ScrollView>
 
             <Animated.View style={[styles.listFrame, { borderColor: theme.colors.border }, listAnimatedStyle]}>
-              {currentList.length > 0 ? (
+              {currentOptions.length > 0 ? (
                 <FlatList
                   ref={listRef}
-                  data={currentList}
-                  extraData={`${draft.activeLevel}-${activeSelectedValue ?? ''}`}
+                  data={currentOptions}
+                  extraData={activeSelectedValue}
                   keyExtractor={keyExtractor}
                   renderItem={renderItem}
                   keyboardShouldPersistTaps="handled"
-                  initialNumToRender={18}
-                  maxToRenderPerBatch={18}
+                  initialNumToRender={14}
+                  maxToRenderPerBatch={12}
                   removeClippedSubviews={Platform.OS === 'android'}
                   showsVerticalScrollIndicator={false}
-                  windowSize={7}
-                  ItemSeparatorComponent={() => (
-                    <View style={[styles.separatorLine, { backgroundColor: theme.colors.border }]} />
-                  )}
+                  updateCellsBatchingPeriod={16}
+                  windowSize={5}
+                  ItemSeparatorComponent={renderSeparator}
                   contentContainerStyle={styles.listContent}
                   onScrollToIndexFailed={(info) => {
                     listRef.current?.scrollToOffset({
