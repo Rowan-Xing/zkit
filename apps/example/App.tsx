@@ -26,6 +26,7 @@ import {
   CheckboxGroup,
   ComponentLibProvider,
   DatePicker,
+  LinkedScroll,
   LoadingSpinner,
   Picker,
   Radio,
@@ -47,6 +48,13 @@ import {
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
 type Density = 'compact' | 'comfortable' | 'spacious';
+type LinkedDemoData = {
+  kind: 'overview' | 'metrics' | 'media';
+  summary: string;
+  accent: string;
+  height: number;
+  chips: string[];
+};
 
 const languageOptions = [
   { id: 'en', title: 'English' },
@@ -90,13 +98,45 @@ const captchaChallenge: SliderCaptchaChallenge = {
   blockHeight: 72,
 };
 
+const linkedFallbackData: LinkedDemoData = {
+  kind: 'metrics',
+  summary: 'Fallback section data for custom item sources.',
+  accent: '#EAF1FF',
+  height: 208,
+  chips: ['Fallback', 'metrics', '0 items'],
+};
+
+const linkedScrollItems = Array.from({ length: 28 }, (_, index) => {
+  const order = index + 1;
+  const kind: LinkedDemoData['kind'] =
+    index % 5 === 0 ? 'overview' : index % 3 === 0 ? 'media' : 'metrics';
+  const palette = ['#EAF1FF', '#ECFDF3', '#FFF7ED', '#F4F3FF'];
+
+  return {
+    value: `section-${order}`,
+    label: `Section ${order}`,
+    data: {
+      kind,
+      summary:
+        kind === 'overview'
+          ? 'Overview block with denser content and a taller viewport target.'
+          : kind === 'media'
+            ? 'Media-like section with mixed copy, chips, and uneven height.'
+            : 'Metric section with compact rows and predictable recycling type.',
+      accent: palette[index % palette.length],
+      height: kind === 'overview' ? 280 : kind === 'media' ? 236 : 208,
+      chips: [`Batch ${Math.ceil(order / 4)}`, kind, `${24 + index * 3} items`],
+    },
+  };
+});
+
 function wait(ms: number) {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
   });
 }
 
-function icon(name: FeatherIconName, color: string, size = 17) {
+function icon(name: FeatherIconName, color: string, size = wp(17)) {
   return <Feather name={name} color={color} size={size} />;
 }
 
@@ -152,6 +192,7 @@ function Playground() {
   const [range, setRange] = React.useState<string[]>(['2026-04-01', '2026-04-23']);
   const [serviceChoice, setServiceChoice] = React.useState('Tokens');
   const [captchaVisible, setCaptchaVisible] = React.useState(false);
+  const [linkedScrollOpen, setLinkedScrollOpen] = React.useState(false);
 
   const rangeLabel = range.length === 2 ? `${range[0]} to ${range[1]}` : 'Select range';
 
@@ -228,6 +269,10 @@ function Playground() {
     }, 2600);
   }, []);
 
+  if (linkedScrollOpen) {
+    return <LinkedScrollDemo onBack={() => setLinkedScrollOpen(false)} />;
+  }
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: '#F6F7F9' }]} edges={['top']}>
       <ScrollView
@@ -238,7 +283,7 @@ function Playground() {
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <View style={[styles.logo, { backgroundColor: theme.colors.primary }]}>
-              {icon('box', theme.colors.onPrimary, 20)}
+              {icon('box', theme.colors.onPrimary, wp(20))}
             </View>
             <View style={styles.headerCopy}>
               <Text style={[styles.eyebrow, { color: theme.colors.muted }]}>@y2kit/example</Text>
@@ -388,6 +433,25 @@ function Playground() {
           </Accordion>
         </Section>
 
+        <Section title="LinkedScroll">
+          <View style={[styles.linkedIntro, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <View style={styles.linkedIntroCopy}>
+              <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+                Scroll-linked menu and content
+              </Text>
+              <Text style={[styles.linkedIntroText, { color: theme.colors.muted }]}>
+                Opens a full-screen demo so both FlashList panes can scroll without parent list nesting.
+              </Text>
+            </View>
+            <Button
+              icon={icon('columns', '#FFFFFF', wp(17))}
+              onPress={() => setLinkedScrollOpen(true)}
+            >
+              Open demo
+            </Button>
+          </View>
+        </Section>
+
         <Section title="Pickers">
           <View style={styles.fieldStack}>
             <Picker
@@ -522,6 +586,125 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>{title}</Text>
       {children}
     </View>
+  );
+}
+
+function LinkedScrollDemo({ onBack }: { onBack: () => void }) {
+  const theme = useTheme();
+  const [selectedSection, setSelectedSection] = React.useState(linkedScrollItems[0].value);
+  const selectedItem = linkedScrollItems.find((item) => item.value === selectedSection) ?? linkedScrollItems[0];
+
+  return (
+    <SafeAreaView style={[styles.screen, { backgroundColor: '#F6F7F9' }]} edges={['top', 'bottom']}>
+      <View style={[styles.linkedDemoHeader, { borderBottomColor: theme.colors.border }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back to playground"
+          onPress={onBack}
+          style={({ pressed }) => [
+            styles.linkedBackButton,
+            {
+              backgroundColor: theme.colors.surface,
+              opacity: pressed ? 0.72 : 1,
+            },
+          ]}
+        >
+          {icon('arrow-left', theme.colors.onSurface, wp(20))}
+        </Pressable>
+
+        <View style={styles.linkedDemoTitleWrap}>
+          <Text style={[styles.linkedDemoTitle, { color: theme.colors.onSurface }]}>LinkedScroll</Text>
+          <Text numberOfLines={1} style={[styles.linkedDemoSubtitle, { color: theme.colors.muted }]}>
+            Selected: {selectedItem.label}
+          </Text>
+        </View>
+
+        <View style={[styles.linkedSelectedBadge, { backgroundColor: theme.colors.secondary }]}>
+          <Text style={[styles.linkedSelectedBadgeText, { color: theme.colors.primary }]}>
+            {selectedItem.data.kind}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.linkedDemoBody}>
+        <LinkedScroll
+          items={linkedScrollItems}
+          value={selectedSection}
+          onChange={(next) => setSelectedSection(next)}
+          menuWidth={wp(108)}
+          menuItemHeight={wp(54)}
+          sectionGap={wp(12)}
+          contentPaddingHorizontal={wp(12)}
+          contentPaddingVertical={wp(12)}
+          activeBackgroundColor="#DCEBFF"
+          activeColor={theme.colors.primary}
+          inactiveColor={theme.colors.muted}
+          menuBackgroundColor="#F0F3F8"
+          contentBackgroundColor="#F6F7F9"
+          getMenuItemType={() => 'menu'}
+          getSectionType={(item) => item.data?.kind ?? linkedFallbackData.kind}
+          menuListProps={{
+            drawDistance: wp(360),
+            contentContainerStyle: styles.linkedMenuContent,
+          }}
+          contentListProps={{
+            drawDistance: wp(900),
+          }}
+          renderSection={({ item, index, selected }) => {
+            const data = item.data ?? linkedFallbackData;
+            return (
+              <View
+                style={[
+                  styles.linkedSectionCard,
+                  {
+                    minHeight: wp(data.height),
+                    backgroundColor: selected ? data.accent : theme.colors.surface,
+                    borderColor: selected ? theme.colors.primary : theme.colors.border,
+                  },
+                ]}
+              >
+                <View style={styles.linkedSectionHeader}>
+                  <Text style={[styles.linkedSectionNumber, { color: theme.colors.primary }]}>
+                    {String(index + 1).padStart(2, '0')}
+                  </Text>
+                  <View style={styles.linkedSectionTitleWrap}>
+                    <Text style={[styles.linkedSectionTitle, { color: theme.colors.onSurface }]}>
+                      {item.label}
+                    </Text>
+                    <Text style={[styles.linkedSummary, { color: theme.colors.muted }]}>
+                      {data.summary}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.linkedChipRow}>
+                  {data.chips.map((chip) => (
+                    <View key={chip} style={[styles.linkedChip, { borderColor: theme.colors.border }]}>
+                      <Text style={[styles.linkedChipText, { color: theme.colors.onSurface }]}>{chip}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.linkedMetricStack}>
+                  <View style={styles.linkedMetricRow}>
+                    <Text style={[styles.linkedMetricLabel, { color: theme.colors.muted }]}>Render type</Text>
+                    <Text style={[styles.linkedMetricValue, { color: theme.colors.onSurface }]}>{data.kind}</Text>
+                  </View>
+                  <View style={styles.linkedMetricRow}>
+                    <Text style={[styles.linkedMetricLabel, { color: theme.colors.muted }]}>Section height</Text>
+                    <Text style={[styles.linkedMetricValue, { color: theme.colors.onSurface }]}>{data.height}</Text>
+                  </View>
+                  <View style={styles.linkedMetricRow}>
+                    <Text style={[styles.linkedMetricLabel, { color: theme.colors.muted }]}>Source</Text>
+                    <Text style={[styles.linkedMetricValue, { color: theme.colors.onSurface }]}>FlashList</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -701,6 +884,144 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderColor: '#D5DCE8',
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  linkedIntro: {
+    alignItems: 'center',
+    borderRadius: wp(8),
+    borderWidth: wp(1),
+    flexDirection: 'row',
+    gap: wp(12),
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(14),
+  },
+  linkedIntroCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  linkedIntroText: {
+    fontSize: wp(13),
+    lineHeight: wp(18),
+    marginTop: wp(4),
+  },
+  linkedDemoHeader: {
+    alignItems: 'center',
+    borderBottomWidth: wp(1),
+    flexDirection: 'row',
+    gap: wp(12),
+    paddingBottom: wp(12),
+    paddingHorizontal: wp(16),
+    paddingTop: wp(10),
+  },
+  linkedBackButton: {
+    alignItems: 'center',
+    borderRadius: wp(18),
+    height: wp(36),
+    justifyContent: 'center',
+    width: wp(36),
+  },
+  linkedDemoTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  linkedDemoTitle: {
+    fontSize: wp(19),
+    fontWeight: '800',
+    lineHeight: wp(24),
+  },
+  linkedDemoSubtitle: {
+    fontSize: wp(13),
+    lineHeight: wp(18),
+    marginTop: wp(2),
+  },
+  linkedSelectedBadge: {
+    alignItems: 'center',
+    borderRadius: wp(13),
+    minHeight: wp(26),
+    minWidth: wp(72),
+    justifyContent: 'center',
+    paddingHorizontal: wp(10),
+  },
+  linkedSelectedBadgeText: {
+    fontSize: wp(12),
+    fontWeight: '800',
+    lineHeight: wp(16),
+  },
+  linkedDemoBody: {
+    flex: 1,
+    minHeight: 0,
+  },
+  linkedMenuContent: {
+    paddingVertical: wp(8),
+  },
+  linkedSectionCard: {
+    borderRadius: wp(18),
+    borderWidth: wp(1),
+    overflow: 'hidden',
+    paddingHorizontal: wp(18),
+    paddingVertical: wp(18),
+  },
+  linkedSectionHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: wp(12),
+  },
+  linkedSectionNumber: {
+    fontSize: wp(13),
+    fontWeight: '900',
+    lineHeight: wp(18),
+    minWidth: wp(24),
+  },
+  linkedSectionTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  linkedSectionTitle: {
+    fontSize: wp(22),
+    fontWeight: '900',
+    lineHeight: wp(28),
+  },
+  linkedSummary: {
+    fontSize: wp(14),
+    lineHeight: wp(20),
+    marginTop: wp(6),
+  },
+  linkedChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(8),
+    marginTop: wp(18),
+  },
+  linkedChip: {
+    borderRadius: wp(12),
+    borderWidth: wp(1),
+    minHeight: wp(24),
+    justifyContent: 'center',
+    paddingHorizontal: wp(10),
+  },
+  linkedChipText: {
+    fontSize: wp(12),
+    fontWeight: '700',
+    lineHeight: wp(16),
+  },
+  linkedMetricStack: {
+    gap: wp(10),
+    marginTop: wp(22),
+  },
+  linkedMetricRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: wp(28),
+  },
+  linkedMetricLabel: {
+    fontSize: wp(13),
+    fontWeight: '700',
+    lineHeight: wp(18),
+  },
+  linkedMetricValue: {
+    fontSize: wp(14),
+    fontWeight: '800',
+    lineHeight: wp(19),
   },
   paragraph: {
     fontSize: 14,

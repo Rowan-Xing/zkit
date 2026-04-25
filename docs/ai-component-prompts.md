@@ -60,7 +60,7 @@
 - 先设计公共 API、状态模型、事件命名、默认行为、受控/非受控边界、导出方式和调用方式，再写代码。
 - API 必须符合开发者直觉。同类概念优先使用 value/defaultValue、checked/defaultChecked、open/defaultOpen、onChange、disabled、loading、variant、tone、size 或 sizePreset。
 - 从一开始设计干净的渲染路径、动画路径和平台差异处理。
-- 动画、过渡、手势、高频渲染必须按设备刷新率稳定输出设计，不默认按 60fps 思考。
+- 动画、过渡、手势、高频渲染必须按设备最高刷新率稳定输出设计，不默认按 60fps 思考。
 - UI 尺寸新增或修改时，像素尺寸大于 0 的值必须通过 wp(...) 计算。
 - 公共入口集中在 packages/ui/src/index.ts，只更新真正影响理解的最少文档。
 

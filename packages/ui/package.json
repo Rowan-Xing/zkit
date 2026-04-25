@@ -32,6 +32,7 @@
   "peerDependencies": {
     "@expo/vector-icons": "*",
     "@lodev09/react-native-true-sheet": "*",
+    "@shopify/flash-list": "*",
     "expo-clipboard": "*",
     "expo-image": "*",
     "expo-linear-gradient": "*",
@@ -52,6 +53,7 @@
   "devDependencies": {
     "@expo/vector-icons": "^15.1.1",
     "@lodev09/react-native-true-sheet": "workspace:*",
+    "@shopify/flash-list": "^2.3.1",
     "@types/react": "~19.1.17",
     "dayjs": "^1.11.13",
     "expo-clipboard": "^8.0.8",

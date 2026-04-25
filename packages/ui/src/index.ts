@@ -106,6 +106,16 @@ export type {
   RadioProps,
   RadioSlotProps,
 } from './ui/Radio/index';
+export { LinkedScroll } from './ui/LinkedScroll/index';
+export type {
+  LinkedScrollChangeMeta,
+  LinkedScrollChangeSource,
+  LinkedScrollItem,
+  LinkedScrollMenuItemRenderContext,
+  LinkedScrollProps,
+  LinkedScrollSectionRenderContext,
+  LinkedScrollValue,
+} from './ui/LinkedScroll/index';
 export { ThemeProvider } from './theme/ThemeProvider';
 export { useTheme } from './theme/useTheme';
 export type { Theme, ThemeOverride } from './theme/types';
