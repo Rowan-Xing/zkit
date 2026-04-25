@@ -1,4 +1,7 @@
 const icon = './assets/images/y2icon.png';
+const iosBundleIdentifier =
+  process.env.Y2KIT_EXAMPLE_IOS_BUNDLE_IDENTIFIER ?? 'com.xingyuyang.y2kitexample';
+const appleTeamId = process.env.Y2KIT_EXAMPLE_APPLE_TEAM_ID;
 
 module.exports = {
   expo: {
@@ -13,8 +16,8 @@ module.exports = {
     plugins: ['expo-dev-client'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.anonymous.y2kit-example',
-      appleTeamId: 'CQ5QU9G4F2',
+      bundleIdentifier: iosBundleIdentifier,
+      ...(appleTeamId ? { appleTeamId } : {}),
     },
     android: {
       package: 'com.anonymous.y2kitexample',
