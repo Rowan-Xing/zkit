@@ -3,7 +3,6 @@ import * as React from 'react';
 import {
   Animated,
   Easing,
-  FlatList,
   Modal,
   Platform,
   Pressable,
@@ -11,7 +10,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
-  type ListRenderItemInfo,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'y2kit-tools';
@@ -148,7 +147,11 @@ type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
 
 const MAX_LEVELS = 3;
 const LEVELS = Array.from({ length: MAX_LEVELS }, (_, level) => level);
-const LIST_TRANSITION_OFFSET = wp(14);
+const LIST_TRANSITION_OFFSET = wp(26);
+const LIST_TRANSITION_DURATION = 210;
+const LIST_TRANSITION_START_OPACITY = 0.82;
+const OPTION_ROW_ESTIMATED_HEIGHT = wp(58);
+const SELECTED_OPTION_VIEW_POSITION = 0.18;
 
 function clampNumber(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -294,6 +297,7 @@ type AddressOptionRowProps = {
   onSurfaceColor: string;
   mutedColor: string;
   onPress: (item: PickerTreeNode, index: number, level: number) => void;
+  onLayout?: (event: LayoutChangeEvent) => void;
 };
 
 const AddressOptionRow = React.memo(function AddressOptionRow({
@@ -304,6 +308,7 @@ const AddressOptionRow = React.memo(function AddressOptionRow({
   onSurfaceColor,
   mutedColor,
   onPress,
+  onLayout,
 }: AddressOptionRowProps) {
   const handlePress = React.useCallback(() => {
     onPress(option.item, option.index, option.level);
@@ -313,6 +318,7 @@ const AddressOptionRow = React.memo(function AddressOptionRow({
     <Pressable
       accessibilityRole="button"
       disabled={disabled || option.disabled}
+      onLayout={onLayout}
       onPress={handlePress}
       style={({ pressed }) => [
         styles.optionRow,
@@ -581,15 +587,21 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   );
   const confirmDisabled = disabled || !isCompleteDraft(draft);
   const stepsScrollRef = React.useRef<ScrollView>(null);
-  const listRef = React.useRef<FlatList<AddressOption>>(null);
+  const optionsScrollRef = React.useRef<ScrollView>(null);
+  const optionLayoutYRef = React.useRef(new Map<string, number>());
+  const optionsViewportHeightRef = React.useRef(0);
+  const pendingOptionScrollFrameRef = React.useRef<number | null>(null);
   const listTranslateX = React.useRef(new Animated.Value(0)).current;
+  const listOpacity = React.useRef(new Animated.Value(1)).current;
+  const pendingListTransitionFrameRef = React.useRef<number | null>(null);
   const previousActiveLevelRef = React.useRef(draft.activeLevel);
 
   const listAnimatedStyle = React.useMemo(
     () => ({
+      opacity: listOpacity,
       transform: [{ translateX: listTranslateX }],
     }),
-    [listTranslateX]
+    [listOpacity, listTranslateX]
   );
 
   React.useEffect(() => {
@@ -603,49 +615,143 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     return () => cancelAnimationFrame(rafId);
   }, [draft.activeLevel]);
 
+  const cancelListTransitionFrame = React.useCallback(() => {
+    if (pendingListTransitionFrameRef.current == null) return;
+    cancelAnimationFrame(pendingListTransitionFrameRef.current);
+    pendingListTransitionFrameRef.current = null;
+  }, []);
+
+  const resetListTransition = React.useCallback(() => {
+    cancelListTransitionFrame();
+    listTranslateX.stopAnimation();
+    listOpacity.stopAnimation();
+    listTranslateX.setValue(0);
+    listOpacity.setValue(1);
+  }, [cancelListTransitionFrame, listOpacity, listTranslateX]);
+
+  const startListTransition = React.useCallback(
+    (fromLevel: number, toLevel: number) => {
+      previousActiveLevelRef.current = toLevel;
+
+      if (!visible || !contentMounted || fromLevel === toLevel) {
+        resetListTransition();
+        return;
+      }
+
+      const direction = toLevel > fromLevel ? 1 : -1;
+      cancelListTransitionFrame();
+      listTranslateX.stopAnimation();
+      listOpacity.stopAnimation();
+      listTranslateX.setValue(direction * LIST_TRANSITION_OFFSET);
+      listOpacity.setValue(LIST_TRANSITION_START_OPACITY);
+
+      pendingListTransitionFrameRef.current = requestAnimationFrame(() => {
+        pendingListTransitionFrameRef.current = null;
+        Animated.parallel([
+          Animated.timing(listTranslateX, {
+            toValue: 0,
+            duration: LIST_TRANSITION_DURATION,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(listOpacity, {
+            toValue: 1,
+            duration: LIST_TRANSITION_DURATION,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    },
+    [
+      cancelListTransitionFrame,
+      contentMounted,
+      listOpacity,
+      listTranslateX,
+      resetListTransition,
+      visible,
+    ]
+  );
+
   React.useEffect(() => {
     if (!visible || !contentMounted) {
       previousActiveLevelRef.current = draft.activeLevel;
-      listTranslateX.setValue(0);
+      resetListTransition();
       return;
     }
 
-    const previous = previousActiveLevelRef.current;
-    if (previous === draft.activeLevel) return;
-    previousActiveLevelRef.current = draft.activeLevel;
-
-    const direction = draft.activeLevel > previous ? 1 : -1;
-    listTranslateX.stopAnimation();
-    listTranslateX.setValue(direction * LIST_TRANSITION_OFFSET);
-
-    Animated.spring(listTranslateX, {
-      toValue: 0,
-      stiffness: 360,
-      damping: 38,
-      mass: 1,
-      restDisplacementThreshold: 0.1,
-      restSpeedThreshold: 0.1,
-      useNativeDriver: true,
-    }).start();
-  }, [contentMounted, draft.activeLevel, listTranslateX, visible]);
+    if (previousActiveLevelRef.current !== draft.activeLevel) {
+      previousActiveLevelRef.current = draft.activeLevel;
+      resetListTransition();
+    }
+  }, [contentMounted, draft.activeLevel, resetListTransition, visible]);
 
   React.useEffect(() => {
-    if (!visible || !contentMounted) return;
+    return resetListTransition;
+  }, [resetListTransition]);
 
-    const rafId = requestAnimationFrame(() => {
-      if (activeSelectedIndex > 0) {
-        listRef.current?.scrollToIndex({
-          index: activeSelectedIndex,
-          animated: false,
-          viewPosition: 0.18,
-        });
+  const keyExtractor = React.useCallback(
+    (item: AddressOption) => `${item.level}-${item.value}-${item.index}`,
+    []
+  );
+
+  const scrollActiveOptionIntoView = React.useCallback(
+    (animated: boolean) => {
+      const scrollView = optionsScrollRef.current;
+      if (!scrollView) return;
+
+      if (activeSelectedIndex <= 0) {
+        scrollView.scrollTo({ y: 0, animated });
         return;
       }
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    });
 
-    return () => cancelAnimationFrame(rafId);
-  }, [activeSelectedIndex, contentMounted, draft.activeLevel, visible]);
+      const activeOption = currentOptions[activeSelectedIndex];
+      if (!activeOption) return;
+
+      const key = keyExtractor(activeOption);
+      const layoutY = optionLayoutYRef.current.get(key);
+      const viewportHeight = optionsViewportHeightRef.current;
+      const fallbackY = activeSelectedIndex * OPTION_ROW_ESTIMATED_HEIGHT;
+      const measuredY = layoutY ?? fallbackY;
+      const viewOffset = viewportHeight > 0 ? viewportHeight * SELECTED_OPTION_VIEW_POSITION : 0;
+
+      scrollView.scrollTo({
+        y: Math.max(0, measuredY - viewOffset),
+        animated,
+      });
+    },
+    [activeSelectedIndex, currentOptions, keyExtractor]
+  );
+
+  const scheduleActiveOptionScroll = React.useCallback(
+    (animated = false) => {
+      if (!visible || !contentMounted) return;
+
+      if (pendingOptionScrollFrameRef.current != null) {
+        cancelAnimationFrame(pendingOptionScrollFrameRef.current);
+      }
+
+      pendingOptionScrollFrameRef.current = requestAnimationFrame(() => {
+        pendingOptionScrollFrameRef.current = null;
+        scrollActiveOptionIntoView(animated);
+      });
+    },
+    [contentMounted, scrollActiveOptionIntoView, visible]
+  );
+
+  React.useEffect(() => {
+    optionLayoutYRef.current.clear();
+  }, [currentOptions]);
+
+  React.useEffect(() => {
+    scheduleActiveOptionScroll(false);
+    return () => {
+      if (pendingOptionScrollFrameRef.current != null) {
+        cancelAnimationFrame(pendingOptionScrollFrameRef.current);
+        pendingOptionScrollFrameRef.current = null;
+      }
+    };
+  }, [activeSelectedIndex, contentMounted, draft.activeLevel, scheduleActiveOptionScroll, visible]);
 
   const emitDraftChange = React.useCallback(
     (nextDraft: AddressDraft) => {
@@ -664,15 +770,16 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const handleLevelPress = React.useCallback(
     (level: number) => {
       if (disabled) return;
-      setDraft((prev) => {
-        if (level !== 0 && !prev.items[level - 1]) return prev;
-        if (prev.activeLevel === level) return prev;
-        const nextDraft = { ...prev, activeLevel: level };
-        draftRef.current = nextDraft;
-        return nextDraft;
-      });
+      const prevDraft = draftRef.current;
+      if (level !== 0 && !prevDraft.items[level - 1]) return;
+      if (prevDraft.activeLevel === level) return;
+
+      const nextDraft = { ...prevDraft, activeLevel: level };
+      startListTransition(prevDraft.activeLevel, nextDraft.activeLevel);
+      draftRef.current = nextDraft;
+      setDraft(nextDraft);
     },
-    [disabled]
+    [disabled, startListTransition]
   );
 
   const handleItemPress = React.useCallback(
@@ -696,11 +803,12 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
         activeLevel: hasNextLevel(item, level) ? level + 1 : level,
       };
 
+      startListTransition(prevDraft.activeLevel, nextDraft.activeLevel);
       draftRef.current = nextDraft;
       setDraft(nextDraft);
       emitDraftChange(nextDraft);
     },
-    [disabled, emitDraftChange]
+    [disabled, emitDraftChange, startListTransition]
   );
 
   const handleCancel = React.useCallback(() => {
@@ -811,31 +919,55 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     ]
   );
 
-  const renderItem = React.useCallback(
-    ({ item }: ListRenderItemInfo<AddressOption>) => {
+  const handleOptionLayout = React.useCallback(
+    (key: string, event: LayoutChangeEvent) => {
+      optionLayoutYRef.current.set(key, event.nativeEvent.layout.y);
+      scheduleActiveOptionScroll(false);
+    },
+    [scheduleActiveOptionScroll]
+  );
+
+  const handleOptionsContentSizeChange = React.useCallback(() => {
+    scheduleActiveOptionScroll(false);
+  }, [scheduleActiveOptionScroll]);
+
+  const handleOptionsViewportLayout = React.useCallback(
+    (event: LayoutChangeEvent) => {
+      optionsViewportHeightRef.current = event.nativeEvent.layout.height;
+      scheduleActiveOptionScroll(false);
+    },
+    [scheduleActiveOptionScroll]
+  );
+
+  const renderOption = React.useCallback(
+    (item: AddressOption) => {
+      const key = keyExtractor(item);
+      const selected = item.value === activeSelectedValue;
       return (
         <AddressOptionRow
           option={item}
-          selected={item.value === activeSelectedValue}
+          selected={selected}
           disabled={disabled}
           primaryColor={theme.colors.primary}
           onSurfaceColor={theme.colors.onSurface}
           mutedColor={theme.colors.muted}
           onPress={handleItemPress}
+          onLayout={selected ? (event) => handleOptionLayout(key, event) : undefined}
         />
       );
     },
     [
       activeSelectedValue,
       disabled,
+      handleOptionLayout,
       handleItemPress,
+      keyExtractor,
       theme.colors.muted,
       theme.colors.onSurface,
       theme.colors.primary,
     ]
   );
 
-  const keyExtractor = React.useCallback((item: AddressOption) => `${item.value}-${item.index}`, []);
   const renderSeparator = React.useCallback(
     () => <View style={[styles.separatorLine, { backgroundColor: theme.colors.border }]} />,
     [theme.colors.border]
@@ -918,28 +1050,26 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
 
             <Animated.View style={[styles.listFrame, { borderColor: theme.colors.border }, listAnimatedStyle]}>
               {currentOptions.length > 0 ? (
-                <FlatList
-                  ref={listRef}
-                  data={currentOptions}
-                  extraData={activeSelectedValue}
-                  keyExtractor={keyExtractor}
-                  renderItem={renderItem}
-                  keyboardShouldPersistTaps="handled"
-                  initialNumToRender={14}
-                  maxToRenderPerBatch={12}
-                  removeClippedSubviews={Platform.OS === 'android'}
-                  showsVerticalScrollIndicator={false}
-                  updateCellsBatchingPeriod={16}
-                  windowSize={5}
-                  ItemSeparatorComponent={renderSeparator}
+                <ScrollView
+                  ref={optionsScrollRef}
                   contentContainerStyle={styles.listContent}
-                  onScrollToIndexFailed={(info) => {
-                    listRef.current?.scrollToOffset({
-                      offset: Math.max(0, info.averageItemLength * info.index),
-                      animated: false,
-                    });
-                  }}
-                />
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                  onContentSizeChange={handleOptionsContentSizeChange}
+                  onLayout={handleOptionsViewportLayout}
+                  showsVerticalScrollIndicator={false}
+                  style={styles.optionsScroll}
+                >
+                  {currentOptions.map((option, index) => {
+                    const key = keyExtractor(option);
+                    return (
+                      <React.Fragment key={key}>
+                        {renderOption(option)}
+                        {index < currentOptions.length - 1 ? renderSeparator() : null}
+                      </React.Fragment>
+                    );
+                  })}
+                </ScrollView>
               ) : (
                 <View style={styles.emptyState}>
                   <Text style={[styles.emptyText, { color: theme.colors.muted }]}>{t('addressCascader.empty')}</Text>
@@ -1071,6 +1201,10 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     flex: 1,
     marginTop: wp(12),
+    overflow: 'hidden',
+  },
+  optionsScroll: {
+    flex: 1,
   },
   listContent: {
     paddingBottom: wp(6),
