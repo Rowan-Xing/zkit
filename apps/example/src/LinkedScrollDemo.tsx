@@ -5,6 +5,7 @@ import { wp } from 'y2kit-tools';
 import {
   LinkedScroll,
   Text,
+  useI18n,
   useTheme,
   type LinkedScrollSectionRenderContext,
 } from 'y2kit-ui';
@@ -22,10 +23,39 @@ import { exampleBackgroundColor } from './theme';
 export function LinkedScrollDemo({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const [selectedSection, setSelectedSection] = React.useState(linkedScrollItems[0].value);
+  const { t } = useI18n();
+  const items = React.useMemo(
+    () =>
+      linkedScrollItems.map((item, index) => {
+        const order = index + 1;
+        const kind = item.data?.kind ?? linkedFallbackData.kind;
+        const summary =
+          kind === 'overview'
+            ? t('example.linked.summary.overview')
+            : kind === 'media'
+              ? t('example.linked.summary.media')
+              : t('example.linked.summary.metrics');
+
+        return {
+          ...item,
+          label: t('example.linked.section', { n: order }),
+          data: {
+            ...(item.data ?? linkedFallbackData),
+            summary,
+            chips: [
+              t('example.linked.batch', { n: Math.ceil(order / 4) }),
+              t(`example.linked.kind.${kind}`),
+              t('example.linked.items', { n: 24 + index * 3 }),
+            ],
+          },
+        };
+      }),
+    [t]
+  );
+  const [selectedSection, setSelectedSection] = React.useState(items[0].value);
   const selectedItem = React.useMemo(
-    () => linkedScrollItems.find((item) => item.value === selectedSection) ?? linkedScrollItems[0],
-    [selectedSection]
+    () => items.find((item) => item.value === selectedSection) ?? items[0],
+    [items, selectedSection]
   );
   const selectedData = selectedItem.data ?? linkedFallbackData;
 
@@ -50,7 +80,7 @@ export function LinkedScrollDemo({ onBack }: { onBack: () => void }) {
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Back to playground"
+          accessibilityLabel={t('example.linked.backA11y')}
           onPress={onBack}
           style={({ pressed }) => [
             styles.linkedBackButton,
@@ -66,20 +96,20 @@ export function LinkedScrollDemo({ onBack }: { onBack: () => void }) {
         <View style={styles.linkedDemoTitleWrap}>
           <Text style={[styles.linkedDemoTitle, { color: theme.colors.onSurface }]}>LinkedScroll</Text>
           <Text numberOfLines={1} style={[styles.linkedDemoSubtitle, { color: theme.colors.muted }]}>
-            Selected: {selectedItem.label}
+            {t('example.linked.selected', { label: selectedItem.label })}
           </Text>
         </View>
 
         <View style={[styles.linkedSelectedBadge, { backgroundColor: theme.colors.secondary }]}>
           <Text style={[styles.linkedSelectedBadgeText, { color: theme.colors.primary }]}>
-            {selectedData.kind}
+            {t(`example.linked.kind.${selectedData.kind}`)}
           </Text>
         </View>
       </View>
 
       <View style={[styles.linkedDemoBody, { paddingBottom: insets.bottom }]}>
         <LinkedScroll
-          items={linkedScrollItems}
+          items={items}
           value={selectedSection}
           onChange={setSelectedSection}
           menuWidth={wp(108)}
@@ -118,7 +148,9 @@ const LinkedSectionCard = React.memo(function LinkedSectionCard({
   selected: boolean;
 }) {
   const theme = useTheme();
+  const { t } = useI18n();
   const data = item.data ?? linkedFallbackData;
+  const summary = item.data ? data.summary : t('example.linked.summary.fallback');
 
   return (
     <View
@@ -137,7 +169,7 @@ const LinkedSectionCard = React.memo(function LinkedSectionCard({
         </Text>
         <View style={styles.linkedSectionTitleWrap}>
           <Text style={[styles.linkedSectionTitle, { color: theme.colors.onSurface }]}>{item.label}</Text>
-          <Text style={[styles.linkedSummary, { color: theme.colors.muted }]}>{data.summary}</Text>
+          <Text style={[styles.linkedSummary, { color: theme.colors.muted }]}>{summary}</Text>
         </View>
       </View>
 
@@ -150,9 +182,9 @@ const LinkedSectionCard = React.memo(function LinkedSectionCard({
       </View>
 
       <View style={styles.linkedMetricStack}>
-        <LinkedMetricRow label="Render type" value={data.kind} />
-        <LinkedMetricRow label="Section height" value={String(data.height)} />
-        <LinkedMetricRow label="Source" value="FlashList" />
+        <LinkedMetricRow label={t('example.linked.renderType')} value={t(`example.linked.kind.${data.kind}`)} />
+        <LinkedMetricRow label={t('example.linked.sectionHeight')} value={String(data.height)} />
+        <LinkedMetricRow label={t('example.linked.source')} value="FlashList" />
       </View>
     </View>
   );

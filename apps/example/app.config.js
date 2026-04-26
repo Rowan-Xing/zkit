@@ -13,7 +13,7 @@ module.exports = {
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     icon,
-    plugins: ['expo-dev-client'],
+    plugins: ['expo-dev-client', 'expo-localization'],
     ios: {
       supportsTablet: true,
       bundleIdentifier: iosBundleIdentifier,

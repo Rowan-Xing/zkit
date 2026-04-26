@@ -7,7 +7,7 @@ export type Density = 'compact' | 'comfortable' | 'spacious';
 
 export type ShowcaseMetric = {
   value: string;
-  label: string;
+  labelKey: string;
 };
 
 export type ShowcaseNavKey =
@@ -22,8 +22,8 @@ export type ShowcaseNavKey =
 
 export type ShowcaseNavItem = {
   key: ShowcaseNavKey;
-  title: string;
-  caption: string;
+  titleKey: string;
+  captionKey: string;
 };
 
 export type LinkedDemoData = {
@@ -36,46 +36,21 @@ export type LinkedDemoData = {
 
 export type LinkedScrollItem = UILinkedScrollItem<string, LinkedDemoData>;
 
-export const languageOptions = [
-  { id: 'en', title: 'English' },
-  { id: 'zh', title: 'Chinese' },
-  { id: 'ja', title: 'Japanese' },
-];
-
 export const showcaseMetrics: ShowcaseMetric[] = [
-  { value: '16+', label: 'UI modules' },
-  { value: '8', label: 'Tool exports' },
-  { value: '120Hz', label: 'Motion target' },
+  { value: '16+', labelKey: 'example.metric.uiModules' },
+  { value: '8', labelKey: 'example.metric.toolExports' },
+  { value: '120Hz', labelKey: 'example.metric.motionTarget' },
 ];
 
 export const showcaseNavItems: ShowcaseNavItem[] = [
-  { key: 'foundation', title: 'Foundation', caption: 'Text / spinner' },
-  { key: 'actions', title: 'Actions', caption: 'Buttons' },
-  { key: 'forms', title: 'Forms', caption: 'Input / switch' },
-  { key: 'choice', title: 'Choice', caption: 'Checkbox / radio' },
-  { key: 'surfaces', title: 'Surfaces', caption: 'Accordion / sheet / linked' },
-  { key: 'pickers', title: 'Pickers', caption: 'Date / address / range' },
-  { key: 'services', title: 'Services', caption: 'Toast / preview / captcha' },
-  { key: 'tools', title: 'Tools', caption: 'Screen / runtime / guard' },
-];
-
-export const workflowOptions = [
-  {
-    id: 'design',
-    title: 'Design',
-    children: [
-      { id: 'tokens', title: 'Tokens' },
-      { id: 'motion', title: 'Motion' },
-    ],
-  },
-  {
-    id: 'ship',
-    title: 'Ship',
-    children: [
-      { id: 'review', title: 'Review' },
-      { id: 'release', title: 'Release' },
-    ],
-  },
+  { key: 'foundation', titleKey: 'example.nav.foundation.title', captionKey: 'example.nav.foundation.caption' },
+  { key: 'actions', titleKey: 'example.nav.actions.title', captionKey: 'example.nav.actions.caption' },
+  { key: 'forms', titleKey: 'example.nav.forms.title', captionKey: 'example.nav.forms.caption' },
+  { key: 'choice', titleKey: 'example.nav.choice.title', captionKey: 'example.nav.choice.caption' },
+  { key: 'surfaces', titleKey: 'example.nav.surfaces.title', captionKey: 'example.nav.surfaces.caption' },
+  { key: 'pickers', titleKey: 'example.nav.pickers.title', captionKey: 'example.nav.pickers.caption' },
+  { key: 'services', titleKey: 'example.nav.services.title', captionKey: 'example.nav.services.caption' },
+  { key: 'tools', titleKey: 'example.nav.tools.title', captionKey: 'example.nav.tools.caption' },
 ];
 
 export const previewImages = [
@@ -97,10 +72,10 @@ export const captchaChallenge: SliderCaptchaChallenge = {
 
 export const linkedFallbackData: LinkedDemoData = {
   kind: 'metrics',
-  summary: 'Fallback section data for custom item sources.',
+  summary: '',
   accent: '#EAF1FF',
   height: 208,
-  chips: ['Fallback', 'metrics', '0 items'],
+  chips: [],
 };
 
 export const linkedScrollItems: LinkedScrollItem[] = Array.from({ length: 28 }, (_, index) => {
@@ -111,18 +86,13 @@ export const linkedScrollItems: LinkedScrollItem[] = Array.from({ length: 28 }, 
 
   return {
     value: `section-${order}`,
-    label: `Section ${order}`,
+    label: '',
     data: {
       kind,
-      summary:
-        kind === 'overview'
-          ? 'Overview block with denser content and a taller viewport target.'
-          : kind === 'media'
-            ? 'Media-like section with mixed copy, chips, and uneven height.'
-            : 'Metric section with compact rows and predictable recycling type.',
+      summary: '',
       accent: palette[index % palette.length],
       height: kind === 'overview' ? 280 : kind === 'media' ? 236 : 208,
-      chips: [`Batch ${Math.ceil(order / 4)}`, kind, `${24 + index * 3} items`],
+      chips: [],
     },
   };
 });

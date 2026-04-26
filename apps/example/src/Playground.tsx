@@ -12,6 +12,7 @@ import {
   permissionPurposeDialog,
   pickerService,
   toast,
+  useI18n,
   useTheme,
   type PickerModelValue,
 } from 'y2kit-ui';
@@ -46,32 +47,33 @@ const NAV_ICONS: Record<ShowcaseNavKey, FeatherIconName> = {
 
 export function Playground() {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const scrollViewRef = React.useRef<ScrollView>(null);
   const sectionOffsetsRef = React.useRef<Partial<Record<ShowcaseNavKey, number>>>({});
   const [activeSection, setActiveSection] = React.useState<ShowcaseNavKey>('foundation');
   const [enabled, setEnabled] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [centerBusy, setCenterBusy] = React.useState(false);
-  const [note, setNote] = React.useState('Expo 54 playground');
+  const [note, setNote] = React.useState(() => t('example.defaultNote'));
   const [checkedItems, setCheckedItems] = React.useState<string[]>(['motion']);
   const [density, setDensity] = React.useState<Density>('comfortable');
   const [language, setLanguage] = React.useState('en');
-  const [languageLabel, setLanguageLabel] = React.useState('English');
+  const [languageLabel, setLanguageLabel] = React.useState(() => t('example.language.en'));
   const [workflow, setWorkflow] = React.useState<PickerModelValue>(['design', 'tokens']);
-  const [workflowLabel, setWorkflowLabel] = React.useState('Design / Tokens');
+  const [workflowLabel, setWorkflowLabel] = React.useState(() => t('example.workflow.designTokens'));
   const [date, setDate] = React.useState('2026-04-23');
   const [dateLabel, setDateLabel] = React.useState('2026-04-23');
   const [address, setAddress] = React.useState<string[]>(['110000', '110100', '110101']);
-  const [addressLabel, setAddressLabel] = React.useState('Beijing-City-Dongcheng');
+  const [addressLabel, setAddressLabel] = React.useState(() => t('example.address.default'));
   const [range, setRange] = React.useState<string[]>(['2026-04-01', '2026-04-23']);
-  const [serviceChoice, setServiceChoice] = React.useState('Tokens');
+  const [serviceChoice, setServiceChoice] = React.useState('tokens');
   const [captchaVisible, setCaptchaVisible] = React.useState(false);
   const [linkedScrollOpen, setLinkedScrollOpen] = React.useState(false);
-  const [routerGuardStatus, setRouterGuardStatus] = React.useState('Ready');
+  const [routerGuardStatus, setRouterGuardStatus] = React.useState(() => t('example.router.ready'));
 
   const rangeLabel = React.useMemo(
-    () => (range.length === 2 ? `${range[0]} to ${range[1]}` : 'Select range'),
-    [range]
+    () => (range.length === 2 ? `${range[0]} ${t('example.common.to')} ${range[1]}` : t('example.range.select')),
+    [range, t]
   );
 
   const handleSectionLayout = React.useCallback(
@@ -93,40 +95,40 @@ export function Playground() {
   const handleGlobalPicker = React.useCallback(async () => {
     const result = await pickerService.pick({
       list: [
-        { id: 'tokens', title: 'Tokens' },
-        { id: 'forms', title: 'Forms' },
-        { id: 'overlays', title: 'Overlays' },
+        { id: 'tokens', title: t('example.area.tokens') },
+        { id: 'forms', title: t('example.area.forms') },
+        { id: 'overlays', title: t('example.area.overlays') },
       ],
-      value: serviceChoice.toLowerCase(),
-      title: 'Component area',
+      value: serviceChoice,
+      title: t('example.globalPicker.title'),
     });
 
     if (!result) return;
-    setServiceChoice(String(result.label || result.value));
-    toast.info(`Selected ${result.label}`, 1200);
-  }, [serviceChoice]);
+    setServiceChoice(String(result.value));
+    toast.info(t('example.toast.selected', { label: result.label }), 1200);
+  }, [serviceChoice, t]);
 
   const handleDialog = React.useCallback(async () => {
     const confirmed = await actionDialog.confirm({
-      title: 'Run action',
-      content: 'Confirm opens the same service API an app screen would use.',
-      confirmText: 'Run',
-      cancelText: 'Cancel',
+      title: t('example.dialog.title'),
+      content: t('example.dialog.content'),
+      confirmText: t('example.dialog.confirm'),
+      cancelText: t('example.common.cancel'),
       footer: { layout: 'row' },
     });
 
     if (confirmed) {
-      toast.success('Action confirmed', 1200);
+      toast.success(t('example.dialog.confirmed'), 1200);
     }
-  }, []);
+  }, [t]);
 
   const handleLoading = React.useCallback(async () => {
     await loading.withPromise(wait(900), {
-      loadingText: 'Syncing',
-      successText: 'Synced',
-      errorText: 'Failed',
+      loadingText: t('example.loading.loading'),
+      successText: t('example.loading.success'),
+      errorText: t('example.loading.error'),
     });
-  }, []);
+  }, [t]);
 
   const handleBusyDemo = React.useCallback(async () => {
     if (busy) return;
@@ -153,15 +155,15 @@ export function Playground() {
   const handlePermissionPurpose = React.useCallback(() => {
     const purpose = permissionPurposeDialog.show({
       permission: 'camera',
-      title: 'Camera access',
-      message: 'Used by image capture and crop flows in this app.',
+      title: t('example.permission.title'),
+      message: t('example.permission.message'),
       scopeKey: 'example-camera',
     });
 
     setTimeout(() => {
       purpose.hide();
     }, 2600);
-  }, []);
+  }, [t]);
 
   const openLinkedScrollDemo = React.useCallback(() => {
     setLinkedScrollOpen(true);
@@ -181,13 +183,13 @@ export function Playground() {
 
   const verifyCaptcha = React.useCallback(async (payload: { progress: number }) => {
     await wait(240);
-    return payload.progress > 0.24 ? { success: true } : { success: false, message: 'Slide farther' };
-  }, []);
+    return payload.progress > 0.24 ? { success: true } : { success: false, message: t('example.captcha.slideFarther') };
+  }, [t]);
 
   const handleCaptchaVerified = React.useCallback(() => {
     setCaptchaVisible(false);
-    toast.success('Captcha verified', 1200);
-  }, []);
+    toast.success(t('example.captcha.verifiedToast'), 1200);
+  }, [t]);
 
   const handleDebuggerOpen = React.useCallback(() => {
     FloatingDebuggerController.show?.();
@@ -216,9 +218,9 @@ export function Playground() {
     router.back();
     destroy();
 
-    setRouterGuardStatus(events.length === 2 ? 'Duplicate push blocked' : events.join(' -> '));
-    toast.info('Router guard tested', 1200);
-  }, []);
+    setRouterGuardStatus(events.length === 2 ? t('example.router.blocked') : events.join(' -> '));
+    toast.info(t('example.router.tested'), 1200);
+  }, [t]);
 
   if (linkedScrollOpen) {
     return <LinkedScrollDemo onBack={closeLinkedScrollDemo} />;
@@ -299,7 +301,7 @@ export function Playground() {
 
         <View onLayout={handleSectionLayout('services')}>
           <ServicesSection
-            serviceChoice={serviceChoice}
+            serviceChoice={t(`example.area.${serviceChoice}`)}
             onCaptchaOpen={openCaptcha}
             onDebuggerOpen={handleDebuggerOpen}
             onDialog={handleDialog}
@@ -324,9 +326,9 @@ export function Playground() {
         verifyChallenge={verifyCaptcha}
         onVerified={handleCaptchaVerified}
         texts={{
-          title: 'Slide captcha',
-          verifyFailed: 'Try again',
-          verifySuccess: 'Verified',
+          title: t('example.captcha.title'),
+          verifyFailed: t('example.captcha.failed'),
+          verifySuccess: t('example.captcha.success'),
         }}
       />
       <FloatingDebugger initialVisible={false} enableNetworkTab />
@@ -342,6 +344,7 @@ const ShowcaseNav = React.memo(function ShowcaseNav({
   onSelect: (key: ShowcaseNavKey) => void;
 }) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <View style={styles.navWrap}>
@@ -377,13 +380,13 @@ const ShowcaseNav = React.memo(function ShowcaseNav({
               </View>
               <View style={styles.navCopy}>
                 <Text style={[styles.navTitle, { color: active ? theme.colors.onPrimary : theme.colors.onSurface }]}>
-                  {item.title}
+                  {t(item.titleKey)}
                 </Text>
                 <Text
                   numberOfLines={1}
                   style={[styles.navCaption, { color: active ? 'rgba(255,255,255,0.72)' : theme.colors.muted }]}
                 >
-                  {item.caption}
+                  {t(item.captionKey)}
                 </Text>
               </View>
             </Pressable>

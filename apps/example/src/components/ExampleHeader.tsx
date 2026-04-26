@@ -2,7 +2,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text, useTheme } from 'y2kit-ui';
+import { Text, useI18n, useTheme } from 'y2kit-ui';
 import { wp } from 'y2kit-tools';
 
 import { showcaseMetrics } from '../data';
@@ -15,6 +15,7 @@ const wordmark = require('../../assets/images/dfff1.png');
 
 export const ExampleHeader = React.memo(function ExampleHeader({ topInset }: { topInset: number }) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <View style={[styles.header, { paddingTop: topInset + wp(18) }]}>
@@ -30,27 +31,33 @@ export const ExampleHeader = React.memo(function ExampleHeader({ topInset }: { t
           </View>
           <View style={styles.headerCopy}>
             <Text style={[styles.eyebrow, { color: 'rgba(255,255,255,0.72)' }]}>@y2kit/example</Text>
-            <Text style={[styles.title, { color: theme.colors.onPrimary }]}>Y2Kit Lab</Text>
+            <Text style={[styles.title, { color: theme.colors.onPrimary }]}>{t('example.header.title')}</Text>
           </View>
         </View>
 
         <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.78)' }]}>
-          Component and tool showcase for fast native screens, polished motion, and provider-backed flows.
+          {t('example.header.subtitle')}
         </Text>
 
         <View style={styles.headerPreview}>
           <Image source={wordmark} style={styles.headerPreviewImage} contentFit="cover" />
           <View style={styles.headerPreviewFooter}>
-            <Text style={[styles.headerPreviewLabel, { color: theme.colors.onPrimary }]}>Prototype surface</Text>
-            <Text style={[styles.headerPreviewValue, { color: 'rgba(255,255,255,0.72)' }]}>mobile-first</Text>
+            <Text style={[styles.headerPreviewLabel, { color: theme.colors.onPrimary }]}>
+              {t('example.header.previewLabel')}
+            </Text>
+            <Text style={[styles.headerPreviewValue, { color: 'rgba(255,255,255,0.72)' }]}>
+              {t('example.header.previewValue')}
+            </Text>
           </View>
         </View>
 
         <View style={styles.headerStats}>
           {showcaseMetrics.map((metric) => (
-            <View key={metric.label} style={styles.heroStat}>
+            <View key={metric.labelKey} style={styles.heroStat}>
               <Text style={[styles.heroStatValue, { color: theme.colors.onPrimary }]}>{metric.value}</Text>
-              <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.7)' }]}>{metric.label}</Text>
+              <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.7)' }]}>
+                {t(metric.labelKey)}
+              </Text>
             </View>
           ))}
         </View>

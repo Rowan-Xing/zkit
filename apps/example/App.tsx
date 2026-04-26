@@ -7,13 +7,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ComponentLibProvider } from 'y2kit-ui';
 
 import { Playground } from './src/Playground';
+import { exampleMessages, resolveExampleLocale } from './src/i18n';
 import { exampleTheme } from './src/theme';
 
 export default function App() {
+  const locale = React.useMemo(resolveExampleLocale, []);
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <ComponentLibProvider theme={exampleTheme}>
+        <ComponentLibProvider locale={locale} messages={exampleMessages[locale]} theme={exampleTheme}>
           <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
           <Playground />
         </ComponentLibProvider>

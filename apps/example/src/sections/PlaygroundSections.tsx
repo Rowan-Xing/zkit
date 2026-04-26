@@ -24,15 +24,14 @@ import {
   imageCropper,
   imagePreview,
   toast,
+  useI18n,
   useTheme,
   type BottomSheetRef,
   type PickerModelValue,
 } from 'y2kit-ui';
 
 import {
-  languageOptions,
   previewImages,
-  workflowOptions,
   type Density,
 } from '../data';
 import { normalizePickerValue, renderIcon, type FeatherIconName } from '../demoUtils';
@@ -72,12 +71,13 @@ const FoundationStatusCell = React.memo(function FoundationStatusCell({
 
 export const FoundationSection = React.memo(function FoundationSection() {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <Section
-      eyebrow="Foundation"
-      title="Design baseline"
-      subtitle="Type, color, scale, and loading primitives"
+      eyebrow={t('example.foundation.eyebrow')}
+      title={t('example.foundation.title')}
+      subtitle={t('example.foundation.subtitle')}
       accentColor="#2563EB"
     >
       <View
@@ -88,21 +88,43 @@ export const FoundationSection = React.memo(function FoundationSection() {
       >
         <View style={styles.typeSpecimen}>
           <View style={styles.typeRow}>
-            <Text style={[styles.typeLabel, { color: theme.colors.primary }]}>Display</Text>
+            <Text style={[styles.typeLabel, { color: theme.colors.primary }]}>
+              {t('example.foundation.displayLabel')}
+            </Text>
             <Text style={[styles.typeDisplay, { color: theme.colors.onSurface }]}>
-              Calm speed, crisp control.
+              {t('example.foundation.displayText')}
             </Text>
           </View>
           <Text style={[styles.typeSubtitle, { color: theme.colors.muted }]}>
-            Body copy stays legible while state changes remain immediate.
+            {t('example.foundation.displaySubtitle')}
           </Text>
         </View>
 
         <View style={[styles.statusStrip, { borderTopColor: theme.colors.border }]}>
-          <FoundationStatusCell iconName="type" label="Text" value="7 variants" color="#2563EB" />
-          <FoundationStatusCell iconName="loader" label="Spinner" value="Native scale" color="#0F9F6E" />
-          <FoundationStatusCell iconName="sliders" label="Tokens" value="Theme aware" color="#EB5A17" />
-          <FoundationStatusCell iconName="activity" label="Motion" value="No layout jump" color="#7C3AED" />
+          <FoundationStatusCell
+            iconName="type"
+            label={t('example.foundation.textLabel')}
+            value={t('example.foundation.textValue')}
+            color="#2563EB"
+          />
+          <FoundationStatusCell
+            iconName="loader"
+            label={t('example.foundation.spinnerLabel')}
+            value={t('example.foundation.spinnerValue')}
+            color="#0F9F6E"
+          />
+          <FoundationStatusCell
+            iconName="sliders"
+            label={t('example.foundation.tokensLabel')}
+            value={t('example.foundation.tokensValue')}
+            color="#EB5A17"
+          />
+          <FoundationStatusCell
+            iconName="activity"
+            label={t('example.foundation.motionLabel')}
+            value={t('example.foundation.motionValue')}
+            color="#7C3AED"
+          />
         </View>
       </View>
     </Section>
@@ -123,12 +145,13 @@ export const ButtonsSection = React.memo(function ButtonsSection({
   onCenterBusyDemo,
 }: ButtonsSectionProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <Section
-      eyebrow="Actions"
-      title="Button system"
-      subtitle="Solid, soft, outline, ghost, icon-only, and loading modes"
+      eyebrow={t('example.actions.eyebrow')}
+      title={t('example.actions.title')}
+      subtitle={t('example.actions.subtitle')}
       accentColor="#EB5A17"
     >
       <View
@@ -142,9 +165,11 @@ export const ButtonsSection = React.memo(function ButtonsSection({
             {renderIcon('zap', '#EB5A17', wp(20))}
           </View>
           <View style={styles.actionPanelCopy}>
-            <Text style={[styles.actionTitle, { color: theme.colors.onSurface }]}>Primary action row</Text>
+            <Text style={[styles.actionTitle, { color: theme.colors.onSurface }]}>
+              {t('example.actions.panelTitle')}
+            </Text>
             <Text style={[styles.actionSubtitle, { color: theme.colors.muted }]}>
-              Buttons keep touch targets stable across loading and pressed states.
+              {t('example.actions.panelSubtitle')}
             </Text>
           </View>
         </View>
@@ -154,46 +179,46 @@ export const ButtonsSection = React.memo(function ButtonsSection({
             gradient={{ colors: ['#2563EB', '#0F9F6E'], direction: 'to right' }}
             icon={renderIcon('zap', '#FFFFFF')}
             shadow="sm"
-            onPress={() => toast.success('Primary action')}
+            onPress={() => toast.success(t('example.actions.toastPrimary'))}
           >
-            Primary
+            {t('example.actions.primary')}
           </Button>
           <Button
             variant="soft"
             tone="warning"
             icon={renderIcon('alert-triangle', '#92400E')}
-            onPress={() => toast.warning('Soft warning')}
+            onPress={() => toast.warning(t('example.actions.toastWarning'))}
           >
-            Warning
+            {t('example.actions.warning')}
           </Button>
           <Button
             variant="outline"
             tone="danger"
             icon={renderIcon('trash-2', '#DC2626')}
-            onPress={() => toast.error('Danger action')}
+            onPress={() => toast.error(t('example.actions.toastDanger'))}
           >
-            Danger
+            {t('example.actions.danger')}
           </Button>
           <Button
             variant="ghost"
             tone="neutral"
             icon={renderIcon('send', theme.colors.onSurface)}
-            onPress={() => toast.info('Ghost action')}
+            onPress={() => toast.info(t('example.actions.toastGhost'))}
           >
-            Ghost
+            {t('example.actions.ghost')}
           </Button>
           <Button
             iconOnly
             shape="pill"
-            accessibilityLabel="Refresh"
+            accessibilityLabel={t('example.actions.refreshA11y')}
             icon={renderIcon('refresh-cw', '#FFFFFF')}
-            onPress={() => toast.info('Refreshed')}
+            onPress={() => toast.info(t('example.actions.refreshed'))}
           />
           <Button loading={busy} onPress={onBusyDemo}>
-            Sync
+            {t('example.actions.sync')}
           </Button>
           <Button loading={centerBusy} loadingMode="overlay" onPress={onCenterBusyDemo}>
-            Center load
+            {t('example.actions.centerLoad')}
           </Button>
         </View>
       </View>
@@ -215,19 +240,20 @@ export const InputsSection = React.memo(function InputsSection({
   onNoteChange,
 }: InputsSectionProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <Section
-      eyebrow="Forms"
-      title="Input controls"
-      subtitle="TextInput, Switch, disabled state, and inline feedback"
+      eyebrow={t('example.forms.eyebrow')}
+      title={t('example.forms.title')}
+      subtitle={t('example.forms.subtitle')}
       accentColor="#0F9F6E"
     >
       <View style={styles.fieldStack}>
         <TextInput
           value={note}
           onChangeText={onNoteChange}
-          placeholder="Type a note"
+          placeholder={t('example.forms.placeholder')}
           placeholderTextColor={theme.colors.muted}
           style={[
             styles.textInput,
@@ -246,12 +272,19 @@ export const InputsSection = React.memo(function InputsSection({
           ]}
         >
           <View style={styles.switchCopy}>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>Notifications</Text>
+            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+              {t('example.forms.notifications')}
+            </Text>
             <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
-              {enabled ? 'Enabled' : 'Disabled'}
+              {enabled ? t('example.forms.enabled') : t('example.forms.disabled')}
             </Text>
           </View>
-          <Switch checked={enabled} checkedLabel="On" uncheckedLabel="Off" onChange={onEnabledChange} />
+          <Switch
+            checked={enabled}
+            checkedLabel={t('example.forms.on')}
+            uncheckedLabel={t('example.forms.off')}
+            onChange={onEnabledChange}
+          />
         </View>
 
         <View
@@ -261,10 +294,20 @@ export const InputsSection = React.memo(function InputsSection({
           ]}
         >
           <View style={styles.switchCopy}>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>Delivery lane</Text>
-            <Text style={[styles.controlValue, { color: theme.colors.muted }]}>Large success tone</Text>
+            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+              {t('example.forms.deliveryLane')}
+            </Text>
+            <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
+              {t('example.forms.deliveryTone')}
+            </Text>
           </View>
-          <Switch defaultChecked size="lg" tone="success" checkedLabel="Live" uncheckedLabel="Hold" />
+          <Switch
+            defaultChecked
+            size="lg"
+            tone="success"
+            checkedLabel={t('example.forms.live')}
+            uncheckedLabel={t('example.forms.hold')}
+          />
         </View>
 
         <View
@@ -274,7 +317,7 @@ export const InputsSection = React.memo(function InputsSection({
           ]}
         >
           <LoadingSpinner size={wp(24)} color={theme.colors.primary} />
-          <Text style={[styles.controlValue, { color: theme.colors.muted }]}>LoadingSpinner</Text>
+          <Text style={[styles.controlValue, { color: theme.colors.muted }]}>{t('example.forms.spinner')}</Text>
         </View>
       </View>
     </Section>
@@ -295,12 +338,13 @@ export const SelectionSection = React.memo(function SelectionSection({
   onDensityChange,
 }: SelectionSectionProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <Section
-      eyebrow="Choice"
-      title="Selection model"
-      subtitle="Controlled CheckboxGroup and RadioGroup with consistent value naming"
+      eyebrow={t('example.choice.eyebrow')}
+      title={t('example.choice.title')}
+      subtitle={t('example.choice.subtitle')}
       accentColor="#7C3AED"
     >
       <View style={styles.selectionGrid}>
@@ -322,9 +366,9 @@ export const SelectionSection = React.memo(function SelectionSection({
             direction="column"
             gap={wp(10)}
           >
-            <Checkbox value="motion" label="Motion tokens" />
-            <Checkbox value="forms" label="Form controls" />
-            <Checkbox value="overlays" label="Overlay services" />
+            <Checkbox value="motion" label={t('example.choice.motionTokens')} />
+            <Checkbox value="forms" label={t('example.choice.formControls')} />
+            <Checkbox value="overlays" label={t('example.choice.overlayServices')} />
           </CheckboxGroup>
         </View>
 
@@ -348,9 +392,9 @@ export const SelectionSection = React.memo(function SelectionSection({
             direction="column"
             gap={wp(10)}
           >
-            <Radio itemValue="compact" label="Compact" />
-            <Radio itemValue="comfortable" label="Comfortable" />
-            <Radio itemValue="spacious" label="Spacious" />
+            <Radio itemValue="compact" label={t('example.choice.compact')} />
+            <Radio itemValue="comfortable" label={t('example.choice.comfortable')} />
+            <Radio itemValue="spacious" label={t('example.choice.spacious')} />
           </RadioGroup>
         </View>
       </View>
@@ -360,6 +404,7 @@ export const SelectionSection = React.memo(function SelectionSection({
 
 export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinkedScroll }: { onOpenLinkedScroll: () => void }) {
   const theme = useTheme();
+  const { t } = useI18n();
   const sheetRef = React.useRef<BottomSheetRef>(null);
 
   const openSheet = React.useCallback(() => {
@@ -372,9 +417,9 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
 
   return (
     <Section
-      eyebrow="Surfaces"
-      title="Layered surfaces"
-      subtitle="Accordion, BottomSheet, and linked scrolling patterns"
+      eyebrow={t('example.surfaces.eyebrow')}
+      title={t('example.surfaces.title')}
+      subtitle={t('example.surfaces.subtitle')}
       accentColor="#334155"
     >
       <View style={styles.surfaceGrid}>
@@ -386,10 +431,10 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
               { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
             ]}
           >
-            <AccordionTrigger title="Controlled and uncontrolled state" />
+            <AccordionTrigger title={t('example.surfaces.accordionState')} />
             <AccordionContent>
               <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
-                Buttons, switches, checkbox groups, radios, and pickers are wired to local state in this app.
+                {t('example.surfaces.accordionStateBody')}
               </Text>
             </AccordionContent>
           </AccordionItem>
@@ -400,10 +445,10 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
               { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
             ]}
           >
-            <AccordionTrigger title="Provider-backed overlays" />
+            <AccordionTrigger title={t('example.surfaces.accordionServices')} />
             <AccordionContent>
               <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
-                Toast, dialog, loading, picker, permission purpose, image preview, cropper, and captcha share one root provider.
+                {t('example.surfaces.accordionServicesBody')}
               </Text>
             </AccordionContent>
           </AccordionItem>
@@ -412,26 +457,28 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
         <View style={[styles.linkedIntro, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <View style={styles.linkedIntroCopy}>
             <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
-              Scroll-linked menu and content
+              {t('example.surfaces.linkedTitle')}
             </Text>
             <Text style={[styles.linkedIntroText, { color: theme.colors.muted }]}>
-              FlashList panes stay isolated from the parent page.
+              {t('example.surfaces.linkedBody')}
             </Text>
           </View>
           <Button icon={renderIcon('columns', '#FFFFFF', wp(17))} onPress={onOpenLinkedScroll}>
-            Open
+            {t('example.common.open')}
           </Button>
         </View>
 
         <View style={[styles.linkedIntro, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <View style={styles.linkedIntroCopy}>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>BottomSheet</Text>
+            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+              {t('example.surfaces.sheetTitle')}
+            </Text>
             <Text style={[styles.linkedIntroText, { color: theme.colors.muted }]}>
-              Native sheet detents with compact content.
+              {t('example.surfaces.sheetBody')}
             </Text>
           </View>
           <Button variant="outline" tone="neutral" icon={renderIcon('layers', theme.colors.onSurface, wp(17))} onPress={openSheet}>
-            Sheet
+            {t('example.common.sheet')}
           </Button>
         </View>
       </View>
@@ -452,23 +499,29 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
       >
         <View style={styles.sheetContent}>
           <View>
-            <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>BottomSheet</Text>
+            <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
+              {t('example.surfaces.sheetTitle')}
+            </Text>
             <Text style={[styles.sheetSubtitle, { color: theme.colors.muted }]}>
-              Detents, native gestures, and stable content sizing.
+              {t('example.surfaces.sheetSubtitle')}
             </Text>
           </View>
           <View style={styles.sheetGrid}>
             <View style={[styles.sheetSwatch, { backgroundColor: '#E8F7F1' }]}>
-              <Text style={[styles.sheetSwatchLabel, { color: '#0F7A57' }]}>Detent</Text>
+              <Text style={[styles.sheetSwatchLabel, { color: '#0F7A57' }]}>
+                {t('example.surfaces.detent')}
+              </Text>
               <Text style={[styles.sheetSwatchValue, { color: '#0F513F' }]}>auto</Text>
             </View>
             <View style={[styles.sheetSwatch, { backgroundColor: '#FFF1E7' }]}>
-              <Text style={[styles.sheetSwatchLabel, { color: '#9A3412' }]}>Max</Text>
+              <Text style={[styles.sheetSwatchLabel, { color: '#9A3412' }]}>
+                {t('example.surfaces.max')}
+              </Text>
               <Text style={[styles.sheetSwatchValue, { color: '#7C2D12' }]}>72%</Text>
             </View>
           </View>
           <Button block onPress={closeSheet}>
-            Done
+            {t('example.common.done')}
           </Button>
         </View>
       </BottomSheet>
@@ -519,11 +572,42 @@ export const PickersSection = React.memo(function PickersSection({
   onWorkflowChange,
   onWorkflowLabelChange,
 }: PickersSectionProps) {
+  const { t } = useI18n();
+  const languageOptions = React.useMemo(
+    () => [
+      { id: 'en', title: t('example.language.en') },
+      { id: 'zh', title: t('example.language.zh') },
+      { id: 'ja', title: t('example.language.ja') },
+    ],
+    [t]
+  );
+  const workflowOptions = React.useMemo(
+    () => [
+      {
+        id: 'design',
+        title: t('example.workflow.design'),
+        children: [
+          { id: 'tokens', title: t('example.workflow.tokens') },
+          { id: 'motion', title: t('example.workflow.motion') },
+        ],
+      },
+      {
+        id: 'ship',
+        title: t('example.workflow.ship'),
+        children: [
+          { id: 'review', title: t('example.workflow.review') },
+          { id: 'release', title: t('example.workflow.release') },
+        ],
+      },
+    ],
+    [t]
+  );
+
   return (
     <Section
-      eyebrow="Pickers"
-      title="Picker flows"
-      subtitle="Single column, tree, date, address, and date range"
+      eyebrow={t('example.pickers.eyebrow')}
+      title={t('example.pickers.title')}
+      subtitle={t('example.pickers.subtitle')}
       accentColor="#0891B2"
     >
       <View style={styles.fieldStack}>
@@ -533,9 +617,15 @@ export const PickersSection = React.memo(function PickersSection({
           onValueChange={(next) => onLanguageChange(normalizePickerValue(next))}
           label={languageLabel}
           onLabelChange={onLanguageLabelChange}
-          title="Language"
+          title={t('example.pickers.language')}
         >
-          {({ label }) => <FieldTrigger iconName="globe" label="Language" value={label || languageLabel || language} />}
+          {({ label }) => (
+            <FieldTrigger
+              iconName="globe"
+              label={t('example.pickers.language')}
+              value={label || languageLabel || language}
+            />
+          )}
         </Picker>
 
         <Picker
@@ -545,9 +635,11 @@ export const PickersSection = React.memo(function PickersSection({
           label={workflowLabel}
           onLabelChange={(next) => onWorkflowLabelChange(next.replace(/-/g, ' / '))}
           separator=" / "
-          title="Workflow"
+          title={t('example.pickers.workflow')}
         >
-          {({ label }) => <FieldTrigger iconName="git-branch" label="Workflow" value={label || workflowLabel} />}
+          {({ label }) => (
+            <FieldTrigger iconName="git-branch" label={t('example.pickers.workflow')} value={label || workflowLabel} />
+          )}
         </Picker>
 
         <DatePicker
@@ -607,6 +699,7 @@ export const ServicesSection = React.memo(function ServicesSection({
   onPermissionPurpose,
 }: ServicesSectionProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const [otaRunId, setOtaRunId] = React.useState(0);
 
   const handleCropImage = React.useCallback(async () => {
@@ -615,19 +708,19 @@ export const ServicesSection = React.memo(function ServicesSection({
         square: true,
         output: { maxWidth: 1024, maxHeight: 1024, compress: 0.92, format: 'jpeg' },
         texts: {
-          title: 'Edit Photo',
-          confirm: 'Use',
-          cancel: 'Cancel',
+          title: t('example.services.cropperEdit'),
+          confirm: t('example.common.use'),
+          cancel: t('example.common.cancel'),
         },
       });
 
       if (result) {
-        toast.success('Image cropped', 1400);
+        toast.success(t('example.services.cropperSuccess'), 1400);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Crop failed', 1800);
+      toast.error(error instanceof Error ? error.message : t('example.services.cropperFailed'), 1800);
     }
-  }, []);
+  }, [t]);
 
   const handleOtaSimulation = React.useCallback(() => {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
@@ -635,95 +728,95 @@ export const ServicesSection = React.memo(function ServicesSection({
       return;
     }
 
-    toast.info('OTA checks run in release builds', 1600);
-  }, []);
+    toast.info(t('example.services.otaRelease'), 1600);
+  }, [t]);
 
   return (
     <Section
-      eyebrow="Services"
-      title="Provider-backed actions"
-      subtitle="Global overlays and command APIs mounted by ComponentLibProvider"
+      eyebrow={t('example.services.eyebrow')}
+      title={t('example.services.title')}
+      subtitle={t('example.services.subtitle')}
       accentColor="#DB2777"
     >
       <View style={styles.serviceGrid}>
         <ServiceActionCard
           iconName="message-square"
-          title="Toast"
-          subtitle="success / warning / error / info"
+          title={t('example.services.toastTitle')}
+          subtitle={t('example.services.toastSubtitle')}
           color="#0F9F6E"
-          buttonLabel="Show"
-          onPress={() => toast.success('Saved with toast', 1400)}
+          buttonLabel={t('example.common.show')}
+          onPress={() => toast.success(t('example.services.toastSaved'), 1400)}
         />
         <ServiceActionCard
           iconName="layers"
-          title="ActionDialog"
-          subtitle="confirm flow"
+          title={t('example.services.dialogTitle')}
+          subtitle={t('example.services.dialogSubtitle')}
           color="#2563EB"
-          buttonLabel="Open"
+          buttonLabel={t('example.common.open')}
           onPress={onDialog}
         />
         <ServiceActionCard
           iconName="loader"
-          title="Loading"
-          subtitle="promise-bound result"
+          title={t('example.services.loadingTitle')}
+          subtitle={t('example.services.loadingSubtitle')}
           color="#7C3AED"
-          buttonLabel="Run"
+          buttonLabel={t('example.common.run')}
           onPress={onLoading}
         />
         <ServiceActionCard
           iconName="list"
-          title="Picker service"
+          title={t('example.services.pickerTitle')}
           subtitle={serviceChoice}
           color="#0891B2"
-          buttonLabel="Pick"
+          buttonLabel={t('example.common.pick')}
           onPress={onGlobalPicker}
         />
         <ServiceActionCard
           iconName="camera"
-          title="Permission purpose"
-          subtitle="camera scope"
+          title={t('example.services.permissionTitle')}
+          subtitle={t('example.services.permissionSubtitle')}
           color="#EB5A17"
-          buttonLabel="Show"
+          buttonLabel={t('example.common.show')}
           onPress={onPermissionPurpose}
         />
         <ServiceActionCard
           iconName="image"
-          title="Image preview"
-          subtitle="pinch, pan, swipe"
+          title={t('example.services.previewTitle')}
+          subtitle={t('example.services.previewSubtitle')}
           color="#334155"
-          buttonLabel="Preview"
+          buttonLabel={t('example.common.preview')}
           onPress={() => imagePreview.show({ images: previewImages })}
         />
         <ServiceActionCard
           iconName="crop"
-          title="Image cropper"
-          subtitle="native photo crop"
+          title={t('example.services.cropperTitle')}
+          subtitle={t('example.services.cropperSubtitle')}
           color="#0F9F6E"
-          buttonLabel="Pick"
+          buttonLabel={t('example.common.pick')}
           onPress={handleCropImage}
         />
         <ServiceActionCard
           iconName="shield"
-          title="Slider captcha"
-          subtitle="challenge verification"
+          title={t('example.services.captchaTitle')}
+          subtitle={t('example.services.captchaSubtitle')}
           color="#DB2777"
-          buttonLabel="Open"
+          buttonLabel={t('example.common.open')}
           onPress={onCaptchaOpen}
         />
         <ServiceActionCard
           iconName="terminal"
-          title="Floating debugger"
-          subtitle="logs and network panel"
+          title={t('example.services.debuggerTitle')}
+          subtitle={t('example.services.debuggerSubtitle')}
           color={theme.colors.onSurface}
-          buttonLabel="Open"
+          buttonLabel={t('example.common.open')}
           onPress={onDebuggerOpen}
         />
         <ServiceActionCard
           iconName="download-cloud"
-          title="OTA manager"
-          subtitle="dev simulation"
+          title={t('example.services.otaTitle')}
+          subtitle={t('example.services.otaSubtitle')}
           color="#2563EB"
-          buttonLabel="Run"
+          buttonLabel={t('example.common.run')}
           onPress={handleOtaSimulation}
         />
       </View>
@@ -795,32 +888,33 @@ export const ToolsSection = React.memo(function ToolsSection({
   onRouterGuardDemo,
 }: ToolsSectionProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const phoneBrand = React.useMemo(() => getPhoneBrand(), []);
   const runtimeEnv = React.useMemo(() => {
     try {
       return getEnv('APP_ENV', 'local') || 'local';
     } catch {
-      return 'provider missing';
+      return t('example.tools.providerMissing');
     }
-  }, []);
+  }, [t]);
 
   const toolCards = React.useMemo(
     () => [
       { iconName: 'maximize' as const, label: 'wp(24)', value: `${Math.round(wp(24))} px`, color: '#2563EB' },
       { iconName: 'type' as const, label: 'sp(16)', value: `${Math.round(sp(16))} px`, color: '#7C3AED' },
-      { iconName: 'smartphone' as const, label: 'Phone brand', value: phoneBrand, color: '#0F9F6E' },
-      { iconName: 'settings' as const, label: 'Font cap', value: `${getMaxFontScale()}x`, color: '#EB5A17' },
-      { iconName: 'server' as const, label: 'Runtime env', value: runtimeEnv, color: '#0891B2' },
-      { iconName: 'package' as const, label: 'Config', value: 'typed access', color: '#334155' },
+      { iconName: 'smartphone' as const, label: t('example.tools.phoneBrand'), value: phoneBrand, color: '#0F9F6E' },
+      { iconName: 'settings' as const, label: t('example.tools.fontCap'), value: `${getMaxFontScale()}x`, color: '#EB5A17' },
+      { iconName: 'server' as const, label: t('example.tools.runtimeEnv'), value: runtimeEnv, color: '#0891B2' },
+      { iconName: 'package' as const, label: t('example.tools.config'), value: t('example.tools.typedAccess'), color: '#334155' },
     ],
-    [phoneBrand, runtimeEnv]
+    [phoneBrand, runtimeEnv, t]
   );
 
   return (
     <Section
-      eyebrow="Tools"
-      title="Runtime utilities"
-      subtitle="Screen scale, font scale, device brand, env, and router guard"
+      eyebrow={t('example.tools.eyebrow')}
+      title={t('example.tools.title')}
+      subtitle={t('example.tools.subtitle')}
       accentColor="#0F766E"
     >
       <View style={styles.toolGrid}>
@@ -848,7 +942,7 @@ export const ToolsSection = React.memo(function ToolsSection({
           </Text>
         </View>
         <Button size="sm" icon={renderIcon('navigation', '#FFFFFF', wp(15))} onPress={onRouterGuardDemo}>
-          Test
+          {t('example.common.test')}
         </Button>
       </View>
     </Section>
