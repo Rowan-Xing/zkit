@@ -1,35 +1,54 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { wp } from 'y2kit-tools';
+import { initRouterGuard, wp } from 'y2kit-tools';
 import {
+  FloatingDebugger,
+  FloatingDebuggerController,
   SliderCaptcha,
+  Text,
   actionDialog,
   loading,
   permissionPurposeDialog,
   pickerService,
   toast,
+  useTheme,
   type PickerModelValue,
 } from 'y2kit-ui';
 
 import { ExampleHeader } from './components/ExampleHeader';
-import { captchaChallenge, type Density } from './data';
-import { wait } from './demoUtils';
+import { captchaChallenge, showcaseNavItems, type Density, type ShowcaseNavKey } from './data';
+import { renderIcon, wait, type FeatherIconName } from './demoUtils';
 import { LinkedScrollDemo } from './LinkedScrollDemo';
 import {
-  AccordionSection,
   ButtonsSection,
+  FoundationSection,
   InputsSection,
-  LinkedScrollLaunchSection,
   PickersSection,
   SelectionSection,
   ServicesSection,
+  SurfacesSection,
+  ToolsSection,
 } from './sections/PlaygroundSections';
 import { styles } from './styles';
 import { exampleBackgroundColor } from './theme';
 
+const NAV_ICONS: Record<ShowcaseNavKey, FeatherIconName> = {
+  foundation: 'grid',
+  actions: 'zap',
+  forms: 'edit-3',
+  choice: 'check-circle',
+  surfaces: 'layers',
+  pickers: 'calendar',
+  services: 'command',
+  tools: 'tool',
+};
+
 export function Playground() {
   const insets = useSafeAreaInsets();
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const sectionOffsetsRef = React.useRef<Partial<Record<ShowcaseNavKey, number>>>({});
+  const [activeSection, setActiveSection] = React.useState<ShowcaseNavKey>('foundation');
   const [enabled, setEnabled] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [centerBusy, setCenterBusy] = React.useState(false);
@@ -48,11 +67,28 @@ export function Playground() {
   const [serviceChoice, setServiceChoice] = React.useState('Tokens');
   const [captchaVisible, setCaptchaVisible] = React.useState(false);
   const [linkedScrollOpen, setLinkedScrollOpen] = React.useState(false);
+  const [routerGuardStatus, setRouterGuardStatus] = React.useState('Ready');
 
   const rangeLabel = React.useMemo(
     () => (range.length === 2 ? `${range[0]} to ${range[1]}` : 'Select range'),
     [range]
   );
+
+  const handleSectionLayout = React.useCallback(
+    (key: ShowcaseNavKey) => (event: LayoutChangeEvent) => {
+      sectionOffsetsRef.current[key] = event.nativeEvent.layout.y;
+    },
+    []
+  );
+
+  const scrollToSection = React.useCallback((key: ShowcaseNavKey) => {
+    setActiveSection(key);
+    const targetY = sectionOffsetsRef.current[key] ?? 0;
+    scrollViewRef.current?.scrollTo({
+      y: Math.max(0, targetY - wp(10)),
+      animated: true,
+    });
+  }, []);
 
   const handleGlobalPicker = React.useCallback(async () => {
     const result = await pickerService.pick({
@@ -153,6 +189,37 @@ export function Playground() {
     toast.success('Captcha verified', 1200);
   }, []);
 
+  const handleDebuggerOpen = React.useCallback(() => {
+    FloatingDebuggerController.show?.();
+  }, []);
+
+  const handleRouterGuardDemo = React.useCallback(() => {
+    const events: string[] = [];
+    const router = {
+      push: (path: string) => {
+        events.push(`push ${path}`);
+      },
+      replace: (path: string) => {
+        events.push(`replace ${path}`);
+      },
+      navigate: (path: string) => {
+        events.push(`navigate ${path}`);
+      },
+      back: () => {
+        events.push('back');
+      },
+    };
+
+    const destroy = initRouterGuard({ router, fallbackLockMs: 700 });
+    router.push('/components');
+    router.push('/components');
+    router.back();
+    destroy();
+
+    setRouterGuardStatus(events.length === 2 ? 'Duplicate push blocked' : events.join(' -> '));
+    toast.info('Router guard tested', 1200);
+  }, []);
+
   if (linkedScrollOpen) {
     return <LinkedScrollDemo onBack={closeLinkedScrollDemo} />;
   }
@@ -160,6 +227,7 @@ export function Playground() {
   return (
     <View style={[styles.screen, { backgroundColor: exampleBackgroundColor }]}>
       <ScrollView
+        ref={scrollViewRef}
         automaticallyAdjustContentInsets={false}
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
@@ -168,61 +236,85 @@ export function Playground() {
       >
         <ExampleHeader topInset={insets.top} />
 
-        <ButtonsSection
-          busy={busy}
-          centerBusy={centerBusy}
-          onBusyDemo={handleBusyDemo}
-          onCenterBusyDemo={handleCenterBusyDemo}
-        />
+        <ShowcaseNav activeKey={activeSection} onSelect={scrollToSection} />
 
-        <InputsSection
-          enabled={enabled}
-          note={note}
-          onEnabledChange={setEnabled}
-          onNoteChange={setNote}
-        />
+        <View onLayout={handleSectionLayout('foundation')}>
+          <FoundationSection />
+        </View>
 
-        <SelectionSection
-          checkedItems={checkedItems}
-          density={density}
-          onCheckedItemsChange={setCheckedItems}
-          onDensityChange={setDensity}
-        />
+        <View onLayout={handleSectionLayout('actions')}>
+          <ButtonsSection
+            busy={busy}
+            centerBusy={centerBusy}
+            onBusyDemo={handleBusyDemo}
+            onCenterBusyDemo={handleCenterBusyDemo}
+          />
+        </View>
 
-        <AccordionSection />
+        <View onLayout={handleSectionLayout('forms')}>
+          <InputsSection
+            enabled={enabled}
+            note={note}
+            onEnabledChange={setEnabled}
+            onNoteChange={setNote}
+          />
+        </View>
 
-        <LinkedScrollLaunchSection onOpen={openLinkedScrollDemo} />
+        <View onLayout={handleSectionLayout('choice')}>
+          <SelectionSection
+            checkedItems={checkedItems}
+            density={density}
+            onCheckedItemsChange={setCheckedItems}
+            onDensityChange={setDensity}
+          />
+        </View>
 
-        <PickersSection
-          address={address}
-          addressLabel={addressLabel}
-          date={date}
-          dateLabel={dateLabel}
-          language={language}
-          languageLabel={languageLabel}
-          range={range}
-          rangeLabel={rangeLabel}
-          workflow={workflow}
-          workflowLabel={workflowLabel}
-          onAddressChange={setAddress}
-          onAddressLabelChange={setAddressLabel}
-          onDateChange={setDate}
-          onDateLabelChange={setDateLabel}
-          onLanguageChange={setLanguage}
-          onLanguageLabelChange={setLanguageLabel}
-          onRangeChange={setRange}
-          onWorkflowChange={setWorkflow}
-          onWorkflowLabelChange={setWorkflowLabel}
-        />
+        <View onLayout={handleSectionLayout('surfaces')}>
+          <SurfacesSection onOpenLinkedScroll={openLinkedScrollDemo} />
+        </View>
 
-        <ServicesSection
-          serviceChoice={serviceChoice}
-          onCaptchaOpen={openCaptcha}
-          onDialog={handleDialog}
-          onGlobalPicker={handleGlobalPicker}
-          onLoading={handleLoading}
-          onPermissionPurpose={handlePermissionPurpose}
-        />
+        <View onLayout={handleSectionLayout('pickers')}>
+          <PickersSection
+            address={address}
+            addressLabel={addressLabel}
+            date={date}
+            dateLabel={dateLabel}
+            language={language}
+            languageLabel={languageLabel}
+            range={range}
+            rangeLabel={rangeLabel}
+            workflow={workflow}
+            workflowLabel={workflowLabel}
+            onAddressChange={setAddress}
+            onAddressLabelChange={setAddressLabel}
+            onDateChange={setDate}
+            onDateLabelChange={setDateLabel}
+            onLanguageChange={setLanguage}
+            onLanguageLabelChange={setLanguageLabel}
+            onRangeChange={setRange}
+            onWorkflowChange={setWorkflow}
+            onWorkflowLabelChange={setWorkflowLabel}
+          />
+        </View>
+
+        <View onLayout={handleSectionLayout('services')}>
+          <ServicesSection
+            serviceChoice={serviceChoice}
+            onCaptchaOpen={openCaptcha}
+            onDebuggerOpen={handleDebuggerOpen}
+            onDialog={handleDialog}
+            onGlobalPicker={handleGlobalPicker}
+            onLoading={handleLoading}
+            onPermissionPurpose={handlePermissionPurpose}
+          />
+        </View>
+
+        <View onLayout={handleSectionLayout('tools')}>
+          <ToolsSection
+            routerGuardStatus={routerGuardStatus}
+            onRouterGuardDemo={handleRouterGuardDemo}
+          />
+        </View>
       </ScrollView>
 
       <SliderCaptcha
@@ -237,6 +329,67 @@ export function Playground() {
           verifySuccess: 'Verified',
         }}
       />
+      <FloatingDebugger initialVisible={false} enableNetworkTab />
     </View>
   );
 }
+
+const ShowcaseNav = React.memo(function ShowcaseNav({
+  activeKey,
+  onSelect,
+}: {
+  activeKey: ShowcaseNavKey;
+  onSelect: (key: ShowcaseNavKey) => void;
+}) {
+  const theme = useTheme();
+
+  return (
+    <View style={styles.navWrap}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.navContent}
+      >
+        {showcaseNavItems.map((item) => {
+          const active = item.key === activeKey;
+          const iconColor = active ? theme.colors.onPrimary : theme.colors.primary;
+          return (
+            <Pressable
+              key={item.key}
+              accessibilityRole="button"
+              onPress={() => onSelect(item.key)}
+              style={({ pressed }) => [
+                styles.navItem,
+                {
+                  backgroundColor: active ? theme.colors.primary : theme.colors.surface,
+                  borderColor: active ? theme.colors.primary : theme.colors.border,
+                  opacity: pressed ? 0.78 : 1,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.navItemIcon,
+                  { backgroundColor: active ? 'rgba(255,255,255,0.18)' : theme.colors.secondary },
+                ]}
+              >
+                {renderIcon(NAV_ICONS[item.key], iconColor, wp(16))}
+              </View>
+              <View style={styles.navCopy}>
+                <Text style={[styles.navTitle, { color: active ? theme.colors.onPrimary : theme.colors.onSurface }]}>
+                  {item.title}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.navCaption, { color: active ? 'rgba(255,255,255,0.72)' : theme.colors.muted }]}
+                >
+                  {item.caption}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+});

@@ -5,6 +5,27 @@ import type {
 
 export type Density = 'compact' | 'comfortable' | 'spacious';
 
+export type ShowcaseMetric = {
+  value: string;
+  label: string;
+};
+
+export type ShowcaseNavKey =
+  | 'foundation'
+  | 'actions'
+  | 'forms'
+  | 'choice'
+  | 'surfaces'
+  | 'pickers'
+  | 'services'
+  | 'tools';
+
+export type ShowcaseNavItem = {
+  key: ShowcaseNavKey;
+  title: string;
+  caption: string;
+};
+
 export type LinkedDemoData = {
   kind: 'overview' | 'metrics' | 'media';
   summary: string;
@@ -19,6 +40,23 @@ export const languageOptions = [
   { id: 'en', title: 'English' },
   { id: 'zh', title: 'Chinese' },
   { id: 'ja', title: 'Japanese' },
+];
+
+export const showcaseMetrics: ShowcaseMetric[] = [
+  { value: '16+', label: 'UI modules' },
+  { value: '8', label: 'Tool exports' },
+  { value: '120Hz', label: 'Motion target' },
+];
+
+export const showcaseNavItems: ShowcaseNavItem[] = [
+  { key: 'foundation', title: 'Foundation', caption: 'Text / spinner' },
+  { key: 'actions', title: 'Actions', caption: 'Buttons' },
+  { key: 'forms', title: 'Forms', caption: 'Input / switch' },
+  { key: 'choice', title: 'Choice', caption: 'Checkbox / radio' },
+  { key: 'surfaces', title: 'Surfaces', caption: 'Accordion / sheet / linked' },
+  { key: 'pickers', title: 'Pickers', caption: 'Date / address / range' },
+  { key: 'services', title: 'Services', caption: 'Toast / preview / captcha' },
+  { key: 'tools', title: 'Tools', caption: 'Screen / runtime / guard' },
 ];
 
 export const workflowOptions = [

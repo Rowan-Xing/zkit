@@ -1,14 +1,14 @@
-export const exampleBackgroundColor = '#F6F7F9';
+export const exampleBackgroundColor = '#F4F6FA';
 
 export const exampleTheme = {
   colors: {
-    primary: '#1F6FEB',
+    primary: '#2563EB',
     onPrimary: '#FFFFFF',
-    secondary: '#EAF1FF',
-    onSecondary: '#102A43',
+    secondary: '#E9F1FF',
+    onSecondary: '#172554',
     surface: '#FFFFFF',
-    onSurface: '#111827',
-    border: '#D5DCE8',
+    onSurface: '#101828',
+    border: '#D7DEE9',
     muted: '#667085',
     disabled: '#98A2B3',
   },
