@@ -1,6 +1,7 @@
 import { defaultTheme } from './theme/defaultTheme';
 import { mergeTheme } from './theme/mergeTheme';
 import type { Theme, ThemeOverride } from './theme/types';
+import { resolveSystemBuiltinLocale } from './i18n/locale';
 import type { I18nMessages, I18nMissingKeyPolicy } from './i18n/types';
 
 // y2kit-ui 提供两类“全局默认配置”入口：
@@ -57,7 +58,7 @@ export function getDefaultTheme(): Theme {
 // - I18nProvider({ ... }) 可在局部覆盖（例如某个子树临时切换语言）
 export function getDefaultI18nConfig(): Required<ComponentLibI18nConfig> {
   return {
-    locale: componentLibConfig.i18n?.locale ?? 'zh-CN',
+    locale: componentLibConfig.i18n?.locale ?? resolveSystemBuiltinLocale(),
     messages: componentLibConfig.i18n?.messages ?? {},
     missingKeyPolicy: componentLibConfig.i18n?.missingKeyPolicy ?? 'key',
   };

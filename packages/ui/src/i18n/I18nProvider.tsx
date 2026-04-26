@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { getDefaultI18nConfig } from '../config';
+import { resolveBuiltinLocale } from './locale';
 import { locales } from './locales';
 import type {
   I18nContextValue,
@@ -41,7 +42,7 @@ function resolveI18nValue(
 ): I18nContextValue {
   const locale = override?.locale ?? base.locale;
   // 优先级：override.messages > base.messages > 内置语言包
-  const builtinMessages = locales[locale] ?? locales['zh-CN'] ?? {};
+  const builtinMessages = locales[resolveBuiltinLocale(locale)] ?? {};
   const messages = { ...builtinMessages, ...base.messages, ...(override?.messages ?? {}) };
   const missingKeyPolicy = override?.missingKeyPolicy ?? base.missingKeyPolicy;
   const t = createTranslator(messages, missingKeyPolicy);

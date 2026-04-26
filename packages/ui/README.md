@@ -37,7 +37,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ComponentLibProvider
       theme={{ colors: { primary: '#2563EB' } }}
-      locale="zh-CN"
       messages={{ 'button.ok': '确定' }}
       missingKeyPolicy="throw"
     >
@@ -78,6 +77,7 @@ configureComponentLib({
 
 ### 核心概念
 
+- 默认 locale 会读取系统语言；不支持的语言回退到 `zh-CN`
 - `messages`：扁平字典 `Record<string, string>`
 - `t(key, params?)`：取文案；支持 `{name}` 这种占位符插值
 - `missingKeyPolicy`：

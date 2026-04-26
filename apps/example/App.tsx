@@ -13,7 +13,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <ComponentLibProvider locale="en-US" theme={exampleTheme}>
+        <ComponentLibProvider theme={exampleTheme}>
           <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
           <Playground />
         </ComponentLibProvider>
