@@ -147,9 +147,8 @@ type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
 
 const MAX_LEVELS = 3;
 const LEVELS = Array.from({ length: MAX_LEVELS }, (_, level) => level);
-const LIST_TRANSITION_OFFSET = wp(26);
-const LIST_TRANSITION_DURATION = 210;
-const LIST_TRANSITION_START_OPACITY = 0.82;
+const LIST_FADE_DURATION = 180;
+const LIST_FADE_START_OPACITY = 0.58;
 const OPTION_ROW_ESTIMATED_HEIGHT = wp(58);
 const SELECTED_OPTION_VIEW_POSITION = 0.18;
 
@@ -585,13 +584,17 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     () => currentOptions.findIndex((item) => item.value === activeSelectedValue),
     [activeSelectedValue, currentOptions]
   );
+  const currentOptionsRef = React.useRef(currentOptions);
+  const activeSelectedIndexRef = React.useRef(activeSelectedIndex);
+  currentOptionsRef.current = currentOptions;
+  activeSelectedIndexRef.current = activeSelectedIndex;
   const confirmDisabled = disabled || !isCompleteDraft(draft);
   const stepsScrollRef = React.useRef<ScrollView>(null);
   const optionsScrollRef = React.useRef<ScrollView>(null);
   const optionLayoutYRef = React.useRef(new Map<string, number>());
   const optionsViewportHeightRef = React.useRef(0);
   const pendingOptionScrollFrameRef = React.useRef<number | null>(null);
-  const listTranslateX = React.useRef(new Animated.Value(0)).current;
+  const pendingActiveOptionScrollRef = React.useRef(false);
   const listOpacity = React.useRef(new Animated.Value(1)).current;
   const pendingListTransitionFrameRef = React.useRef<number | null>(null);
   const previousActiveLevelRef = React.useRef(draft.activeLevel);
@@ -599,9 +602,8 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const listAnimatedStyle = React.useMemo(
     () => ({
       opacity: listOpacity,
-      transform: [{ translateX: listTranslateX }],
     }),
-    [listOpacity, listTranslateX]
+    [listOpacity]
   );
 
   React.useEffect(() => {
@@ -623,11 +625,9 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
 
   const resetListTransition = React.useCallback(() => {
     cancelListTransitionFrame();
-    listTranslateX.stopAnimation();
     listOpacity.stopAnimation();
-    listTranslateX.setValue(0);
     listOpacity.setValue(1);
-  }, [cancelListTransitionFrame, listOpacity, listTranslateX]);
+  }, [cancelListTransitionFrame, listOpacity]);
 
   const startListTransition = React.useCallback(
     (fromLevel: number, toLevel: number) => {
@@ -638,36 +638,24 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
         return;
       }
 
-      const direction = toLevel > fromLevel ? 1 : -1;
       cancelListTransitionFrame();
-      listTranslateX.stopAnimation();
       listOpacity.stopAnimation();
-      listTranslateX.setValue(direction * LIST_TRANSITION_OFFSET);
-      listOpacity.setValue(LIST_TRANSITION_START_OPACITY);
+      listOpacity.setValue(LIST_FADE_START_OPACITY);
 
       pendingListTransitionFrameRef.current = requestAnimationFrame(() => {
         pendingListTransitionFrameRef.current = null;
-        Animated.parallel([
-          Animated.timing(listTranslateX, {
-            toValue: 0,
-            duration: LIST_TRANSITION_DURATION,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-          Animated.timing(listOpacity, {
-            toValue: 1,
-            duration: LIST_TRANSITION_DURATION,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]).start();
+        Animated.timing(listOpacity, {
+          toValue: 1,
+          duration: LIST_FADE_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
       });
     },
     [
       cancelListTransitionFrame,
       contentMounted,
       listOpacity,
-      listTranslateX,
       resetListTransition,
       visible,
     ]
@@ -700,18 +688,19 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
       const scrollView = optionsScrollRef.current;
       if (!scrollView) return;
 
-      if (activeSelectedIndex <= 0) {
+      const activeIndex = activeSelectedIndexRef.current;
+      if (activeIndex <= 0) {
         scrollView.scrollTo({ y: 0, animated });
         return;
       }
 
-      const activeOption = currentOptions[activeSelectedIndex];
+      const activeOption = currentOptionsRef.current[activeIndex];
       if (!activeOption) return;
 
       const key = keyExtractor(activeOption);
       const layoutY = optionLayoutYRef.current.get(key);
       const viewportHeight = optionsViewportHeightRef.current;
-      const fallbackY = activeSelectedIndex * OPTION_ROW_ESTIMATED_HEIGHT;
+      const fallbackY = activeIndex * OPTION_ROW_ESTIMATED_HEIGHT;
       const measuredY = layoutY ?? fallbackY;
       const viewOffset = viewportHeight > 0 ? viewportHeight * SELECTED_OPTION_VIEW_POSITION : 0;
 
@@ -720,12 +709,12 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
         animated,
       });
     },
-    [activeSelectedIndex, currentOptions, keyExtractor]
+    [keyExtractor]
   );
 
   const scheduleActiveOptionScroll = React.useCallback(
     (animated = false) => {
-      if (!visible || !contentMounted) return;
+      if (!visible || !contentMounted || !pendingActiveOptionScrollRef.current) return;
 
       if (pendingOptionScrollFrameRef.current != null) {
         cancelAnimationFrame(pendingOptionScrollFrameRef.current);
@@ -733,6 +722,8 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
 
       pendingOptionScrollFrameRef.current = requestAnimationFrame(() => {
         pendingOptionScrollFrameRef.current = null;
+        if (!pendingActiveOptionScrollRef.current) return;
+        pendingActiveOptionScrollRef.current = false;
         scrollActiveOptionIntoView(animated);
       });
     },
@@ -744,6 +735,12 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   }, [currentOptions]);
 
   React.useEffect(() => {
+    if (!visible || !contentMounted) {
+      pendingActiveOptionScrollRef.current = false;
+      return;
+    }
+
+    pendingActiveOptionScrollRef.current = true;
     scheduleActiveOptionScroll(false);
     return () => {
       if (pendingOptionScrollFrameRef.current != null) {
@@ -751,7 +748,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
         pendingOptionScrollFrameRef.current = null;
       }
     };
-  }, [activeSelectedIndex, contentMounted, draft.activeLevel, scheduleActiveOptionScroll, visible]);
+  }, [contentMounted, draft.activeLevel, scheduleActiveOptionScroll, visible]);
 
   const emitDraftChange = React.useCallback(
     (nextDraft: AddressDraft) => {
@@ -803,7 +800,9 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
         activeLevel: hasNextLevel(item, level) ? level + 1 : level,
       };
 
-      startListTransition(prevDraft.activeLevel, nextDraft.activeLevel);
+      if (prevDraft.activeLevel !== nextDraft.activeLevel) {
+        startListTransition(prevDraft.activeLevel, nextDraft.activeLevel);
+      }
       draftRef.current = nextDraft;
       setDraft(nextDraft);
       emitDraftChange(nextDraft);
@@ -886,7 +885,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
               styles.stepPill,
               {
                 backgroundColor: isActive ? theme.colors.secondary : theme.colors.surface,
-                borderColor: isActive ? 'transparent' : theme.colors.border,
+                borderColor: isActive ? theme.colors.secondary : theme.colors.border,
                 opacity: enabled ? (pressed ? 0.78 : 1) : 0.45,
               },
             ]}
@@ -1185,12 +1184,11 @@ const styles = StyleSheet.create({
   stepPill: {
     alignItems: 'center',
     borderRadius: wp(8),
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: wp(1),
     justifyContent: 'center',
     maxWidth: wp(178),
     minHeight: wp(34),
     minWidth: wp(76),
-    overflow: 'hidden',
     paddingHorizontal: wp(11),
   },
   stepText: {

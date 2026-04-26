@@ -28,7 +28,7 @@ export type {
   CheckedState,
 } from './ui/Checkbox/index';
 export { Text } from './ui/Text/index';
-export type { TextProps } from './ui/Text/index';
+export type { TextProps, TextRef, TextSize, TextTone, TextVariant, TextWeight } from './ui/Text/index';
 export { TextInput } from './ui/TextInput/index';
 export type { TextInputProps } from './ui/TextInput/index';
 export { BottomSheet } from './ui/BottomSheet/index';

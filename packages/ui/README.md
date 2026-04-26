@@ -171,7 +171,7 @@ export function DemoAccordion() {
 
 - 组件内部禁止写死品牌色，必须来自 `useTheme()`（允许通过 props 单次覆盖）
 - 尺寸类 props 直接接收 number（业务侧可自行传 `wp/sp` 计算后的值）
-- 文字组件统一使用组件库 [Text.tsx](src/ui/Text.tsx)，避免字体/缩放规则在业务里分裂
+- 文字组件统一使用组件库 [Text](src/ui/Text/index.tsx)，优先用 `variant` / `size` / `weight` / `tone` 表达语义，`style` 只作为最终 escape hatch
 - 新增 tokens 流程：
   - 先扩展 [Theme](src/theme/types.ts) 的字段
   - 同步补齐 [defaultTheme](src/theme/defaultTheme.ts)
