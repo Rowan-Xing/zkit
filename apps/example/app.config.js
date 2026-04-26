@@ -1,4 +1,4 @@
-const icon = './assets/images/y2icon.png';
+const icon = './assets/images/logo.png';
 const iosBundleIdentifier =
   process.env.Y2KIT_EXAMPLE_IOS_BUNDLE_IDENTIFIER ?? 'com.xingyuyang.y2kitexample';
 const appleTeamId = process.env.Y2KIT_EXAMPLE_APPLE_TEAM_ID;
@@ -17,6 +17,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: iosBundleIdentifier,
+      icon,
       ...(appleTeamId ? { appleTeamId } : {}),
     },
     android: {
