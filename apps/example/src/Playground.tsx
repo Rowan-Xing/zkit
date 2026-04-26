@@ -1,6 +1,14 @@
 import * as React from 'react';
-import { Pressable, ScrollView, View, type LayoutChangeEvent } from 'react-native';
+import {
+  BackHandler,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { initRouterGuard, wp } from 'y2kit-tools';
 import {
   FloatingDebugger,
@@ -45,8 +53,12 @@ const NAV_ICONS: Record<ShowcaseNavKey, FeatherIconName> = {
   tools: 'tool',
 };
 
+const ROUTE_PUSH_DURATION = 280;
+const ROUTE_POP_DURATION = 220;
+
 export function Playground() {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { t } = useI18n();
   const scrollViewRef = React.useRef<ScrollView>(null);
   const sectionOffsetsRef = React.useRef<Partial<Record<ShowcaseNavKey, number>>>({});
@@ -68,8 +80,9 @@ export function Playground() {
   const [range, setRange] = React.useState<string[]>(['2026-04-01', '2026-04-23']);
   const [serviceChoice, setServiceChoice] = React.useState('tokens');
   const [captchaVisible, setCaptchaVisible] = React.useState(false);
-  const [linkedScrollOpen, setLinkedScrollOpen] = React.useState(false);
+  const [linkedScrollMounted, setLinkedScrollMounted] = React.useState(false);
   const [routerGuardStatus, setRouterGuardStatus] = React.useState(() => t('example.router.ready'));
+  const linkedRouteProgress = useSharedValue(0);
 
   const rangeLabel = React.useMemo(
     () => (range.length === 2 ? `${range[0]} ${t('example.common.to')} ${range[1]}` : t('example.range.select')),
@@ -165,13 +178,52 @@ export function Playground() {
     }, 2600);
   }, [t]);
 
-  const openLinkedScrollDemo = React.useCallback(() => {
-    setLinkedScrollOpen(true);
+  const completeLinkedScrollClose = React.useCallback(() => {
+    setLinkedScrollMounted(false);
   }, []);
 
+  const openLinkedScrollDemo = React.useCallback(() => {
+    linkedRouteProgress.value = 0;
+    setLinkedScrollMounted(true);
+    requestAnimationFrame(() => {
+      linkedRouteProgress.value = withTiming(1, {
+        duration: ROUTE_PUSH_DURATION,
+        easing: Easing.out(Easing.cubic),
+      });
+    });
+  }, [linkedRouteProgress]);
+
   const closeLinkedScrollDemo = React.useCallback(() => {
-    setLinkedScrollOpen(false);
-  }, []);
+    linkedRouteProgress.value = withTiming(
+      0,
+      {
+        duration: ROUTE_POP_DURATION,
+        easing: Easing.in(Easing.cubic),
+      },
+      (finished) => {
+        if (finished) runOnJS(completeLinkedScrollClose)();
+      }
+    );
+  }, [completeLinkedScrollClose, linkedRouteProgress]);
+
+  React.useEffect(() => {
+    if (!linkedScrollMounted) return undefined;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeLinkedScrollDemo();
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [closeLinkedScrollDemo, linkedScrollMounted]);
+
+  const linkedRouteAnimatedStyle = useAnimatedStyle(
+    () => ({
+      opacity: linkedRouteProgress.value,
+      transform: [{ translateX: (1 - linkedRouteProgress.value) * screenWidth }],
+    }),
+    [screenWidth]
+  );
 
   const openCaptcha = React.useCallback(() => {
     setCaptchaVisible(true);
@@ -221,10 +273,6 @@ export function Playground() {
     setRouterGuardStatus(events.length === 2 ? t('example.router.blocked') : events.join(' -> '));
     toast.info(t('example.router.tested'), 1200);
   }, [t]);
-
-  if (linkedScrollOpen) {
-    return <LinkedScrollDemo onBack={closeLinkedScrollDemo} />;
-  }
 
   return (
     <View style={[styles.screen, { backgroundColor: exampleBackgroundColor }]}>
@@ -332,6 +380,12 @@ export function Playground() {
         }}
       />
       <FloatingDebugger initialVisible={false} enableNetworkTab />
+
+      {linkedScrollMounted ? (
+        <Animated.View style={[styles.linkedRouteLayer, linkedRouteAnimatedStyle]}>
+          <LinkedScrollDemo onBack={closeLinkedScrollDemo} />
+        </Animated.View>
+      ) : null}
     </View>
   );
 }

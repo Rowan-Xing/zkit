@@ -58,6 +58,33 @@ export function LinkedScrollDemo({ onBack }: { onBack: () => void }) {
     [items, selectedSection]
   );
   const selectedData = selectedItem.data ?? linkedFallbackData;
+  const menuContentContainerStyle = React.useMemo(
+    () => [styles.linkedMenuContent, { paddingBottom: insets.bottom + wp(8) }],
+    [insets.bottom]
+  );
+  const contentListContentContainerStyle = React.useMemo(
+    () => ({ paddingBottom: insets.bottom + wp(12) }),
+    [insets.bottom]
+  );
+  const menuListProps = React.useMemo(
+    () => ({
+      drawDistance: wp(360),
+      contentContainerStyle: menuContentContainerStyle,
+    }),
+    [menuContentContainerStyle]
+  );
+  const contentListProps = React.useMemo(
+    () => ({
+      drawDistance: wp(900),
+      contentContainerStyle: contentListContentContainerStyle,
+    }),
+    [contentListContentContainerStyle]
+  );
+  const getMenuItemType = React.useCallback(() => 'menu', []);
+  const getSectionType = React.useCallback(
+    (item: LinkedScrollItem) => item.data?.kind ?? linkedFallbackData.kind,
+    []
+  );
 
   const renderSection = React.useCallback(
     ({ item, index, selected }: LinkedScrollSectionRenderContext<string, LinkedDemoData>) => (
@@ -107,7 +134,7 @@ export function LinkedScrollDemo({ onBack }: { onBack: () => void }) {
         </View>
       </View>
 
-      <View style={[styles.linkedDemoBody, { paddingBottom: insets.bottom }]}>
+      <View style={styles.linkedDemoBody}>
         <LinkedScroll
           items={items}
           value={selectedSection}
@@ -122,15 +149,10 @@ export function LinkedScrollDemo({ onBack }: { onBack: () => void }) {
           inactiveColor={theme.colors.muted}
           menuBackgroundColor="#F0F3F8"
           contentBackgroundColor={exampleBackgroundColor}
-          getMenuItemType={() => 'menu'}
-          getSectionType={(item) => item.data?.kind ?? linkedFallbackData.kind}
-          menuListProps={{
-            drawDistance: wp(360),
-            contentContainerStyle: styles.linkedMenuContent,
-          }}
-          contentListProps={{
-            drawDistance: wp(900),
-          }}
+          getMenuItemType={getMenuItemType}
+          getSectionType={getSectionType}
+          menuListProps={menuListProps}
+          contentListProps={contentListProps}
           renderSection={renderSection}
         />
       </View>

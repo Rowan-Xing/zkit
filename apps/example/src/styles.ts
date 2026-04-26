@@ -5,6 +5,11 @@ export const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
+  linkedRouteLayer: {
+    ...StyleSheet.absoluteFillObject,
+    elevation: 8,
+    zIndex: 8,
+  },
   content: {
     paddingHorizontal: wp(18),
   },
