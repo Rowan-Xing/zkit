@@ -151,6 +151,7 @@ const PROGRAMMATIC_SETTLE_DURATION = 120;
 const DEFAULT_MINIMUM_VIEW_TIME = 32;
 const DISABLED_OPACITY = 0.45;
 const PRESSED_OPACITY = 0.72;
+const MENU_VISIBLE_INDEX_BUFFER = 1;
 const DISABLED_MAINTAIN_VISIBLE_CONTENT_POSITION = { disabled: true };
 
 function clampNumber(value: number, min: number, max: number) {
@@ -302,6 +303,7 @@ export function LinkedScroll<
   const activeValueRef = React.useRef<Value | undefined>(activeValue);
   const disabledRef = React.useRef(disabled);
   const lastInternalCommitValueRef = React.useRef<Value | null>(null);
+  const lastChangeSourceRef = React.useRef<LinkedScrollChangeSource | 'external'>('external');
   const didInitialContentSyncRef = React.useRef(false);
   const didInitialMenuSyncRef = React.useRef(false);
   const itemsRef = React.useRef(items);
@@ -384,6 +386,7 @@ export function LinkedScroll<
       if (Object.is(activeValueRef.current, nextValue)) return;
 
       lastInternalCommitValueRef.current = nextValue;
+      lastChangeSourceRef.current = source;
       if (!isControlled) {
         activeValueRef.current = nextValue;
         setUncontrolledValue(nextValue);
@@ -416,6 +419,22 @@ export function LinkedScroll<
     [resolvedMenuScrollViewPosition]
   );
 
+  const isMenuIndexComfortablyVisible = React.useCallback((index: number) => {
+    if (index < 0) return true;
+
+    const visibleRange = menuListRef.current?.computeVisibleIndices();
+    if (!visibleRange) return false;
+
+    const { startIndex, endIndex } = visibleRange;
+    if (!Number.isFinite(startIndex) || !Number.isFinite(endIndex)) return false;
+    if (startIndex < 0 || endIndex < 0) return false;
+
+    return (
+      index >= startIndex + MENU_VISIBLE_INDEX_BUFFER &&
+      index <= endIndex - MENU_VISIBLE_INDEX_BUFFER
+    );
+  }, []);
+
   const scrollContentToIndex = React.useCallback(
     (index: number, animated: boolean) => {
       if (index < 0) return Promise.resolve();
@@ -431,11 +450,27 @@ export function LinkedScroll<
 
   React.useEffect(() => {
     if (activeIndex < 0) return;
-    const animated = didInitialMenuSyncRef.current;
+    const didInitialMenuSync = didInitialMenuSyncRef.current;
     didInitialMenuSyncRef.current = true;
-    const frame = requestAnimationFrame(() => scrollMenuToIndex(activeIndex, animated));
+
+    const source =
+      activeValue !== undefined && Object.is(lastInternalCommitValueRef.current, activeValue)
+        ? lastChangeSourceRef.current
+        : 'external';
+
+    const frame = requestAnimationFrame(() => {
+      if (!didInitialMenuSync || source === 'external' || source === 'menu') {
+        void scrollMenuToIndex(activeIndex, didInitialMenuSync);
+        return;
+      }
+
+      if (!isMenuIndexComfortablyVisible(activeIndex)) {
+        void scrollMenuToIndex(activeIndex, false);
+      }
+    });
+
     return () => cancelAnimationFrame(frame);
-  }, [activeIndex, scrollMenuToIndex]);
+  }, [activeIndex, activeValue, isMenuIndexComfortablyVisible, scrollMenuToIndex]);
 
   React.useEffect(() => {
     if (activeIndex < 0 || activeValue === undefined) return;
