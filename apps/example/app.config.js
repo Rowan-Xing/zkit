@@ -5,8 +5,8 @@ const appleTeamId = process.env.Y2KIT_EXAMPLE_APPLE_TEAM_ID;
 
 module.exports = {
   expo: {
-    name: 'y2kit example',
-    slug: 'y2kit-example',
+    name: 'Y2Kit',
+    slug: 'Y2Kit',
     version: '1.0.0',
     orientation: 'portrait',
     scheme: 'y2kit-example',

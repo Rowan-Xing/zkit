@@ -23,13 +23,13 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  TouchableOpacity,
   View,
   type KeyboardEvent,
 } from 'react-native';
 import Reanimated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { wp } from 'y2kit-tools';
 import { useTheme } from '../../theme/useTheme';
+import { Button } from '../../ui/Button/index';
 import { Text } from '../../ui/Text';
 
 /**
@@ -71,6 +71,8 @@ const DEFAULT_FOOTER_LAYOUT = 'row';
 const DEFAULT_Z_INDEX = 2000;
 /** 危险态按钮的临时语义色，后续更理想的是收敛到 theme token。 */
 const DANGER_COLOR = '#CF3050';
+/** 默认 action 按钮使用背景变暗反馈，避免和组件库 Button 默认缩放反馈发散。 */
+const ACTION_BUTTON_PRESS_EFFECT = 'darken' as const;
 
 /**
  * 动作语义角色。
@@ -940,8 +942,6 @@ function ActionDialogCard({
   onActionPress,
 }: ActionDialogCardProps) {
   const theme = useTheme();
-  /** 当前处于按压态的按钮 key，只用于提供按下反馈。 */
-  const [pressedButton, setPressedButton] = React.useState<string | null>(null);
   /** 控制蒙层透明度和卡片缩放的基础动画值。 */
   const anim = React.useRef(new Animated.Value(open ? 1 : 0)).current;
   /** 控制组件是否真正挂载到视图树。 */
@@ -1239,28 +1239,6 @@ function ActionDialogCard({
   }, [options.content, options.title, theme.colors.onSurface]);
 
   /**
-   * 默认按钮文案渲染。
-   *
-   * 说明：
-   * 1. 字符串/数字会使用统一按钮文字样式
-   * 2. ReactNode 会原样包一层容器后渲染
-   */
-  const renderActionLabel = React.useCallback(
-    (action: NormalizedActionDialogAction, color: string, pressed: boolean) => {
-      if (typeof action.label === 'string' || typeof action.label === 'number') {
-        return (
-          <Text style={[styles.buttonText, { color }, pressed ? styles.textPressed : null]}>
-            {action.label}
-          </Text>
-        );
-      }
-
-      return <View style={styles.buttonLabelNode}>{action.label}</View>;
-    },
-    []
-  );
-
-  /**
    * 根据按钮变体计算面板式按钮的颜色。
    */
   const getPanelColors = React.useCallback(
@@ -1269,7 +1247,6 @@ function ActionDialogCard({
         return {
           backgroundColor: DANGER_COLOR,
           textColor: '#FFFFFF',
-          borderColor: DANGER_COLOR,
           filled: true,
         };
       }
@@ -1278,7 +1255,6 @@ function ActionDialogCard({
         return {
           backgroundColor: theme.colors.primary,
           textColor: theme.colors.onPrimary,
-          borderColor: theme.colors.primary,
           filled: true,
         };
       }
@@ -1286,11 +1262,10 @@ function ActionDialogCard({
       return {
         backgroundColor: theme.colors.surface,
         textColor: theme.colors.onSurface,
-        borderColor: theme.colors.border,
         filled: false,
       };
     },
-    [theme.colors.border, theme.colors.onPrimary, theme.colors.onSurface, theme.colors.primary, theme.colors.surface]
+    [theme.colors.onPrimary, theme.colors.onSurface, theme.colors.primary, theme.colors.surface]
   );
 
   /**
@@ -1318,8 +1293,6 @@ function ActionDialogCard({
    */
   const renderDefaultAction = React.useCallback(
     (action: NormalizedActionDialogAction, index: number) => {
-      const isPressed = pressedButton === action.key;
-
       if (options.footer.layout === 'bar') {
         const textColor =
           action.variant === 'destructive'
@@ -1336,16 +1309,25 @@ function ActionDialogCard({
               index > 0 ? [styles.barDivider, { borderLeftColor: theme.colors.border }] : null,
             ]}
           >
-            <TouchableOpacity
+            <Button
+              block
               disabled={action.disabled}
-              style={[styles.barButton, isPressed ? styles.barButtonPressed : null]}
-              activeOpacity={1}
-              onPressIn={() => setPressedButton(action.key)}
-              onPressOut={() => setPressedButton(null)}
+              variant="ghost"
+              shape="square"
+              pressEffect={ACTION_BUTTON_PRESS_EFFECT}
+              minHeight={wp(45)}
+              paddingHorizontal={0}
+              paddingVertical={wp(12)}
+              color={textColor}
+              textColor={textColor}
+              disabledTextColor={theme.colors.disabled}
+              style={[styles.barButtonRoot, action.disabled ? styles.barButtonDisabledRoot : null]}
+              contentStyle={styles.barButton}
+              textStyle={styles.buttonText}
               onPress={() => void onActionPress(action.key)}
             >
-              {renderActionLabel(action, action.disabled ? theme.colors.disabled : textColor, isPressed)}
-            </TouchableOpacity>
+              {action.label}
+            </Button>
           </View>
         );
       }
@@ -1354,26 +1336,31 @@ function ActionDialogCard({
 
       return (
         <View key={action.key} style={options.footer.layout === 'row' ? styles.rowCell : null}>
-          <TouchableOpacity
+          <Button
+            block
             disabled={action.disabled}
-            style={[
+            variant="solid"
+            shape="rounded"
+            pressEffect={ACTION_BUTTON_PRESS_EFFECT}
+            radius={wp(12)}
+            minHeight={wp(44)}
+            paddingHorizontal={wp(16)}
+            paddingVertical={0}
+            backgroundColor={colors.backgroundColor}
+            textColor={colors.textColor}
+            disabledBackgroundColor={colors.backgroundColor}
+            disabledTextColor={colors.textColor}
+            borderWidth={colors.filled ? undefined : StyleSheet.hairlineWidth}
+            style={action.disabled ? styles.panelButtonDisabledRoot : null}
+            contentStyle={[
               styles.panelButton,
               options.footer.layout === 'stacked' ? styles.panelButtonStacked : null,
-              {
-                backgroundColor: colors.backgroundColor,
-                borderColor: colors.borderColor,
-                borderWidth: colors.filled ? 0 : StyleSheet.hairlineWidth,
-                opacity: action.disabled ? 0.45 : colors.filled && isPressed ? 0.86 : 1,
-              },
-              !colors.filled && isPressed ? styles.panelButtonPressed : null,
             ]}
-            activeOpacity={1}
-            onPressIn={() => setPressedButton(action.key)}
-            onPressOut={() => setPressedButton(null)}
+            textStyle={styles.buttonText}
             onPress={() => void onActionPress(action.key)}
           >
-            {renderActionLabel(action, colors.textColor, isPressed)}
-          </TouchableOpacity>
+            {action.label}
+          </Button>
         </View>
       );
     },
@@ -1381,8 +1368,6 @@ function ActionDialogCard({
       getPanelColors,
       onActionPress,
       options.footer.layout,
-      pressedButton,
-      renderActionLabel,
       theme.colors.border,
       theme.colors.disabled,
       theme.colors.onSurface,
@@ -1703,14 +1688,17 @@ const styles = StyleSheet.create({
   barDivider: {
     borderLeftWidth: StyleSheet.hairlineWidth,
   },
+  barButtonRoot: {
+    width: '100%',
+  },
+  barButtonDisabledRoot: {
+    opacity: 1,
+  },
   barButton: {
     width: '100%',
     paddingVertical: wp(12),
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  barButtonPressed: {
-    backgroundColor: '#F0F0F4',
   },
   panelFooter: {
     width: '100%',
@@ -1738,18 +1726,11 @@ const styles = StyleSheet.create({
   panelButtonStacked: {
     width: '100%',
   },
-  panelButtonPressed: {
-    backgroundColor: '#F5F5F7',
+  panelButtonDisabledRoot: {
+    opacity: 0.45,
   },
   buttonText: {
     fontSize: wp(15),
     lineHeight: wp(21),
-  },
-  buttonLabelNode: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textPressed: {
-    opacity: 0.72,
   },
 });
