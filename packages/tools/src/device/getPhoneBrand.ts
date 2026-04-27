@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
  * 说明：
  * - 这里的“品牌”是为了业务侧做更新提醒/跳转商店时的归类结果，而不是严格的硬件厂商枚举。
  * - iOS 统一返回 `ios`（对应 App Store 口径）。
- * - Android 只依赖系统 Build 信息：`Platform.constants.Manufacturer` + `Platform.constants.Brand`。
+ * - Android 只依赖系统 Build 信息：Manufacturer / Brand / Model / Product / Device。
  *
  * 可靠性与边界：
  * - 大多数真机上 Manufacturer/Brand 比较稳定，满足“按手机品牌归类”这个需求。
@@ -23,18 +23,70 @@ export type PhoneBrand =
   | 'meizu'
   | 'unknown';
 
+export type PhoneBrandInput = {
+  os?: unknown;
+  manufacturer?: unknown;
+  brand?: unknown;
+  model?: unknown;
+  product?: unknown;
+  device?: unknown;
+};
+
+const norm = (value: unknown): string =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+const readPlatformConstant = (constants: Record<string, unknown>, key: string): unknown =>
+  constants[key] ?? constants[key.toLowerCase()];
+
 /**
- * 将任意输入规整为可比对的小写字符串。
+ * 将平台信息归类成应用商店口径的设备品牌。
  */
-function norm(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase();
+export function resolvePhoneBrand(input: PhoneBrandInput): PhoneBrand {
+  const os = norm(input.os);
+  if (os === 'ios') return 'ios';
+  if (os && os !== 'android') return 'unknown';
+
+  const manufacturer = norm(input.manufacturer);
+  const brand = norm(input.brand);
+  const value = [
+    manufacturer,
+    brand,
+    input.model,
+    input.product,
+    input.device,
+  ]
+    .map(norm)
+    .filter(Boolean)
+    .join(' ');
+
+  if (!value) return 'unknown';
+
+  // OPPO 系：OPPO/一加/真我/HeyTap（同一套应用商店口径）
+  if (/(oppo|one\s*plus|oneplus|realme|heytap|欧珀|一加|真我)/.test(value)) return 'oppo';
+  // vivo 系：vivo/iQOO/bbk
+  if (/(vivo|i\s*qoo|iqoo|bbk|维沃)/.test(value)) return 'vivo';
+  // 小米系：小米/红米/POCO
+  if (/(xiaomi|redmi|poco|小米|红米)/.test(value)) return 'xiaomi';
+  // 荣耀：优先做“老荣耀→华为”兼容
+  if (/(honor|荣耀)/.test(value)) {
+    if (/(huawei|华为)/.test(manufacturer)) return 'huawei';
+    return 'honor';
+  }
+  // 华为
+  if (/(huawei|华为)/.test(value)) return 'huawei';
+  // 魅族/魅蓝
+  if (/(meizu|mblu|魅族|魅蓝)/.test(value)) return 'meizu';
+
+  return 'unknown';
 }
 
 /**
  * 获取当前设备应归类到的品牌（用于映射到应用商城）。
  *
  * Android 判定策略：
- * - 取 Manufacturer + Brand 拼接做匹配，尽量覆盖“子品牌/别名”。
+ * - 取 Manufacturer / Brand / Model / Product / Device 拼接做匹配，尽量覆盖“子品牌/别名”。
  * - 映射规则（按业务口径归并）：
  *   - OPPO 系：oppo / oneplus(一加) / realme(真我) / heytap → `oppo`
  *   - vivo 系：vivo / iqoo / bbk → `vivo`
@@ -56,28 +108,13 @@ export function getPhoneBrand(): PhoneBrand {
   if (Platform.OS !== 'android') return 'unknown';
 
   // Android：读取 RN 暴露的系统常量
-  const constants = (Platform as any).constants || {};
-  const manufacturer = norm(constants.Manufacturer);
-  const brand = norm(constants.Brand);
-  // 拼接成一个可搜索串，方便一次性覆盖 manufacturer/brand 两处的特征
-  const s = `${manufacturer} ${brand}`.trim();
-
-  // OPPO 系：OPPO/一加/真我/HeyTap（同一套应用商店口径）
-  if (/(oppo|oneplus|realme|heytap|欧珀|一加|真我)/.test(s)) return 'oppo';
-  // vivo 系：vivo/iQOO/bbk
-  if (/(vivo|iqoo|bbk|维沃)/.test(s)) return 'vivo';
-  // 小米系：小米/红米/POCO
-  if (/(xiaomi|redmi|poco|小米|红米)/.test(s)) return 'xiaomi';
-  // 荣耀：优先做“老荣耀→华为”兼容
-  if (/honor/.test(s)) {
-    if (/huawei|华为/.test(manufacturer)) return 'huawei';
-    return 'honor';
-  }
-  // 华为
-  if (/huawei|华为/.test(s)) return 'huawei';
-  // 魅族/魅蓝
-  if (/meizu|mblu|魅族/.test(s)) return 'meizu';
-
-  // 不在映射内的机型统一返回 unknown，交由业务侧兜底处理
-  return 'unknown';
+  const constants = ((Platform as any).constants || {}) as Record<string, unknown>;
+  return resolvePhoneBrand({
+    os: Platform.OS,
+    manufacturer: readPlatformConstant(constants, 'Manufacturer'),
+    brand: readPlatformConstant(constants, 'Brand'),
+    model: readPlatformConstant(constants, 'Model'),
+    product: readPlatformConstant(constants, 'Product'),
+    device: readPlatformConstant(constants, 'Device'),
+  });
 }
