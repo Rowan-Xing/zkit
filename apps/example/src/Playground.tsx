@@ -427,7 +427,7 @@ const ShowcaseNav = React.memo(function ShowcaseNav({
               <View
                 style={[
                   styles.navItemIcon,
-                  { backgroundColor: active ? 'rgba(255,255,255,0.18)' : theme.colors.secondary },
+                  { backgroundColor: active ? 'rgba(255,255,255,0.2)' : theme.colors.secondary },
                 ]}
               >
                 {renderIcon(NAV_ICONS[item.key], iconColor, wp(16))}
