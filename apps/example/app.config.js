@@ -17,17 +17,11 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: iosBundleIdentifier,
-      icon,
       ...(appleTeamId ? { appleTeamId } : {}),
     },
     android: {
       package: 'com.anonymous.y2kitexample',
       edgeToEdgeEnabled: true,
-      icon,
-      adaptiveIcon: {
-        foregroundImage: icon,
-        backgroundColor: '#ffffff',
-      },
     },
   },
 };
