@@ -5,8 +5,9 @@
  * ```tsx
  * import { toast } from 'y2kit-ui';
  *
+ * toast.configure({ position: 'top', offset: 35, duration: 1500 });
  * toast.success('操作成功');
- * toast.error('操作失败');
+ * toast.error('网络错误', { position: 'bottom', offset: 48 });
  * ```
  */
 
@@ -30,8 +31,21 @@ import { Text } from '../../ui/Text';
 /** Toast 语义色 */
 export type ToastTone = 'success' | 'error' | 'warning' | 'info';
 
+/** Toast 出现位置 */
+export type ToastPosition = 'top' | 'bottom';
+
 /** @deprecated 请使用 ToastTone */
 export type ToastType = ToastTone;
+
+/** 全局默认配置，应用启动时通过 `toast.configure(...)` 设定 */
+export type ToastDefaults = {
+  /** Toast 出现位置，默认 'top' */
+  position?: ToastPosition;
+  /** 相对 safeArea 的额外偏移（设计尺寸，内部会通过 wp 换算），默认 35 */
+  offset?: number;
+  /** 默认显示时长（毫秒），传 0 时不自动关闭，默认 1000 */
+  duration?: number;
+};
 
 /** Toast 配置选项 */
 export type ToastOptions = {
@@ -43,8 +57,12 @@ export type ToastOptions = {
   title?: unknown;
   /** 提示内容，支持字符串、数字、Error 对象 */
   message?: unknown;
-  /** 显示时长（毫秒）。传 0 时不自动关闭，默认 1000 */
+  /** 显示时长（毫秒）。传 0 时不自动关闭，默认继承全局配置 */
   duration?: number;
+  /** Toast 出现位置，默认继承全局配置 */
+  position?: ToastPosition;
+  /** 相对 safeArea 的额外偏移（设计尺寸），默认继承全局配置 */
+  offset?: number;
 };
 
 /** 消息入参后追加的配置选项 */
@@ -57,12 +75,24 @@ type LegacyToastOptions = ToastOptions & {
   type?: ToastTone;
 };
 
+type PartialToastOptions = {
+  id?: string;
+  tone?: ToastTone;
+  title: string;
+  message: string;
+  duration?: number;
+  position?: ToastPosition;
+  offset?: number;
+};
+
 type ResolvedToastOptions = {
   id?: string;
   tone: ToastTone;
   title: string;
   message: string;
   duration: number;
+  position: ToastPosition;
+  offset: number;
 };
 
 type ToastItem = ResolvedToastOptions & {
@@ -75,10 +105,11 @@ type ToastState = {
   toast: ToastItem | null;
 };
 
+const DEFAULT_POSITION: ToastPosition = 'top';
+const DEFAULT_OFFSET = 35;
 const DEFAULT_DURATION = 1000;
-const DEFAULT_TOP_OFFSET = wp(35);
 const TOAST_HOST_Z_INDEX = 5000;
-const TOAST_OPTION_KEYS = new Set(['id', 'tone', 'type', 'title', 'message', 'duration']);
+const TOAST_OPTION_KEYS = new Set(['id', 'tone', 'type', 'title', 'message', 'duration', 'position', 'offset']);
 
 const TOAST_ICON_SUCCESS = require('../../assets/icons/toast/success.webp');
 const TOAST_ICON_ERROR = require('../../assets/icons/toast/error.webp');
@@ -122,10 +153,20 @@ function normalizeMessage(message: unknown) {
   }
 }
 
-function normalizeDuration(value: number | undefined) {
-  if (value == null) return DEFAULT_DURATION;
-  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_DURATION;
+function normalizeDuration(value: number | undefined): number | undefined {
+  if (value == null) return undefined;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return Math.max(0, Math.round(value));
+}
+
+function normalizePosition(value: unknown): ToastPosition | undefined {
+  if (value === 'top' || value === 'bottom') return value;
+  return undefined;
+}
+
+function normalizeOffset(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return Math.max(0, value);
 }
 
 function pickToneConfig(tone: ToastTone) {
@@ -159,11 +200,11 @@ function resolveToastOptions(
   input: unknown,
   options: ToastMessageOptions | ToastShortcutOptions | number | undefined,
   forcedTone?: ToastTone
-): ResolvedToastOptions {
+): PartialToastOptions {
   const optionInput = isOptionsObject(input) ? input : undefined;
   const messageOptions = resolveMessageOptions(options);
   const toneOverride = 'tone' in messageOptions ? messageOptions.tone : undefined;
-  const tone = forcedTone ?? toneOverride ?? optionInput?.tone ?? optionInput?.type ?? 'info';
+  const tone = forcedTone ?? toneOverride ?? optionInput?.tone ?? optionInput?.type;
   const title = normalizeMessage(messageOptions.title ?? optionInput?.title);
   const message = normalizeMessage(optionInput ? optionInput.message : input);
 
@@ -173,6 +214,8 @@ function resolveToastOptions(
     title,
     message,
     duration: normalizeDuration(messageOptions.duration ?? optionInput?.duration),
+    position: normalizePosition(messageOptions.position ?? optionInput?.position),
+    offset: normalizeOffset(messageOptions.offset ?? optionInput?.offset),
   };
 }
 
@@ -196,6 +239,32 @@ class ToastServiceClass {
   private idSeed = 0;
   private setState: React.Dispatch<React.SetStateAction<ToastState>> | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private defaults: Required<ToastDefaults> = {
+    position: DEFAULT_POSITION,
+    offset: DEFAULT_OFFSET,
+    duration: DEFAULT_DURATION,
+  };
+
+  /**
+   * 设置全局默认配置。通常在应用启动时调用一次，后续每条 toast 的同名字段未指定时会回落到这里。
+   * 未传的字段会保留当前值，可以多次调用做增量更新。
+   */
+  configure(next: ToastDefaults | undefined) {
+    if (!next) return;
+    const position = normalizePosition(next.position);
+    const offset = normalizeOffset(next.offset);
+    const duration = normalizeDuration(next.duration);
+    this.defaults = {
+      position: position ?? this.defaults.position,
+      offset: offset ?? this.defaults.offset,
+      duration: duration ?? this.defaults.duration,
+    };
+  }
+
+  /** 读取当前全局默认配置 */
+  getDefaults(): Required<ToastDefaults> {
+    return this.defaults;
+  }
 
   /** @internal 设置挂载状态 */
   setMounted(mounted: boolean) {
@@ -298,8 +367,8 @@ class ToastServiceClass {
     this.clearTimer();
   }
 
-  private showResolved(options: ResolvedToastOptions) {
-    if (!options.title && !options.message) return '';
+  private showResolved(partial: PartialToastOptions) {
+    if (!partial.title && !partial.message) return '';
 
     if (!this.mounted) {
       console.warn('[toast] Provider not mounted');
@@ -308,9 +377,19 @@ class ToastServiceClass {
 
     if (!this.setState) return '';
 
-    const id = options.id ?? `toast_${Date.now()}_${(this.idSeed += 1)}`;
+    const resolved: ResolvedToastOptions = {
+      id: partial.id,
+      tone: partial.tone ?? 'info',
+      title: partial.title,
+      message: partial.message,
+      duration: partial.duration ?? this.defaults.duration,
+      position: partial.position ?? this.defaults.position,
+      offset: partial.offset ?? this.defaults.offset,
+    };
+
+    const id = resolved.id ?? `toast_${Date.now()}_${(this.idSeed += 1)}`;
     const toast: ToastItem = {
-      ...options,
+      ...resolved,
       id,
       open: true,
       updatedAt: Date.now(),
@@ -319,7 +398,7 @@ class ToastServiceClass {
     this.activeId = id;
     this.clearTimer();
     this.setState({ toast });
-    this.scheduleDismiss(id, options.duration);
+    this.scheduleDismiss(id, resolved.duration);
 
     return id;
   }
@@ -349,6 +428,7 @@ type ToastCardProps = {
   message: string;
   visible: boolean;
   accessibilityLabel: string;
+  position: ToastPosition;
 };
 
 function ToastCardBody({
@@ -375,9 +455,12 @@ function ToastCardBody({
   );
 }
 
-function IOSToastCard({ tone, message, visible, accessibilityLabel }: ToastCardProps) {
+function IOSToastCard({ tone, message, visible, accessibilityLabel, position }: ToastCardProps) {
+  const direction = position === 'top' ? -1 : 1;
+  const enterOffset = direction * IOS_TOAST_ENTER_OFFSET;
+  const exitOffset = direction * IOS_TOAST_EXIT_OFFSET;
   const opacity = useSharedValue(visible ? 1 : 0);
-  const translateY = useSharedValue(visible ? 0 : -IOS_TOAST_EXIT_OFFSET);
+  const translateY = useSharedValue(visible ? 0 : exitOffset);
   const scale = useSharedValue(visible ? 1 : 0.975);
   const squash = useSharedValue(0);
   const contentProgress = useSharedValue(visible ? 1 : 0);
@@ -404,7 +487,7 @@ function IOSToastCard({ tone, message, visible, accessibilityLabel }: ToastCardP
 
     if (visible) {
       opacity.value = 0;
-      translateY.value = -IOS_TOAST_ENTER_OFFSET;
+      translateY.value = enterOffset;
       scale.value = 0.955;
       squash.value = 1;
       contentProgress.value = 0;
@@ -420,12 +503,12 @@ function IOSToastCard({ tone, message, visible, accessibilityLabel }: ToastCardP
     }
 
     opacity.value = withTiming(0, { duration: 160, easing: IOS_TOAST_EXIT_EASING });
-    translateY.value = withTiming(-IOS_TOAST_EXIT_OFFSET, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
+    translateY.value = withTiming(exitOffset, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
     scale.value = withTiming(0.975, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
     squash.value = withTiming(0.32, { duration: 120, easing: IOS_TOAST_EXIT_EASING });
     contentProgress.value = withTiming(0, { duration: 120, easing: IOS_TOAST_EXIT_EASING });
     sheenOpacity.value = withTiming(0, { duration: 110, easing: IOS_TOAST_EXIT_EASING });
-  }, [contentProgress, opacity, scale, sheenOpacity, squash, translateY, visible]);
+  }, [contentProgress, enterOffset, exitOffset, opacity, scale, sheenOpacity, squash, translateY, visible]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const scaleX = scale.value * interpolate(squash.value, [0, 1], [1, 1.028]);
@@ -441,7 +524,7 @@ function IOSToastCard({ tone, message, visible, accessibilityLabel }: ToastCardP
   const contentAnimatedStyle = useAnimatedStyle(() => ({
     opacity: interpolate(contentProgress.value, [0, 1], [0.7, 1]),
     transform: [
-      { translateY: interpolate(contentProgress.value, [0, 1], [IOS_TOAST_CONTENT_OFFSET, 0]) },
+      { translateY: interpolate(contentProgress.value, [0, 1], [direction * IOS_TOAST_CONTENT_OFFSET, 0]) },
       { scale: interpolate(contentProgress.value, [0, 1], [0.985, 1]) },
     ],
   }));
@@ -469,7 +552,8 @@ function IOSToastCard({ tone, message, visible, accessibilityLabel }: ToastCardP
   );
 }
 
-function DefaultToastCard({ tone, message, visible, accessibilityLabel }: ToastCardProps) {
+function DefaultToastCard({ tone, message, visible, accessibilityLabel, position }: ToastCardProps) {
+  const direction = position === 'top' ? -1 : 1;
   const anim = React.useRef(new RNAnimated.Value(0)).current;
   const lastVisibleRef = React.useRef<boolean>(false);
 
@@ -513,12 +597,12 @@ function DefaultToastCard({ tone, message, visible, accessibilityLabel }: ToastC
         {
           translateY: anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [-wp(6), 0],
+            outputRange: [direction * wp(6), 0],
           }),
         },
       ],
     }),
-    [anim]
+    [anim, direction]
   );
 
   return (
@@ -548,7 +632,6 @@ function ToastCard(props: ToastCardProps) {
  */
 export function CardToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
-  const offset = React.useMemo(() => (insets.top || 0) + DEFAULT_TOP_OFFSET, [insets.top]);
   const [state, setState] = React.useState<ToastState>(initialState);
 
   React.useEffect(() => {
@@ -561,10 +644,20 @@ export function CardToastProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const hostStyle = React.useMemo<ViewStyle>(() => {
+    const defaults = toast.getDefaults();
+    const position = state.toast?.position ?? defaults.position;
+    const offset = state.toast?.offset ?? defaults.offset;
+    if (position === 'bottom') {
+      return { bottom: (insets.bottom || 0) + wp(offset) };
+    }
+    return { top: (insets.top || 0) + wp(offset) };
+  }, [insets.bottom, insets.top, state.toast?.offset, state.toast?.position]);
+
   return (
     <>
       {children}
-      <View pointerEvents="box-none" style={[styles.host, { top: offset }]}>
+      <View pointerEvents="box-none" style={[styles.host, hostStyle]}>
         {state.toast ? (
           <ToastCard
             key={state.toast.id}
@@ -572,6 +665,7 @@ export function CardToastProvider({ children }: { children: React.ReactNode }) {
             message={getDisplayMessage(state.toast)}
             visible={state.toast.open}
             accessibilityLabel={getAccessibilityLabel(state.toast)}
+            position={state.toast.position}
           />
         ) : null}
       </View>

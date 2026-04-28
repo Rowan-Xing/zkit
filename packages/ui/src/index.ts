@@ -145,8 +145,10 @@ export type {
 } from './services/PickerService/index';
 export { toast, cardToast, CardToastProvider } from './services/CardToastService/index';
 export type {
+  ToastDefaults,
   ToastMessageOptions,
   ToastOptions,
+  ToastPosition,
   ToastShortcutOptions,
   ToastTone,
   ToastType,
