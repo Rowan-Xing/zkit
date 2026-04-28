@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ComponentLibProvider } from 'y2kit-ui';
 
-import { Playground } from './src/Playground';
+import { RootTabs } from './src/screens/RootTabs';
 import { exampleMessages, resolveExampleLocale } from './src/i18n';
 import { exampleTheme } from './src/theme';
 
@@ -18,7 +18,7 @@ export default function App() {
       <SafeAreaProvider>
         <ComponentLibProvider locale={locale} messages={exampleMessages[locale]} theme={exampleTheme}>
           <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-          <Playground />
+          <RootTabs />
         </ComponentLibProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

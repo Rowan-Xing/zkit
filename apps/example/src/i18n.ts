@@ -117,6 +117,11 @@ const enUS: I18nMessages = {
   'example.metric.toolExports': 'Tool exports',
   'example.metric.motionTarget': 'Motion target',
 
+  'example.tabs.home': 'Basics',
+  'example.tabs.forms': 'Forms',
+  'example.tabs.showcase': 'Showcase',
+  'example.tabs.tools': 'Tools',
+
   'example.nav.foundation.title': 'Foundation',
   'example.nav.foundation.caption': 'Text / spinner',
   'example.nav.actions.title': 'Actions',
@@ -325,6 +330,11 @@ const zhCN: I18nMessages = {
   'example.metric.uiModules': 'UI 模块',
   'example.metric.toolExports': '工具导出',
   'example.metric.motionTarget': '动效帧率',
+
+  'example.tabs.home': '基础',
+  'example.tabs.forms': '表单',
+  'example.tabs.showcase': '展示',
+  'example.tabs.tools': '工具',
 
   'example.nav.foundation.title': '基础',
   'example.nav.foundation.caption': '文本 · 加载',

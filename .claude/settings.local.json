@@ -1,7 +1,33 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "WebFetch(domain:okwasniewski.github.io)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:callstackincubator.github.io)",
+      "WebFetch(domain:incubator.callstack.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s https://raw.githubusercontent.com/callstackincubator/react-native-bottom-tabs/main/README.md)",
+      "Bash(curl -s https://registry.npmjs.org/react-native-bottom-tabs)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('latest:', d.get\\('dist-tags',{}\\)\\); print\\('desc:', d.get\\('description',''\\)\\)\")",
+      "Bash(curl -sL \"https://oss.callstack.com/react-native-bottom-tabs/docs/getting-started/quick-start\" -o /tmp/quickstart.html)",
+      "Bash(curl -sL \"https://oss.callstack.com/react-native-bottom-tabs/docs/api/components/tabs\" -o /tmp/tabs.html)",
+      "Bash(curl -sL \"https://oss.callstack.com/react-native-bottom-tabs/docs/guides/liquid-glass\" -o /tmp/lg.html)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -sL \"https://oss.callstack.com/react-native-bottom-tabs/sitemap.xml\")",
+      "Bash(curl -sL \"https://callstackincubator.github.io/react-native-bottom-tabs/docs/getting-started/quick-start\")",
+      "Bash(grep -v \"^$\")",
+      "Read(//tmp/**)",
+      "Bash(curl -sL \"https://callstackincubator.github.io/react-native-bottom-tabs/docs/guides/standalone-usage\")",
+      "Bash(curl -s \"https://api.github.com/repos/callstackincubator/react-native-bottom-tabs/contents/docs/docs\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(x['name'],x.get\\('type'\\)\\) for x in d]\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(x['path']\\) for x in d['tree'] if 'docs' in x['path'] and x['path'].endswith\\('.md'\\)]\")",
+      "Bash(curl -s \"https://api.github.com/repos/callstackincubator/react-native-bottom-tabs/git/trees/main?recursive=1\")",
+      "Bash(curl -s \"https://api.github.com/repos/callstackincubator/react-native-bottom-tabs\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('default_branch'\\), d.get\\('full_name'\\)\\)\")",
+      "Bash(curl -sL https://raw.githubusercontent.com/callstackincubator/react-native-bottom-tabs/main/docs/docs/__TRACKED_VAR__.md)"
     ]
   }
 }
