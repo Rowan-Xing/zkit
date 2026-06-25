@@ -518,7 +518,7 @@ function composeTrigger(
 // 把业务数据映射成滚轮列组件需要的标准结构。
 function toWheelOptions(nodes: PickerTreeNode[], valueKey: string, labelKey: string): WheelOption[] {
   return nodes.map((node, index) => ({
-    key: pickKey(node, valueKey) ?? pickKey(node, 'id') ?? pickKey(node, 'code') ?? pickKey(node, 'key') ?? index,
+    value: pickKey(node, valueKey) ?? pickKey(node, 'id') ?? pickKey(node, 'code') ?? pickKey(node, 'key') ?? index,
     label: pickText(node, labelKey),
     disabled: !!node.disabled,
   }));
@@ -530,7 +530,7 @@ type MemoizedWheelColumnProps = {
   valueKey: string;
   labelKey: string;
   selectedIndex: number;
-  onSelectedIndexChange: (colIdx: number, idx: number) => void;
+  onIndexChange: (colIdx: number, idx: number) => void;
   width: number;
   disabled: boolean;
   wheelsRef: React.MutableRefObject<Array<WheelColumnHandle | null>>;
@@ -545,19 +545,23 @@ const MemoizedWheelColumn = React.memo(function MemoizedWheelColumn({
   valueKey,
   labelKey,
   selectedIndex,
-  onSelectedIndexChange,
+  onIndexChange,
   width,
   disabled,
   wheelsRef,
 }: MemoizedWheelColumnProps) {
-  const data = React.useMemo(() => toWheelOptions(col, valueKey, labelKey), [col, valueKey, labelKey]);
-  const handleChange = React.useCallback((idx: number) => onSelectedIndexChange(colIdx, idx), [colIdx, onSelectedIndexChange]);
+  const options = React.useMemo(() => toWheelOptions(col, valueKey, labelKey), [col, valueKey, labelKey]);
+  const selectedValue = options[Math.max(0, selectedIndex)]?.value ?? null;
+  const handleChange = React.useCallback(
+    (payload: { index: number }) => onIndexChange(colIdx, payload.index),
+    [colIdx, onIndexChange]
+  );
   return (
     <WheelColumn
       ref={(el) => { wheelsRef.current[colIdx] = el; }}
-      data={data}
-      selectedIndex={selectedIndex}
-      onSelectedIndexChange={handleChange}
+      options={options}
+      value={selectedValue}
+      onChange={handleChange}
       width={width}
       disabled={disabled}
     />
@@ -1331,7 +1335,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
                     valueKey={valueKey}
                     labelKey={labelKey}
                     selectedIndex={Math.max(0, draftIndices[colIdx] ?? 0)}
-                    onSelectedIndexChange={handleWheelIndexChange}
+                    onIndexChange={handleWheelIndexChange}
                     width={columnWidth}
                     disabled={disabled}
                     wheelsRef={wheelsRef}

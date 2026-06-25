@@ -49,17 +49,24 @@ export {
   AccordionTrigger,
 } from './ui/Accordion/index';
 export type {
+  AccordionAnimationConfig,
   AccordionContentProps,
   AccordionIndicatorProps,
   AccordionItemState,
   AccordionItemProps,
+  AccordionMountStrategy,
   AccordionMultipleProps,
+  AccordionPressEffect,
   AccordionProps,
   AccordionSingleProps,
+  AccordionSize,
+  AccordionSlot,
+  AccordionTone,
   AccordionTriggerProps,
   AccordionTriggerRenderState,
   AccordionType,
   AccordionValue,
+  AccordionVariant,
 } from './ui/Accordion/index';
 export { BetweenTime } from './ui/BetweenTime/index';
 export type { BetweenTimeProps } from './ui/BetweenTime/index';
@@ -72,6 +79,23 @@ export type {
   PickerProps,
   PickerTreeNode,
 } from './ui/Picker/index';
+export {
+  WheelColumn,
+  WHEEL_AREA_HEIGHT,
+  WHEEL_AREA_VERTICAL_INSET,
+  WHEEL_ITEM_HEIGHT,
+  WHEEL_VIEWPORT_HEIGHT,
+  WHEEL_VISIBLE_ITEMS,
+} from './ui/WheelColumn/index';
+export type {
+  WheelColumnChangePayload,
+  WheelColumnChangeSource,
+  WheelColumnHandle,
+  WheelColumnOption,
+  WheelColumnProps,
+  WheelColumnValue,
+  WheelOption,
+} from './ui/WheelColumn/index';
 export { AddressCascader } from './ui/AddressCascader/index';
 export type {
   AddressCascaderChangePayload,

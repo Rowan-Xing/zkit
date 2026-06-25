@@ -103,9 +103,10 @@ function Demo() {
 
 ## 组件清单
 
-- Accordion：手风琴/折叠面板（Reanimated Layout 动画）
+- Accordion：手风琴/折叠面板（Reanimated 高度与指示器动画）
 - AddressCascader：省市区级联选择（内置中国数据）
 - DatePicker：年月日选择（输出 YYYY-MM-DD）
+- WheelColumn：单列滚轮选择（iOS 原生 wheel，Android/Web 自绘高性能路径）
 
 ### Accordion 用法
 
@@ -123,9 +124,9 @@ export function DemoAccordion() {
   const [openItem, setOpenItem] = React.useState<string | null>('item-1');
 
   return (
-    <Accordion value={openItem} onChange={setOpenItem} collapsible>
+    <Accordion value={openItem} onChange={setOpenItem} variant="card" size="md">
       <AccordionItem value="item-1">
-        <AccordionTrigger title="第一项" />
+        <AccordionTrigger title="第一项" description="支持标题、副标题和自定义插槽" />
         <AccordionContent>
           <Text>内容 1</Text>
         </AccordionContent>
@@ -142,7 +143,7 @@ export function DemoAccordion() {
 }
 ```
 
-`Accordion` 使用 `value/defaultValue/onChange` 状态模型。`type="single"` 时空值为 `null`，`type="multiple"` 时值为数组。
+`Accordion` 使用 `value/defaultValue/onChange` 状态模型。默认 `type="single"` 且可折叠，空值为 `null`；`type="multiple"` 时值为数组。内容默认 `mountStrategy="eager"` 以保留内部状态，可按需切到 `lazy` 或 `unmountOnExit`。
 
 ### 目录与导出
 

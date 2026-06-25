@@ -313,7 +313,7 @@ function buildWheelOptions(min: number, max: number, pad2 = false): WheelOption[
 
   const out: WheelOption[] = [];
   for (let v = min; v <= max; v += 1) {
-    out.push({ key: v, label: pad2 ? String(v).padStart(2, '0') : String(v) });
+    out.push({ value: v, label: pad2 ? String(v).padStart(2, '0') : String(v) });
   }
   wheelOptionsCache.set(cacheKey, out);
   return out;
@@ -369,12 +369,12 @@ function resolveWheelData(d: Dayjs, bounds: DateBounds, type: ModelType) {
 
   const all = [years, months, days, hours, minutes, seconds].slice(0, count);
   const indices = [
-    years.findIndex((it) => it.key === y),
-    months.findIndex((it) => it.key === month),
-    days.findIndex((it) => it.key === day),
-    hours.findIndex((it) => it.key === hour),
-    minutes.findIndex((it) => it.key === minute),
-    seconds.findIndex((it) => it.key === clampNumber(d.second(), sMin, sMax)),
+    years.findIndex((it) => it.value === y),
+    months.findIndex((it) => it.value === month),
+    days.findIndex((it) => it.value === day),
+    hours.findIndex((it) => it.value === hour),
+    minutes.findIndex((it) => it.value === minute),
+    seconds.findIndex((it) => it.value === clampNumber(d.second(), sMin, sMax)),
   ].slice(0, count);
 
   return { columns: all, indices };
@@ -707,7 +707,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
       const picked = opts[safeIndex];
       if (!picked) continue;
 
-      nextDraft = applyColumnValue(nextDraft, columnIndex, picked.key as number);
+      nextDraft = applyColumnValue(nextDraft, columnIndex, picked.value as number);
     }
 
     nextDraft = normalizeDraftByType(clampToBounds(nextDraft, bounds), type);
@@ -729,7 +729,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
       const opts = columns[columnIndex];
       const picked = opts?.[nextIndex];
       if (!picked) return;
-      const valueNum = picked.key as number;
+      const valueNum = picked.value as number;
       let nextDraft = applyColumnValue(activeDraft, columnIndex, valueNum);
       nextDraft = clampToBounds(nextDraft, bounds);
       nextDraft = normalizeDraftByType(nextDraft, type);
@@ -966,9 +966,9 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
                     ref={(instance) => {
                       wheelsRef.current[colIdx] = instance;
                     }}
-                    data={col}
-                    selectedIndex={Math.max(0, indices[colIdx] ?? 0)}
-                    onSelectedIndexChange={(idx) => handleWheelIndexChange(colIdx, idx)}
+                    options={col}
+                    value={col[Math.max(0, indices[colIdx] ?? 0)]?.value ?? null}
+                    onChange={(payload) => handleWheelIndexChange(colIdx, payload.index)}
                     width={columnWidth}
                     disabled={disabled}
                   />

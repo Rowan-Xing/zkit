@@ -423,14 +423,8 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
       accentColor="#334155"
     >
       <View style={styles.surfaceGrid}>
-        <Accordion type="single" collapsible defaultValue="state" style={styles.accordion}>
-          <AccordionItem
-            value="state"
-            style={[
-              styles.accordionItem,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
+        <Accordion defaultValue="state" itemGap={wp(10)} size="md" variant="card">
+          <AccordionItem value="state">
             <AccordionTrigger title={t('example.surfaces.accordionState')} />
             <AccordionContent>
               <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
@@ -438,13 +432,7 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
               </Text>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem
-            value="services"
-            style={[
-              styles.accordionItem,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
+          <AccordionItem value="services">
             <AccordionTrigger title={t('example.surfaces.accordionServices')} />
             <AccordionContent>
               <Text style={[styles.paragraph, { color: theme.colors.muted }]}>

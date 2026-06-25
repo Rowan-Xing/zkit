@@ -385,14 +385,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     width: wp(34),
   },
-  accordion: {
-    gap: wp(10),
-  },
-  accordionItem: {
-    borderRadius: wp(12),
-    borderWidth: wp(1),
-    overflow: 'hidden',
-  },
   surfaceGrid: {
     gap: wp(12),
   },
