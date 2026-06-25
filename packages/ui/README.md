@@ -110,7 +110,7 @@ function Demo() {
 - TextInput / TextInputPrimitive：统一文本输入 Field 与接近 RN 原生能力的薄封装
 - Picker：底部滚轮选择器（单列/级联、确认提交、iOS 原生 wheel）
 - AddressCascader：省市区级联选择（内置中国数据）
-- DatePicker：年月日选择（输出 YYYY-MM-DD）
+- DatePicker：年/月/日日期选择（空值、范围、精度与确认提交语义）
 - WheelColumn：单列滚轮选择（iOS 原生 wheel，Android/Web 自绘高性能路径）
 
 ### Accordion 用法

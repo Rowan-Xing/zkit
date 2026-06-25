@@ -7,6 +7,7 @@ export const zhCN = {
 
   // DatePicker
   'datePicker.title': '请选择日期',
+  'datePicker.placeholder': '选择日期',
   'datePicker.year': '年',
   'datePicker.month': '月',
   'datePicker.day': '日',

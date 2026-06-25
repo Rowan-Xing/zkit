@@ -635,13 +635,16 @@ export const PickersSection = React.memo(function PickersSection({
 
         <DatePicker
           value={date}
-          onValueChange={onDateChange}
-          label={dateLabel}
-          onLabelChange={onDateLabelChange}
-          start="2024-01-01"
-          end="2030-12-31"
+          onChange={(next, selection) => {
+            onDateChange(next);
+            onDateLabelChange(selection.label);
+          }}
+          min="2024-01-01"
+          max="2030-12-31"
         >
-          {({ label }) => <FieldTrigger iconName="calendar" label="DatePicker" value={label || date} />}
+          {({ label, placeholder }) => (
+            <FieldTrigger iconName="calendar" label="DatePicker" value={label || dateLabel || placeholder} />
+          )}
         </DatePicker>
 
         <AddressCascader

@@ -145,8 +145,20 @@ export type {
 export { DatePicker } from './ui/DatePicker/index';
 export type {
   DatePickerChangePayload,
+  DatePickerColumn,
+  DatePickerColumnHeaderContext,
   DatePickerConfirmPayload,
+  DatePickerDisableContext,
+  DatePickerDraftChangePayload,
+  DatePickerHandle,
+  DatePickerInput,
+  DatePickerLabelFormat,
+  DatePickerOption,
+  DatePickerParts,
+  DatePickerPrecision,
   DatePickerProps,
+  DatePickerRenderContext,
+  DatePickerSelection,
   DatePickerValue,
 } from './ui/DatePicker/index';
 export { Switch } from './ui/Switch/index';

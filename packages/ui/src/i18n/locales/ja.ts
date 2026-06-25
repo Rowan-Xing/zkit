@@ -7,6 +7,7 @@ export const ja = {
 
   // DatePicker
   'datePicker.title': '日付を選択',
+  'datePicker.placeholder': '日付を選択',
   'datePicker.year': '年',
   'datePicker.month': '月',
   'datePicker.day': '日',

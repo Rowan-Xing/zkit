@@ -48,8 +48,8 @@ if (result) {
 const result = await pickerService.pickDate({
   value: '2024-01-15',
   title: '选择日期',
-  start: '2020-01-01',
-  end: '2030-12-31',
+  min: '2020-01-01',
+  max: '2030-12-31',
 });
 
 if (result) {
@@ -112,9 +112,10 @@ if (result) {
 | value | string | - | 当前日期，格式 YYYY-MM-DD |
 | defaultValue | string | - | 默认日期 |
 | title | string | - | 标题 |
-| start | string | - | 最小日期 |
-| end | string | - | 最大日期 |
-| separator | string | - | 分隔符，默认 '-' |
+| precision | 'year' \| 'month' \| 'day' | - | 精度，默认 'day' |
+| min | string \| Date \| Dayjs | - | 最小日期 |
+| max | string \| Date \| Dayjs | - | 最大日期 |
+| labelFormat | string \| function | - | 展示格式 |
 | disabled | boolean | - | 是否禁用 |
 
 返回 `Promise<DatePickerResult>`，取消时返回 `null`。

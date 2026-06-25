@@ -7,6 +7,7 @@ export const enUS = {
 
   // DatePicker
   'datePicker.title': 'Select Date',
+  'datePicker.placeholder': 'Select date',
   'datePicker.year': 'Year',
   'datePicker.month': 'Month',
   'datePicker.day': 'Day',

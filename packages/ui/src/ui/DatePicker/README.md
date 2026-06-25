@@ -1,106 +1,117 @@
 # DatePicker
 
-DatePicker 是一个“年月日”选择组件，基于 [Picker](src/ui/Picker/index.tsx) 封装，默认输出标准日期字符串 `YYYY-MM-DD`。
+DatePicker 是日期语义组件，底层复用 Picker 的三端滚轮与 BottomSheet 生命周期，但公共 API 不暴露滚轮细节。它支持空值、受控/非受控值、受控/非受控弹层、年/月/日精度、边界限制、提交事件和草稿事件。
+
+## 设计取舍
+
+- `value/defaultValue/onChange` 表示已提交日期；滚轮移动使用 `onDraftChange`，避免把临时草稿误当成表单值。
+- `value={null}` 表示受控空值；未提供 `defaultValue` 时组件默认不选中日期，打开后定位到 `defaultPickerValue` 或今天。
+- `min/max` 使用日期语义边界；`max="2026-02"` 表示可选到 2026 年 2 月末。
+- 输出值始终跟随 `precision`：`year => YYYY`、`month => YYYY-MM`、`day => YYYY-MM-DD`。
 
 ## 基础用法
 
 ```tsx
-import { DatePicker, Button } from 'y2kit-ui';
+import * as React from 'react';
+import { Button, DatePicker } from 'y2kit-ui';
 
 export function Demo() {
-  const [value, setValue] = React.useState('2026-01-12');
-  const [label, setLabel] = React.useState('');
+  const [value, setValue] = React.useState<string | null>(null);
 
   return (
-    <DatePicker value={value} onValueChange={setValue} label={label} onLabelChange={setLabel}>
-      {({ label }) => <Button>{label || '选择日期'}</Button>}
+    <DatePicker value={value} onChange={setValue}>
+      {({ label, placeholder }) => (
+        <Button>{label || placeholder}</Button>
+      )}
     </DatePicker>
   );
 }
 ```
 
-## 限制可选范围（start / end）
+## 限制范围
 
 ```tsx
-import { DatePicker, Button } from 'y2kit-ui';
-
-export function Demo() {
-  const [value, setValue] = React.useState('2026-01-12');
-
-  return (
-    <DatePicker value={value} onValueChange={setValue} start="2020-01-01" end="2035-12-31">
-      {({ label }) => <Button>{label || '选择日期'}</Button>}
-    </DatePicker>
-  );
-}
+<DatePicker
+  value={value}
+  onChange={setValue}
+  min="2020-01-01"
+  max="2035-12-31"
+/>
 ```
 
-说明：
+## 月份选择
 
-- `start/end` 需要是“标准日期格式”的字符串；不合法会直接抛错（fail-fast）
-- 支持格式：`YYYY`、`YYYY-MM`、`YYYY-MM-DD`（也兼容 `YYYY-M`、`YYYY-M-D`）
+```tsx
+<DatePicker
+  precision="month"
+  value="2026-04"
+  min="2020-01"
+  max="2035-12"
+  labelFormat="YYYY 年 MM 月"
+  onChange={(next) => {
+    // next: '2026-04'
+  }}
+/>
+```
+
+## 禁用部分日期
+
+```tsx
+<DatePicker
+  min="2026-01-01"
+  max="2026-12-31"
+  isDateDisabled={(date) => date.day() === 0 || date.day() === 6}
+  onChange={(next, selection) => {
+    console.log(next, selection.date);
+  }}
+/>
+```
 
 ## Props
 
-### 值与状态
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| value | `string \| null` | - | 受控已提交值；`null` 表示空值 |
+| defaultValue | `string \| null` | `null` | 非受控初始已提交值 |
+| onChange | `(value, payload) => void` | - | 用户确认后触发 |
+| open | `boolean` | - | 受控弹层开关 |
+| defaultOpen | `boolean` | `false` | 非受控初始弹层状态 |
+| onOpenChange | `(open: boolean) => void` | - | 弹层开关变化 |
+| precision | `'year' \| 'month' \| 'day'` | `'day'` | 选择精度与输出格式 |
+| min | `string \| Date \| Dayjs` | `1900-01-01` | 最小可选日期 |
+| max | `string \| Date \| Dayjs` | `2100-12-31` | 最大可选日期 |
+| defaultPickerValue | `string \| Date \| Dayjs` | 今天 | 空值打开时滚轮定位 |
+| isDateDisabled | `(date, context) => boolean` | - | 禁用某个可选日期、月份或年份 |
+| title | `string` | i18n | 弹层标题 |
+| placeholder | `string` | i18n | 空值触发器占位文本 |
+| cancelText / confirmText / emptyText | `string` | i18n | 弹层文案 |
+| labelFormat | `string \| (selection) => string` | 同 `value` | 触发器和 payload 的展示文案 |
+| columnLabels | `Partial<Record<'year' \| 'month' \| 'day', string>>` | i18n | 列头文案 |
+| renderColumnHeader | `(context) => ReactNode` | - | 自定义列头 |
+| lazyContent | `boolean` | `true` | 延迟挂载滚轮内容 |
+| sheetHeight | `number \| 'auto'` | `'auto'` | 弹层高度 |
+| disabled | `boolean` | `false` | 禁用打开和交互 |
+| onCancel | `() => void` | - | 取消事件 |
+| onConfirm | `(payload) => void` | - | 确认事件 |
+| onDraftChange | `(payload) => void` | - | 滚轮草稿变化事件 |
+| children | `ReactNode \| (context) => ReactNode` | - | 触发器 |
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| value | string | - | - | 当前日期值（受控），格式 `YYYY-MM-DD` |
-| defaultValue | string | - | 当天日期 | 非受控模式下的初始值 |
-| onValueChange | (next: string) => void | - | - | 值变更回调 |
-
-### 弹窗控制
-
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| open | boolean | - | - | 弹窗是否打开（受控） |
-| defaultOpen | boolean | - | false | 非受控模式下弹窗初始状态 |
-| onOpenChange | (next: boolean) => void | - | - | 弹窗状态变更回调 |
-
-### 标签
-
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| label | string | - | - | 显示的标签文本（受控） |
-| defaultLabel | string | - | '' | 非受控模式下的初始标签 |
-| onLabelChange | (next: string) => void | - | - | 标签变更回调 |
-
-### 配置
-
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| title | string | - | '选择日期' | 弹窗标题 |
-| separator | string | - | '-' | 标签拼接分隔符 |
-| start | string | - | - | 可选范围最小日期，格式 `YYYY`/`YYYY-MM`/`YYYY-MM-DD` |
-| end | string | - | - | 可选范围最大日期，格式同上 |
-| lazyContent | boolean | - | true | 是否延迟渲染选择器内容 |
-| drawerSize | string \| number | - | 自动计算 | 弹窗高度 |
-| disabled | boolean | - | false | 是否禁用 |
-
-### 事件
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| onCancel | () => void | 点击取消按钮时触发 |
-| onConfirm | (payload: DatePickerConfirmPayload) => void | 点击确认按钮时触发 |
-| onChange | (payload: DatePickerChangePayload) => void | 滚轮滚动选中项变更时触发 |
-
-### 触发器
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| children | ReactNode \| ((ctx: { label: string; value: string }) => ReactNode) | 触发器内容 |
-
-## onConfirm / onChange Payload
+## Payload
 
 ```ts
-type DatePickerConfirmPayload = {
-  value: string; // YYYY-MM-DD
-  values: string[]; // ['YYYY','MM','DD']
-  label: string; // 'YYYY-MM-DD'（受 separator 影响）
-  labels: string[]; // ['YYYY','MM','DD']
-  items: PickerOption<number>[];
-  date: Dayjs; // dayjs('YYYY-MM-DD')
+type DatePickerSelection = {
+  value: string;
+  date: Dayjs;
+  precision: 'year' | 'month' | 'day';
+  parts: { year: number; month?: number; day?: number };
+  values: number[];
+  label: string;
+  labels: string[];
+  items: DatePickerOption[];
+  columns: DatePickerOption[][];
+  indices: number[];
+  isComplete: boolean;
 };
 ```
+
+`date` 会归一到当前精度的起点：年为 1 月 1 日，月为 1 日，日为当天零点。

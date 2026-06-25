@@ -7,6 +7,7 @@ export const zhTW = {
 
   // DatePicker
   'datePicker.title': '請選擇日期',
+  'datePicker.placeholder': '選擇日期',
   'datePicker.year': '年',
   'datePicker.month': '月',
   'datePicker.day': '日',
