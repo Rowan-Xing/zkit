@@ -27,7 +27,7 @@ import {
   useI18n,
   useTheme,
   type BottomSheetRef,
-  type PickerModelValue,
+  type PickerValue,
 } from 'y2kit-ui';
 
 import {
@@ -527,7 +527,7 @@ type PickersSectionProps = {
   languageLabel: string;
   range: string[];
   rangeLabel: string;
-  workflow: PickerModelValue;
+  workflow: PickerValue;
   workflowLabel: string;
   onAddressChange: (next: string[]) => void;
   onAddressLabelChange: (next: string) => void;
@@ -536,7 +536,7 @@ type PickersSectionProps = {
   onLanguageChange: (next: string) => void;
   onLanguageLabelChange: (next: string) => void;
   onRangeChange: (next: string[]) => void;
-  onWorkflowChange: (next: PickerModelValue) => void;
+  onWorkflowChange: (next: PickerValue) => void;
   onWorkflowLabelChange: (next: string) => void;
 };
 
@@ -564,28 +564,28 @@ export const PickersSection = React.memo(function PickersSection({
   const { t } = useI18n();
   const languageOptions = React.useMemo(
     () => [
-      { id: 'en', title: t('example.language.en') },
-      { id: 'zh', title: t('example.language.zh') },
-      { id: 'ja', title: t('example.language.ja') },
+      { value: 'en', label: t('example.language.en') },
+      { value: 'zh', label: t('example.language.zh') },
+      { value: 'ja', label: t('example.language.ja') },
     ],
     [t]
   );
   const workflowOptions = React.useMemo(
     () => [
       {
-        id: 'design',
-        title: t('example.workflow.design'),
+        value: 'design',
+        label: t('example.workflow.design'),
         children: [
-          { id: 'tokens', title: t('example.workflow.tokens') },
-          { id: 'motion', title: t('example.workflow.motion') },
+          { value: 'tokens', label: t('example.workflow.tokens') },
+          { value: 'motion', label: t('example.workflow.motion') },
         ],
       },
       {
-        id: 'ship',
-        title: t('example.workflow.ship'),
+        value: 'ship',
+        label: t('example.workflow.ship'),
         children: [
-          { id: 'review', title: t('example.workflow.review') },
-          { id: 'release', title: t('example.workflow.release') },
+          { value: 'review', label: t('example.workflow.review') },
+          { value: 'release', label: t('example.workflow.release') },
         ],
       },
     ],
@@ -601,11 +601,12 @@ export const PickersSection = React.memo(function PickersSection({
     >
       <View style={styles.fieldStack}>
         <Picker
-          list={languageOptions}
+          options={languageOptions}
           value={language}
-          onValueChange={(next) => onLanguageChange(normalizePickerValue(next))}
-          label={languageLabel}
-          onLabelChange={onLanguageLabelChange}
+          onChange={(next, selection) => {
+            onLanguageChange(normalizePickerValue(next));
+            onLanguageLabelChange(selection.label);
+          }}
           title={t('example.pickers.language')}
         >
           {({ label }) => (
@@ -618,11 +619,12 @@ export const PickersSection = React.memo(function PickersSection({
         </Picker>
 
         <Picker
-          list={workflowOptions}
+          options={workflowOptions}
           value={workflow}
-          onValueChange={onWorkflowChange}
-          label={workflowLabel}
-          onLabelChange={(next) => onWorkflowLabelChange(next.replace(/-/g, ' / '))}
+          onChange={(next, selection) => {
+            onWorkflowChange(next);
+            onWorkflowLabelChange(selection.label.replace(/-/g, ' / '));
+          }}
           separator=" / "
           title={t('example.pickers.workflow')}
         >

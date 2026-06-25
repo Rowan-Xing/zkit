@@ -3,6 +3,7 @@ export const zhTW = {
   'picker.title': '請選擇',
   'picker.cancel': '取消',
   'picker.confirm': '確認',
+  'picker.empty': '暫無可選項',
 
   // DatePicker
   'datePicker.title': '請選擇日期',

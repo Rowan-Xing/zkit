@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useI18n, type PickerModelValue } from 'y2kit-ui';
+import { useI18n, type PickerValue } from 'y2kit-ui';
 
 import { InputsSection, PickersSection, SelectionSection } from '../sections/PlaygroundSections';
 import type { Density } from '../data';
@@ -14,7 +14,7 @@ export const FormsScreen = React.memo(function FormsScreen() {
   const [density, setDensity] = React.useState<Density>('comfortable');
   const [language, setLanguage] = React.useState('en');
   const [languageLabel, setLanguageLabel] = React.useState(() => t('example.language.en'));
-  const [workflow, setWorkflow] = React.useState<PickerModelValue>(['design', 'tokens']);
+  const [workflow, setWorkflow] = React.useState<PickerValue>(['design', 'tokens']);
   const [workflowLabel, setWorkflowLabel] = React.useState(() => t('example.workflow.designTokens'));
   const [date, setDate] = React.useState('2026-04-23');
   const [dateLabel, setDateLabel] = React.useState('2026-04-23');

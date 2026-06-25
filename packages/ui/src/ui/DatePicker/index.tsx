@@ -10,8 +10,8 @@ import {
   type PickerChangePayload,
   type PickerConfirmPayload,
   type PickerHandle,
-  type PickerModelValue,
-  type PickerTreeNode,
+  type PickerOption,
+  type PickerValue,
 } from '../Picker';
 
 export type DatePickerHandle = PickerHandle;
@@ -61,7 +61,7 @@ function toYmdFromStandardValue(v: string, bounds: DateBounds) {
   return { year: d.year(), month: d.month() + 1, day: d.date() };
 }
 
-function normalizePickerValueToYmd(value: PickerModelValue | undefined, bounds: DateBounds) {
+function normalizePickerValueToYmd(value: PickerValue | undefined, bounds: DateBounds) {
   if (Array.isArray(value)) {
     const y = Number(value[0]);
     const m = Number(value[1]);
@@ -92,9 +92,9 @@ function clampYmdToBounds(ymd: { year: number; month: number; day: number }, bou
 }
 
 // 缓存已构建的月份数据
-const monthCache = new Map<string, PickerTreeNode[]>();
+const monthCache = new Map<string, PickerOption<number>[]>();
 
-function buildDays(y: number, m: number, bounds: DateBounds): PickerTreeNode[] {
+function buildDays(y: number, m: number, bounds: DateBounds): PickerOption<number>[] {
   const isMinYear = bounds.min != null && y === bounds.min.year();
   const isMaxYear = bounds.max != null && y === bounds.max.year();
   const isMinYM = bounds.min != null && isMinYear && m === bounds.min.month() + 1;
@@ -105,14 +105,14 @@ function buildDays(y: number, m: number, bounds: DateBounds): PickerTreeNode[] {
   const dayMin = isMinYM ? bounds.min!.date() : 1;
   const dayMax = isMaxYM ? bounds.max!.date() : dim;
 
-  const days: PickerTreeNode[] = [];
+  const days: PickerOption<number>[] = [];
   for (let d = dayMin; d <= dayMax; d += 1) {
-    days.push({ value: d, text: pad2(d) });
+    days.push({ value: d, label: pad2(d) });
   }
   return days;
 }
 
-function buildMonths(y: number, bounds: DateBounds): PickerTreeNode[] {
+function buildMonths(y: number, bounds: DateBounds): PickerOption<number>[] {
   const cacheKey = `${y}-${bounds.min?.format('YYYYMMDD') ?? ''}-${bounds.max?.format('YYYYMMDD') ?? ''}`;
   const cached = monthCache.get(cacheKey);
   if (cached) return cached;
@@ -122,22 +122,22 @@ function buildMonths(y: number, bounds: DateBounds): PickerTreeNode[] {
   const monthMin = isMinYear ? bounds.min!.month() + 1 : 1;
   const monthMax = isMaxYear ? bounds.max!.month() + 1 : 12;
 
-  const months: PickerTreeNode[] = [];
+  const months: PickerOption<number>[] = [];
   for (let m = monthMin; m <= monthMax; m += 1) {
-    months.push({ value: m, text: pad2(m), children: buildDays(y, m, bounds) });
+    months.push({ value: m, label: pad2(m), children: buildDays(y, m, bounds) });
   }
 
   monthCache.set(cacheKey, months);
   return months;
 }
 
-function buildDateTree(bounds: DateBounds): PickerTreeNode[] {
+function buildDateTree(bounds: DateBounds): PickerOption<number>[] {
   const minYear = bounds.min?.year() ?? 1970;
   const maxYear = bounds.max?.year() ?? 2099;
-  const years: PickerTreeNode[] = [];
+  const years: PickerOption<number>[] = [];
 
   for (let y = minYear; y <= maxYear; y += 1) {
-    years.push({ value: y, text: String(y), children: buildMonths(y, bounds) });
+    years.push({ value: y, label: String(y), children: buildMonths(y, bounds) });
   }
 
   return years;
@@ -150,7 +150,7 @@ export type DatePickerConfirmPayload = {
   values: string[];
   label: string;
   labels: string[];
-  items: PickerTreeNode[];
+  items: PickerOption<number>[];
   date: Dayjs;
 };
 
@@ -195,8 +195,6 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   defaultOpen,
   onOpenChange,
   onDismissComplete,
-  label,
-  defaultLabel,
   onLabelChange,
   title,
   separator = '-',
@@ -235,7 +233,7 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   }, [bounds, defaultValue]);
 
   const handleValueChange = React.useCallback(
-    (next: PickerModelValue) => {
+    (next: PickerValue) => {
       const ymd = normalizePickerValueToYmd(next, bounds);
       const out = toStandardValueFromYmd(ymd);
       onValueChange?.(out);
@@ -244,10 +242,11 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   );
 
   const handleConfirm = React.useCallback(
-    (payload: PickerConfirmPayload) => {
+    (payload: PickerConfirmPayload<PickerOption<number>>) => {
       const ymd = normalizePickerValueToYmd(payload.value, bounds);
       const out = toStandardValueFromYmd(ymd);
       const date = dayjs(out, 'YYYY-MM-DD', true);
+      onLabelChange?.(payload.label);
       onConfirm?.({
         value: out,
         values: payload.values.map(String),
@@ -257,11 +256,11 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
         date,
       });
     },
-    [bounds, onConfirm]
+    [bounds, onConfirm, onLabelChange]
   );
 
   const handleChange = React.useCallback(
-    (payload: PickerChangePayload) => {
+    (payload: PickerChangePayload<PickerOption<number>>) => {
       const ymd = normalizePickerValueToYmd(payload.value, bounds);
       const out = toStandardValueFromYmd(ymd);
       const date = dayjs(out, 'YYYY-MM-DD', true);
@@ -278,34 +277,29 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   );
 
   return (
-    <Picker
+    <Picker<PickerOption<number>>
       ref={ref}
-      list={list}
+      options={list}
       value={resolvedValue}
       defaultValue={resolvedDefaultValue}
-      onValueChange={handleValueChange}
+      onChange={handleValueChange}
       open={open}
       defaultOpen={defaultOpen}
       onOpenChange={onOpenChange}
       onDismissComplete={onDismissComplete}
-      label={label}
-      defaultLabel={defaultLabel}
-      onLabelChange={onLabelChange}
       title={title ?? t('datePicker.title')}
-      valueKey="value"
-      labelKey="text"
       separator={separator}
-      renderColumnHeader={(colIdx) => (
+      renderColumnHeader={({ columnIndex }) => (
         <Text style={styles.columnLabel}>
-          {[t('datePicker.year'), t('datePicker.month'), t('datePicker.day')][colIdx]}
+          {[t('datePicker.year'), t('datePicker.month'), t('datePicker.day')][columnIndex]}
         </Text>
       )}
       lazyContent={lazyContent}
-      drawerSize={drawerSize}
+      sheetHeight={typeof drawerSize === 'number' ? drawerSize : drawerSize == null ? 'auto' : Number.parseFloat(drawerSize)}
       disabled={disabled}
       onCancel={onCancel}
       onConfirm={handleConfirm}
-      onChange={handleChange}
+      onDraftChange={handleChange}
     >
       {children}
     </Picker>

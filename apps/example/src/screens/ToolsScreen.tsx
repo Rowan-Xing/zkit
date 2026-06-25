@@ -26,10 +26,10 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
 
   const handleGlobalPicker = React.useCallback(async () => {
     const result = await pickerService.pick({
-      list: [
-        { id: 'tokens', title: t('example.area.tokens') },
-        { id: 'forms', title: t('example.area.forms') },
-        { id: 'overlays', title: t('example.area.overlays') },
+      options: [
+        { value: 'tokens', label: t('example.area.tokens') },
+        { value: 'forms', label: t('example.area.forms') },
+        { value: 'overlays', label: t('example.area.overlays') },
       ],
       value: serviceChoice,
       title: t('example.globalPicker.title'),

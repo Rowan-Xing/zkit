@@ -3,6 +3,7 @@ export const ja = {
   'picker.title': '選択',
   'picker.cancel': 'キャンセル',
   'picker.confirm': '確認',
+  'picker.empty': '選択できる項目がありません',
 
   // DatePicker
   'datePicker.title': '日付を選択',

@@ -3,6 +3,7 @@ export const zhCN = {
   'picker.title': '请选择',
   'picker.cancel': '取消',
   'picker.confirm': '确认',
+  'picker.empty': '暂无可选项',
 
   // DatePicker
   'datePicker.title': '请选择日期',

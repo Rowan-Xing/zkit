@@ -1,29 +1,36 @@
 # Picker
 
-Picker 是一个高性能的级联选择器组件：
+`Picker` 是底部弹出的滚轮选择器，负责普通单列选择和树形级联选择。它的核心语义是：
 
-- 支持单列/多列级联选择（最多 3 列）
-- 交互与过渡动画基于 `react-native-reanimated`
-- 支持受控/非受控模式
-- 支持自定义触发器（children）
+- `value/defaultValue/onChange` 表示“已确认值”，只在点击确认后提交。
+- 打开弹层后使用内部 draft，滚轮滚动不会污染外部表单值。
+- 需要实时联动时监听 `onDraftChange`。
+- 默认数据结构是 `{ value, label, children, disabled }`，其它数据结构用 accessor 适配。
 
 ## 基础用法
 
 ```tsx
-import { Picker } from 'y2kit-ui';
 import * as React from 'react';
+import { Picker, Text } from 'y2kit-ui';
 
-const list = [
-  { id: 1, title: '选项一' },
-  { id: 2, title: '选项二' },
-  { id: 3, title: '选项三' },
+const options = [
+  { value: 'design', label: 'Design' },
+  { value: 'motion', label: 'Motion' },
+  { value: 'release', label: 'Release' },
 ];
 
 export function Demo() {
-  const [value, setValue] = React.useState<number>();
+  const [value, setValue] = React.useState<string | number>();
+
   return (
-    <Picker list={list} value={value} onValueChange={setValue}>
-      <Text>{value ?? '请选择'}</Text>
+    <Picker
+      options={options}
+      value={value}
+      valueMode="single"
+      onChange={(next) => setValue(Array.isArray(next) ? next[0] : next)}
+      placeholder="请选择"
+    >
+      {({ label, placeholder }) => <Text>{label || placeholder}</Text>}
     </Picker>
   );
 }
@@ -32,319 +39,152 @@ export function Demo() {
 ## 级联选择
 
 ```tsx
-import { Picker } from 'y2kit-ui';
-
-const cascadeList = [
+const options = [
   {
-    id: 1,
-    title: '浙江省',
+    value: 'zj',
+    label: '浙江省',
     children: [
-      { id: 11, title: '杭州市' },
-      { id: 12, title: '宁波市' },
+      { value: 'hz', label: '杭州市' },
+      { value: 'nb', label: '宁波市' },
     ],
   },
   {
-    id: 2,
-    title: '江苏省',
+    value: 'js',
+    label: '江苏省',
     children: [
-      { id: 21, title: '南京市' },
-      { id: 22, title: '苏州市' },
+      { value: 'nj', label: '南京市' },
+      { value: 'sz', label: '苏州市' },
     ],
   },
 ];
 
 export function Demo() {
-  const [value, setValue] = React.useState<number[]>([]);
+  const [value, setValue] = React.useState<string[]>();
+
   return (
-    <Picker list={cascadeList} value={value} onValueChange={setValue}>
-      <Text>选择地区</Text>
+    <Picker
+      options={options}
+      value={value}
+      valueMode="path"
+      separator=" / "
+      onChange={(next) => setValue(Array.isArray(next) ? next.map(String) : [String(next)])}
+    >
+      {({ label }) => <Text>{label || '选择地区'}</Text>}
     </Picker>
   );
 }
 ```
 
-## 自定义触发器
+## 适配外部数据
+
+主 API 不再暴露 `valueKey/labelKey` 这类字符串配置。外部数据字段不一致时，用 accessor 明确适配：
 
 ```tsx
-import { Picker, Button } from 'y2kit-ui';
+const rawOptions = [
+  { id: 1, title: '选项一' },
+  { id: 2, title: '选项二', children: [{ id: 21, title: '子项' }] },
+];
 
-export function Demo() {
-  return (
-    <Picker list={list}>
-      {({ label, value }) => (
-        <Button>{label || '请选择'}</Button>
-      )}
-    </Picker>
-  );
-}
+<Picker
+  options={rawOptions}
+  getOptionValue={(item) => item.id}
+  getOptionLabel={(item) => item.title}
+  getOptionChildren={(item) => item.children}
+/>;
 ```
 
 ## 自定义列标题
 
 ```tsx
-import { Picker, Text } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <Picker
-      list={cascadeList}
-      renderColumnHeader={(columnIndex, columnCount) => (
-        <Text>{['省份', '城市', '区县'][columnIndex]}</Text>
-      )}
-    >
-      <Text>选择地区</Text>
-    </Picker>
-  );
-}
+<Picker
+  options={options}
+  renderColumnHeader={({ columnIndex }) => (
+    <Text>{['省份', '城市', '区县'][columnIndex]}</Text>
+  )}
+/>;
 ```
 
-## 禁用状态
+## 命令式打开
 
 ```tsx
-import { Picker } from 'y2kit-ui';
+const ref = React.useRef<PickerHandle>(null);
 
-export function Demo() {
-  return (
-    <Picker list={list} disabled>
-      <Text>已禁用</Text>
-    </Picker>
-  );
-}
-```
+<Picker ref={ref} options={options} />;
 
-## 禁用某个选项
-
-```tsx
-import { Picker } from 'y2kit-ui';
-
-const list = [
-  { id: 1, title: '选项一' },
-  { id: 2, title: '选项二', disabled: true },
-  { id: 3, title: '选项三' },
-];
-
-export function Demo() {
-  return (
-    <Picker list={list}>
-      <Text>请选择</Text>
-    </Picker>
-  );
-}
+ref.current?.open();
+ref.current?.close();
 ```
 
 ## Types
 
-### PickerTreeNode
-
-选项节点类型定义：
-
-```typescript
-type PickerTreeNode = {
-  [key: string]: unknown;  // 支持任意字段
-  disabled?: boolean;      // 是否禁用该选项
-  children?: PickerTreeNode[]; // 子级选项（用于级联）
-};
-```
-
-### PickerModelValue
-
-值类型定义：
-
-```typescript
+```ts
 type PickerPrimitiveValue = string | number;
-type PickerModelValue = PickerPrimitiveValue | PickerPrimitiveValue[];
-```
+type PickerValue = PickerPrimitiveValue | PickerPrimitiveValue[];
+type PickerValueMode = 'auto' | 'single' | 'path';
 
-- 单列选择时，值为 `string | number`
-- 多列级联选择时，值为 `(string | number)[]`
-
-### PickerConfirmPayload / PickerChangePayload
-
-事件回调参数类型：
-
-```typescript
-type PickerConfirmPayload = {
-  value: PickerModelValue;    // 当前选中值
-  values: PickerPrimitiveValue[]; // 各列选中值数组
-  label: string;              // 拼接后的标签文本
-  labels: string[];           // 各列标签数组
-  items: PickerTreeNode[];    // 各列选中的节点对象
+type PickerOption = {
+  value: PickerPrimitiveValue;
+  label: string;
+  disabled?: boolean;
+  children?: PickerOption[];
+  key?: React.Key;
+  testID?: string;
+  accessibilityLabel?: string;
 };
 
-type PickerChangePayload = PickerConfirmPayload;
+type PickerSelection<TOption = PickerOption> = {
+  value: PickerValue;
+  values: PickerPrimitiveValue[];
+  label: string;
+  labels: string[];
+  items: TOption[];
+  columns: TOption[][];
+  indices: number[];
+  isComplete: boolean;
+};
 ```
 
 ## Props
 
-### 数据源
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `options` | `readonly TOption[]` | required | 数据源，默认读取 `value/label/children/disabled` |
+| `value` | `PickerValue` | - | 受控的已确认值 |
+| `defaultValue` | `PickerValue` | - | 非受控初始值 |
+| `onChange` | `(value, selection) => void` | - | 点击确认后提交已确认值 |
+| `valueMode` | `'auto' \| 'single' \| 'path'` | `'auto'` | 输出单值还是路径数组；级联建议显式用 `path` |
+| `open` | `boolean` | - | 受控打开状态 |
+| `defaultOpen` | `boolean` | `false` | 非受控初始打开状态 |
+| `onOpenChange` | `(open: boolean) => void` | - | 打开状态变化 |
+| `onDismissComplete` | `() => void` | - | 原生弹层完全关闭后触发 |
+| `title` | `string` | i18n `picker.title` | 弹层标题 |
+| `placeholder` | `string` | `''` | 无已确认值时给 trigger 使用 |
+| `cancelText` | `string` | i18n `picker.cancel` | 取消按钮文案 |
+| `confirmText` | `string` | i18n `picker.confirm` | 确认按钮文案 |
+| `emptyText` | `string` | i18n `picker.empty` | 空数据文案 |
+| `separator` | `string` | `'-'` | 多列 label 拼接分隔符 |
+| `formatLabel` | `(selection) => string` | - | 自定义最终 label |
+| `renderColumnHeader` | `(context) => ReactNode` | - | 自定义列标题 |
+| `maxColumns` | `number` | `5` | 最多渲染列数，内部限制 1-8 |
+| `lazyContent` | `boolean` | `true` | 打开时再挂载滚轮内容，关闭后卸载 |
+| `sheetHeight` | `number \| 'auto'` | `'auto'` | 底部弹层高度；数字按 RN dp 解释 |
+| `disabled` | `boolean` | `false` | 禁用打开、滚动和按钮 |
+| `onCancel` | `() => void` | - | 取消或点背景关闭时触发 |
+| `onConfirm` | `(selection) => void` | - | 点击确认后触发，晚于 `onChange` |
+| `onDraftChange` | `(selection) => void` | - | 滚轮草稿变化时触发，不提交外部值 |
+| `children` | `ReactNode \| (context) => ReactNode` | - | 触发器内容 |
 
-- `list: PickerTreeNode[]`
-  - **必填**
-  - 说明：选项数据源，支持树形结构（通过 `children` 字段实现级联）。
+Accessor props:
 
-### 值与状态
+| Prop | Type |
+| --- | --- |
+| `getOptionValue` | `(option, index, path) => PickerPrimitiveValue \| undefined` |
+| `getOptionLabel` | `(option, index, path) => string \| number \| undefined` |
+| `getOptionChildren` | `(option, index, path) => readonly TOption[] \| undefined` |
+| `isOptionDisabled` | `(option, index, path) => boolean` |
 
-- `value?: PickerModelValue`
-  - 默认值：`undefined`
-  - 说明：当前选中值（受控模式）。单列时为 `string | number`，多列时为数组。
-- `defaultValue?: PickerModelValue`
-  - 默认值：`undefined`
-  - 说明：非受控模式下的初始值。
-- `onValueChange?: (next: PickerModelValue) => void`
-  - 说明：值变更回调（受控模式下用于更新 `value`）。
+## 设计取舍
 
-### 弹窗控制
-
-- `open?: boolean`
-  - 默认值：`undefined`
-  - 说明：弹窗是否打开（受控模式）。
-- `defaultOpen?: boolean`
-  - 默认值：`false`
-  - 说明：非受控模式下弹窗的初始状态。
-- `onOpenChange?: (next: boolean) => void`
-  - 说明：弹窗状态变更回调。
-
-### 标签
-
-- `label?: string`
-  - 默认值：`undefined`
-  - 说明：显示的标签文本（受控模式）。
-- `defaultLabel?: string`
-  - 默认值：`''`
-  - 说明：非受控模式下的初始标签。
-- `onLabelChange?: (next: string) => void`
-  - 说明：标签变更回调。
-
-### 配置
-
-- `title?: string`
-  - 默认值：`'请选择'`
-  - 说明：弹窗标题。
-- `valueKey?: string`
-  - 默认值：`'id'`
-  - 说明：选项值的字段名。从 `PickerTreeNode` 中取值时使用此字段。
-- `labelKey?: string`
-  - 默认值：`'title'`
-  - 说明：选项显示文本的字段名。从 `PickerTreeNode` 中取文本时使用此字段。
-- `separator?: string`
-  - 默认值：`'-'`
-  - 说明：多列标签拼接时的分隔符。例如 `'浙江省-杭州市'`。
-- `renderColumnHeader?: (columnIndex: number, columnCount: number) => React.ReactNode`
-  - 默认值：`undefined`
-  - 说明：自定义列标题渲染函数。
-  - 参数：
-    - `columnIndex`：当前列索引（从 0 开始）
-    - `columnCount`：总列数
-- `lazyContent?: boolean`
-  - 默认值：`true`
-  - 说明：是否延迟渲染选择器内容。开启时，弹窗首次打开才渲染滚轮。
-- `drawerSize?: string | number`
-  - 默认值：`undefined`（自动计算）
-  - 说明：弹窗高度。
-  - 取值：
-    - `number`：按像素解释
-    - `string`：支持 `'400'` 或 `'400px'`
-- `disabled?: boolean`
-  - 默认值：`false`
-  - 说明：是否禁用整个选择器。禁用后无法打开弹窗。
-
-### 事件
-
-- `onCancel?: () => void`
-  - 说明：点击取消按钮时触发。
-- `onConfirm?: (payload: PickerConfirmPayload) => void`
-  - 说明：点击确认按钮时触发。
-  - 参数：`payload` 包含 `value`、`values`、`label`、`labels`、`items`。
-- `onChange?: (payload: PickerChangePayload) => void`
-  - 说明：滚轮滚动选中项变更时触发（确认前的实时变更）。
-  - 参数：`payload` 包含 `value`、`values`、`label`、`labels`、`items`。
-
-### 触发器
-
-- `children?: React.ReactNode | ((ctx: { label: string; value: PickerModelValue }) => React.ReactNode)`
-  - 说明：触发器内容。
-  - 取值：
-    - `React.ReactNode`：直接渲染，点击时打开弹窗
-    - `函数`：接收 `{ label, value }` 上下文，返回渲染内容
-
-## 完整示例
-
-```tsx
-import { Picker, Text, Button } from 'y2kit-ui';
-import * as React from 'react';
-
-const provinceList = [
-  {
-    id: 'zj',
-    title: '浙江省',
-    children: [
-      {
-        id: 'hz',
-        title: '杭州市',
-        children: [
-          { id: 'xs', title: '西湖区' },
-          { id: 'sc', title: '上城区' },
-        ],
-      },
-      {
-        id: 'nb',
-        title: '宁波市',
-        children: [
-          { id: 'hq', title: '海曙区' },
-          { id: 'jb', title: '江北区' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'js',
-    title: '江苏省',
-    children: [
-      {
-        id: 'nj',
-        title: '南京市',
-        children: [
-          { id: 'xw', title: '玄武区' },
-          { id: 'qh', title: '秦淮区' },
-        ],
-      },
-    ],
-  },
-];
-
-export function AddressPickerDemo() {
-  const [value, setValue] = React.useState<string[]>([]);
-  const [label, setLabel] = React.useState('');
-
-  return (
-    <Picker
-      list={provinceList}
-      value={value}
-      onValueChange={setValue}
-      label={label}
-      onLabelChange={setLabel}
-      title="选择地区"
-      valueKey="id"
-      labelKey="title"
-      separator=" / "
-      renderColumnHeader={(idx) => (
-        <Text style={{ fontWeight: '600' }}>
-          {['省份', '城市', '区县'][idx]}
-        </Text>
-      )}
-      onConfirm={(payload) => {
-        console.log('确认选择:', payload);
-      }}
-      onChange={(payload) => {
-        console.log('滚动变更:', payload);
-      }}
-      onCancel={() => {
-        console.log('取消选择');
-      }}
-    >
-      {({ label }) => (
-        <Button variant="soft">{label || '请选择地区'}</Button>
-      )}
-    </Picker>
-  );
-}
+- `label/defaultLabel/onLabelChange` 不再作为 Picker 状态。label 是由已确认 `value + options` 推导出的展示结果，业务需要自定义显示时使用 `formatLabel` 或 trigger render context。
+- `onChange` 表示最终表单值变化，和 TextInput、Radio、CheckboxGroup 的状态事件保持一致。
+- iOS 保留原生 `UIPickerView`，Android/Web 继续走自绘 wheel。Picker 层只处理级联状态和弹层生命周期，不把额外 JS 工作塞进滚轮关键帧。

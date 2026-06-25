@@ -5,7 +5,7 @@
  * ```tsx
  * import { pickerService } from 'y2kit-ui';
  *
- * const result = await pickerService.pick({ list: [...], value: 'id' });
+ * const result = await pickerService.pick({ options: [...], value: 'id' });
  * const date = await pickerService.pickDate({ value: '2024-01-01' });
  * ```
  */
@@ -14,7 +14,7 @@ import * as React from 'react';
 import {
   Picker,
   type PickerConfirmPayload,
-  type PickerModelValue,
+  type PickerValue,
   type PickerProps,
   type PickerTreeNode,
 } from '../../ui/Picker';
@@ -27,7 +27,7 @@ import { BetweenTime, type BetweenTimeProps } from '../../ui/BetweenTime';
 /** 通用选择器返回结果 */
 export type PickerResult = {
   /** 选中值 */
-  value: PickerModelValue;
+  value: PickerValue;
   /** 选中值数组（多列时） */
   values: PickerConfirmPayload['values'];
   /** 选中项文本 */
@@ -35,7 +35,7 @@ export type PickerResult = {
   /** 选中项文本数组（多列时） */
   labels: string[];
   /** 选中项数据 */
-  items: PickerTreeNode[];
+  items: PickerConfirmPayload['items'];
 } | null;
 
 /** 日期选择器返回结果 */

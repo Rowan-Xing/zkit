@@ -3,6 +3,7 @@ export const enUS = {
   'picker.title': 'Please Select',
   'picker.cancel': 'Cancel',
   'picker.confirm': 'Confirm',
+  'picker.empty': 'No options available',
 
   // DatePicker
   'datePicker.title': 'Select Date',

@@ -103,10 +103,17 @@ export type { BetweenTimeProps } from './ui/BetweenTime/index';
 export { Picker } from './ui/Picker/index';
 export type {
   PickerChangePayload,
+  PickerColumnHeaderContext,
   PickerConfirmPayload,
-  PickerModelValue,
+  PickerDraftChangePayload,
+  PickerHandle,
+  PickerOption,
   PickerPrimitiveValue,
   PickerProps,
+  PickerSelection,
+  PickerTriggerContext,
+  PickerValue,
+  PickerValueMode,
   PickerTreeNode,
 } from './ui/Picker/index';
 export {

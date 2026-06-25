@@ -108,6 +108,7 @@ function Demo() {
 - Radio：三端一致的单选框/单选组（受控/非受控、可清空组、Reanimated 指示器动画）
 - Switch：三端一致的布尔开关（受控/非受控、Reanimated 轨道与 thumb 动画）
 - TextInput / TextInputPrimitive：统一文本输入 Field 与接近 RN 原生能力的薄封装
+- Picker：底部滚轮选择器（单列/级联、确认提交、iOS 原生 wheel）
 - AddressCascader：省市区级联选择（内置中国数据）
 - DatePicker：年月日选择（输出 YYYY-MM-DD）
 - WheelColumn：单列滚轮选择（iOS 原生 wheel，Android/Web 自绘高性能路径）

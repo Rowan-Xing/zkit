@@ -100,7 +100,7 @@ type DatePickerConfirmPayload = {
   values: string[]; // ['YYYY','MM','DD']
   label: string; // 'YYYY-MM-DD'（受 separator 影响）
   labels: string[]; // ['YYYY','MM','DD']
-  items: PickerTreeNode[];
+  items: PickerOption<number>[];
   date: Dayjs; // dayjs('YYYY-MM-DD')
 };
 ```

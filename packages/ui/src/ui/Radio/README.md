@@ -1,205 +1,207 @@
 # Radio
 
-Radio 与 RadioGroup 提供单选能力：
+Radio 是三端一致的单选组件，适合互斥选项、设置项模式选择和表单中的单一值选择。组件使用自绘 Pressable + Reanimated 路径，而不是依赖平台原生 radio，以保证 iOS / Android / Web 的尺寸、动效、主题和禁用态表现一致。
 
-- 单个 Radio：`checked/defaultChecked/onCheckedChange`（boolean）
-- RadioGroup：管理一个“选中值”（`string | number | boolean | null`），组内 Radio 通过 `itemValue` 参与选择
-- 交互与过渡动画基于 `react-native-reanimated`
+## 设计约定
 
-## 基础用法（单个）
+- `RadioGroup` 使用 `value/defaultValue/onChange` 管理单一选中值
+- 组内 Radio 使用 `value` 作为身份标识，类型为 `string | number`
+- 受控模式完全跟随外部 `value/checked`，不会乐观漂移
+- 非受控模式先在 UI 线程推进动画，再同步内部状态
+- 已选项默认再次点击不取消；筛选类场景需要清空时显式开启 `allowDeselect`
+- `size/tone/variant` 提供语义化外观，`colors/layout` 作为集中 escape hatch
+- 默认触控热区至少补到 `wp(44)`，小尺寸也保持可点性
 
-```tsx
-import * as React from 'react';
-import { View } from 'react-native';
-import { Radio, Text } from 'y2kit-ui';
-
-export function Demo() {
-  const [checked, setChecked] = React.useState(false);
-
-  return (
-    <View style={{ gap: 12 }}>
-      <Radio checked={checked} onCheckedChange={setChecked} label="我已阅读并同意" />
-      <Text>当前：{String(checked)}</Text>
-    </View>
-  );
-}
-```
-
-## RadioGroup（最常用）
+## RadioGroup
 
 ```tsx
 import * as React from 'react';
-import { View } from 'react-native';
 import { Radio, RadioGroup, Text } from 'y2kit-ui';
+import { wp } from 'y2kit-tools';
+
+type Density = 'compact' | 'comfortable' | 'spacious';
 
 export function Demo() {
-  const [value, setValue] = React.useState<string | null>(null);
-  const list = ['苹果', '梨子', '香蕉', '地瓜', '花生'];
+  const [value, setValue] = React.useState<Density | null>('comfortable');
 
   return (
-    <View style={{ gap: 12 }}>
-      <RadioGroup value={value} onValueChange={setValue} gap={12}>
-        {list.map((it) => (
-          <Radio key={it} itemValue={it} label={it} />
-        ))}
+    <>
+      <RadioGroup<Density>
+        value={value}
+        onChange={setValue}
+        orientation="vertical"
+        gap={wp(10)}
+      >
+        <Radio value="compact" label="紧凑" />
+        <Radio value="comfortable" label="舒适" />
+        <Radio value="spacious" label="宽松" />
       </RadioGroup>
       <Text>当前：{value ?? '未选择'}</Text>
-    </View>
+    </>
   );
 }
 ```
 
-## 竖向排列 + 自定义外观（render-prop）
+## 可清空选择
 
-`children` 支持 render-prop，可以拿到 `checked/disabled/toggle`。Radio 根节点本身就是可点击区域；自定义内容通常只读取 `checked` 做视觉变化，不需要在子节点里再绑定一次点击。
+Radio 默认遵循单选控件直觉：点击已选项不会取消。需要筛选器这类“可回到未选择”的场景时，在组上开启 `allowDeselect`，再次点击当前项会触发 `onChange(null)`。
 
 ```tsx
-import * as React from 'react';
-import { View } from 'react-native';
-import { Radio, RadioGroup, Text } from 'y2kit-ui';
+<RadioGroup
+  value={sort}
+  onChange={setSort}
+  allowDeselect
+  gap={wp(10)}
+>
+  <Radio value="latest" label="最新" />
+  <Radio value="popular" label="最热" />
+</RadioGroup>
+```
 
-export function Demo() {
-  const [value, setValue] = React.useState<number>(1);
-  const list = [
-    { text: '科技创新引领制造业高质量发展', id: 1 },
-    { text: '建立保持制造业合理比重投入机制', id: 2 },
-    { text: '完善现代化产业体系', id: 3 },
-  ];
+## 外观与主题
 
-  return (
-    <RadioGroup value={value} onValueChange={setValue} direction="column" gap={12} align="left">
-      {list.map((item) => (
-        <Radio key={item.id} itemValue={item.id} hiddenIndicator>
-          {({ checked }) => (
-            <View
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 12,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: checked ? '#111827' : '#E5E7EB',
-                backgroundColor: checked ? '#111827' : '#FFFFFF',
-              }}
-            >
-              <Text style={{ color: checked ? '#FFFFFF' : '#111827' }}>{item.text}</Text>
-            </View>
-          )}
-        </Radio>
-      ))}
-    </RadioGroup>
-  );
-}
+```tsx
+<Radio label="默认" />
+<Radio label="柔和" variant="soft" />
+<Radio label="实心" variant="solid" />
+<Radio label="成功色" tone="success" />
+<Radio label="自定义主色" color="#0EA5E9" />
+<Radio colors={{ uncheckedBorder: '#CBD5E1' }} label="自定义颜色" />
+```
+
+像素类自定义值应在调用侧用 `wp(...)` 计算后传入：
+
+```tsx
+<Radio
+  label="大尺寸"
+  layout={{
+    indicatorSize: wp(24),
+    indicatorDotSize: wp(11),
+    gap: wp(12),
+  }}
+/>
+```
+
+## 自定义内容
+
+`children` 支持 render-prop。根节点本身就是可点击区域，子节点通常只读取状态做视觉变化，不需要再绑定一次点击。
+
+```tsx
+<RadioGroup value={plan} onChange={setPlan} orientation="vertical" gap={wp(10)}>
+  {plans.map((item) => (
+    <Radio key={item.id} value={item.id} showIndicator={false}>
+      {({ checked }) => (
+        <View
+          style={{
+            paddingHorizontal: wp(12),
+            paddingVertical: wp(12),
+            borderRadius: wp(8),
+            borderWidth: wp(1),
+            borderColor: checked ? '#111827' : '#E5E7EB',
+            backgroundColor: checked ? '#111827' : '#FFFFFF',
+          }}
+        >
+          <Text tone={checked ? 'inverse' : 'default'}>{item.label}</Text>
+        </View>
+      )}
+    </Radio>
+  ))}
+</RadioGroup>
+```
+
+需要完全替换圆点内容时使用 `indicator`，或在自定义内容中放置 `RadioIndicator`：
+
+```tsx
+<Radio
+  checked={checked}
+  onChange={setChecked}
+  indicator={({ checked }) => <YourIcon name={checked ? 'dot' : 'circle'} />}
+  label="自定义指示器"
+/>
+```
+
+## 单个 Radio
+
+单个 Radio 支持 `checked/defaultChecked/onChange`，但它仍然遵循 radio 语义：点击已选中项默认不取消。协议勾选、开关设置这类布尔交互应优先使用 Checkbox 或 Switch。
+
+```tsx
+<Radio checked={checked} onChange={setChecked} allowDeselect label="可取消的单个选项" />
 ```
 
 ## Props
 
-Radio 基于 React Native 的 `Pressable`，除下述 props 外，也支持 `Pressable` 的其它属性（例如 `hitSlop`、`accessibilityLabel`、`testID` 等）。
+Radio 透传 React Native `Pressable` 的常用属性和事件；组件自身固定使用 `accessibilityRole="radio"`，并维护 `checked/disabled` 状态。
 
-### Radio
+### 状态
 
-#### 值与事件
+- `value?: string | number`：在 `RadioGroup` 内参与单选值匹配。
+- `checked?: boolean`：单个 Radio 的受控选中态。
+- `defaultChecked?: boolean`：单个 Radio 的非受控初始状态，默认 `false`。
+- `onChange?: (checked: boolean) => void`：单个 Radio 状态变化回调；组内 Radio 被用户点击选中或清空时也会触发。
+- `allowDeselect?: boolean`：是否允许点击已选项后清空，默认跟随组配置或 `false`。
+- `disabled?: boolean`：禁用，默认 `false`；组禁用会叠加到组内所有 Radio。
 
-- `checked?: boolean`
-  - 说明：受控选中态。传入后由外部完全接管选中状态。
-- `defaultChecked?: boolean`
-  - 默认值：`false`
-  - 说明：非受控模式下的初始选中态（仅在未传 `checked` 时生效）。
-- `onCheckedChange?: (checked: boolean) => void`
-  - 说明：选中态变化回调。
+### 外观
 
-#### 组内选择（配合 RadioGroup）
+- `size?: 'sm' | 'md' | 'lg'`：尺寸，默认 `'md'`。
+- `tone?: 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info'`：语义色，默认 `'primary'`。
+- `variant?: 'outline' | 'soft' | 'solid'`：选中态视觉样式，默认 `'outline'`。
+- `color?: string`：主色覆盖，支持主题 token、语义色或颜色字符串。
+- `colors?: RadioColors`：结构化颜色覆盖。
+- `layout?: RadioLayout`：结构化尺寸覆盖。
+- `duration?: number`：状态切换动画时长，默认 `170`。
 
-- `itemValue?: string | number | boolean`
-  - 说明：组内唯一值标识。将 Radio 放入 RadioGroup 时，通过 `itemValue` 决定它对应哪个选项。
-  - 注意：组内请保证 `itemValue` 唯一。
+### 内容
 
-#### 状态
+- `label?: ReactNode`：快捷主文案；字符串会使用组件库 `Text` 渲染，并可推导 `accessibilityLabel`。
+- `description?: ReactNode`：快捷辅助文案。
+- `labelPlacement?: 'start' | 'end'`：文案位于指示器的逻辑起点或终点，默认 `'end'`，RTL 下会自动调整视觉顺序。
+- `children?: ReactNode | ((slot: RadioSlotProps) => ReactNode)`：自定义内容区域。
+- `showIndicator?: boolean`：是否渲染内置指示器，默认 `true`。
+- `indicator?: ReactNode | ((slot: RadioSlotProps) => ReactNode)`：自定义指示器内容。
 
-- `disabled?: boolean`
-  - 默认值：`false`
-  - 说明：禁用交互；在 RadioGroup 内会与 group 的 `disabled` 叠加。
+### 样式 escape hatch
 
-#### 文案与布局
-
-- `label?: string`
-  - 说明：快捷文案；当 `children` 未提供时渲染。
-- `showLabel?: boolean`
-  - 默认值：`true`
-  - 说明：是否渲染 label 区域（同时会移除 label 间距）。
-- `labelDirection?: 'left' | 'right'`
-  - 默认值：`'left'`
-  - 说明：圆点在文字左侧还是右侧。
-- `labelFontSize?: number`
-  - 默认值：跟随组件内部默认字号
-  - 说明：label 的字号。
-- `labelSpace?: number`
-  - 默认值：内部默认间距
-  - 说明：圆点与 label 的间距。
-
-#### 指示器（圆点）样式
-
-- `hiddenIndicator?: boolean`
-  - 默认值：`false`
-  - 说明：隐藏默认圆点；用于完全自定义外观，只复用交互/状态。
-- `size?: number`
-  - 说明：圆点外圈尺寸（宽高相同）。
-- `borderWidth?: number`
-  - 说明：圆点外圈边框宽度。
-- `color?: string`
-  - 说明：选中态主色（外圈边框色 + 内部实心点颜色）。
-- `unCheckColor?: string`
-  - 说明：未选中时边框色（浅色模式）。
-- `darkUnCheckColor?: string`
-  - 说明：未选中时边框色（暗色模式优先使用）。
-- `indicatorStyle?: StyleProp<ViewStyle>`
-  - 说明：仅作用于圆点外圈的样式（不影响整行布局）。
-
-#### 自定义内容
-
-- `children?: ReactNode | ((slot) => ReactNode)`
-  - 说明：
-    - 传入 `ReactNode`：纯展示内容
-    - 传入函数：render-prop，可拿到状态与 `toggle()`
-  - `slot` 结构：
-    - `checked: boolean`
-    - `itemValue?: string | number | boolean`
-    - `disabled: boolean`
-    - `toggle: () => void`
-
-### RadioIndicator
-
-Radio 内置的选中指示器（对外导出，便于替换内部内容）。
-
-- `children?: ReactNode`
-  - 说明：自定义内部“实心点”；不传时渲染默认圆点。
-- `style?: StyleProp<ViewStyle>`
-  - 说明：指示器容器样式。
+- `style?: Pressable['style']`：根 Pressable 样式。
+- `contentStyle?: StyleProp<ViewStyle>`：内容行样式。
+- `indicatorStyle?: StyleProp<ViewStyle>`：指示器样式。
+- `labelStyle?: StyleProp<TextStyle>`：快捷主文案样式。
+- `descriptionStyle?: StyleProp<TextStyle>`：快捷辅助文案样式。
 
 ### RadioGroup
 
-RadioGroup 继承 React Native `View` 的所有 props，并额外提供以下 props：
+- `value?: string | number | null`：受控选中值。
+- `defaultValue?: string | number | null`：非受控初始选中值。
+- `onChange?: (value: string | number | null) => void`：选中值变化回调。
+- `disabled?: boolean`：组禁用。
+- `allowDeselect?: boolean`：是否允许点击已选项后清空为 `null`，默认 `false`。
+- `orientation?: 'horizontal' | 'vertical'`：布局方向，默认 `'horizontal'`。
+- `align?: 'start' | 'center' | 'end' | 'stretch'`：交叉轴对齐，默认 `'start'`。
+- `wrap?: boolean`：横向布局是否换行，默认 `false`。
+- `gap?: number` / `rowGap?: number` / `columnGap?: number`：组内间距，默认 `wp(12)`。
+- `size` / `tone` / `variant` / `color` / `colors` / `layout`：作为组内 Radio 的默认外观配置，单个 Radio 传入同名 props 时优先生效。
 
-- `value?: string | number | boolean | null`
-  - 说明：受控选中值；传入后由外部完全接管选中项。
-- `defaultValue?: string | number | boolean | null`
-  - 默认值：`null`
-  - 说明：非受控初始选中值（仅在未传 `value` 时生效）。
-- `onValueChange?: (value: string | number | boolean | null) => void`
-  - 说明：选中值变化回调。
-  - 注意：受控模式下组件不会乐观改内部选中值；如果父组件拒绝这次变更，UI 会保持原状态。
-- `disabled?: boolean`
-  - 默认值：`false`
-  - 说明：组禁用；组内所有 Radio 都会被禁用。
-- `direction?: 'row' | 'column'`
-  - 默认值：`'row'`
-  - 说明：组内排列方向。
-- `align?: 'left' | 'center' | 'right'`
-  - 默认值：`'left'`
-  - 说明：组内对齐方式。
-- `gap?: number | string | [number | string, number | string]`
-  - 默认值：`20`
-  - 说明：排列间距。
-  - 取值：
-    - `number`：按 RN 数值像素解释
-    - `string`：支持 `'12px'` / `'12'`
-    - `[columnGap, rowGap]`：分别控制列/行间距
+## 类型
+
+```ts
+type RadioValue = string | number;
+
+type RadioColors = {
+  checkedBackground?: string;
+  checkedBorder?: string;
+  checkedIndicator?: string;
+  uncheckedBackground?: string;
+  uncheckedBorder?: string;
+  focusRing?: string;
+};
+
+type RadioLayout = {
+  indicatorSize?: number;
+  indicatorDotSize?: number;
+  indicatorBorderWidth?: number;
+  gap?: number;
+  minTouchTarget?: number;
+  focusRingWidth?: number;
+  focusRingOffset?: number;
+};
+```

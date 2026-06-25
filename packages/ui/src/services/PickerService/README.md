@@ -28,9 +28,9 @@ import { pickerService } from 'y2kit-ui';
 
 ```tsx
 const result = await pickerService.pick({
-  list: [
-    { id: 'zh', title: '中文' },
-    { id: 'en', title: 'English' },
+  options: [
+    { value: 'zh', label: '中文' },
+    { value: 'en', label: 'English' },
   ],
   value: 'zh',
   title: '选择语言',
@@ -94,12 +94,13 @@ if (result) {
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| list | PickerTreeNode[] | ✓ | 选项列表 |
-| value | PickerModelValue | - | 当前值 |
-| defaultValue | PickerModelValue | - | 默认值 |
+| options | PickerOption[] | ✓ | 选项列表，默认字段为 `value/label/children/disabled` |
+| value | PickerValue | - | 当前值 |
+| defaultValue | PickerValue | - | 默认值 |
 | title | string | - | 标题 |
-| valueKey | string | - | 值字段名，默认 'id' |
-| labelKey | string | - | 文本字段名，默认 'title' |
+| valueMode | `'auto' \| 'single' \| 'path'` | - | 输出值模式 |
+| getOptionValue | function | - | 自定义取值 |
+| getOptionLabel | function | - | 自定义文案 |
 | disabled | boolean | - | 是否禁用 |
 
 返回 `Promise<PickerResult>`，取消时返回 `null`。
