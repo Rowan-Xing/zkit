@@ -57,6 +57,11 @@ export const zhCN = {
   'actionDialog.cancel': '取消',
   'actionDialog.close': '关闭弹窗',
 
+  // Loading
+  'loading.loading': '正在加载',
+  'loading.success': '已完成',
+  'loading.error': '操作失败',
+
   // SliderCaptcha
   'sliderCaptcha.title': '请拖动滑块完成拼图',
   'sliderCaptcha.verifyFailed': '验证失败，请重试',

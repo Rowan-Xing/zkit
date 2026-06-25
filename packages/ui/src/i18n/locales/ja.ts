@@ -57,6 +57,11 @@ export const ja = {
   'actionDialog.cancel': 'キャンセル',
   'actionDialog.close': 'ダイアログを閉じる',
 
+  // Loading
+  'loading.loading': '読み込み中',
+  'loading.success': '完了',
+  'loading.error': '失敗しました',
+
   // SliderCaptcha
   'sliderCaptcha.title': 'スライドで認証',
   'sliderCaptcha.verifyFailed': '認証失敗',

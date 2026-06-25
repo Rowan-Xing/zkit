@@ -5,7 +5,7 @@ import { ActionDialogProvider } from './services/ActionDialogService/index';
 import { ToastProvider } from './services/CardToastService/index';
 import { ImageCropperProvider } from './services/ImageCropperService/index';
 import { ImagePreviewProvider } from './services/ImagePreviewService/index';
-import { LoadingProvider } from './services/LoadingService/index';
+import { LoadingProvider, type LoadingDefaults } from './services/LoadingService/index';
 import { PermissionPurposeDialogProvider } from './services/PermissionPurposeDialogService/index';
 import { PickerServiceProvider } from './services/PickerService/index';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -20,6 +20,7 @@ export type ComponentLibProviderProps = {
   locale?: string;
   messages?: I18nMessages;
   missingKeyPolicy?: I18nMissingKeyPolicy;
+  loading?: LoadingDefaults;
   children: React.ReactNode;
 };
 
@@ -32,6 +33,7 @@ export function ComponentLibProvider({
   locale,
   messages,
   missingKeyPolicy,
+  loading,
   children,
 }: ComponentLibProviderProps) {
   return (
@@ -41,7 +43,7 @@ export function ComponentLibProvider({
           <PickerServiceProvider>
             <ToastProvider>
               <ActionDialogProvider>
-                <LoadingProvider>
+                <LoadingProvider defaults={loading}>
                   <PermissionPurposeDialogProvider>
                     <ImagePreviewProvider>
                       <ImageCropperProvider>{children}</ImageCropperProvider>

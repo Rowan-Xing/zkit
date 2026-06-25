@@ -109,6 +109,7 @@ function Demo() {
 - Switch：三端一致的布尔开关（受控/非受控、Reanimated 轨道与 thumb 动画）
 - TextInput / TextInputPrimitive：统一文本输入 Field 与接近 RN 原生能力的薄封装
 - BottomSheet：跨 iOS / Android / Web 的底部浮层基础件（受控/非受控 open、detents、统一遮罩与 Provider）
+- LoadingService：全局加载 HUD 服务（handle 状态模型、Promise 绑定、Android 无 elevation 残影路径）
 - ImagePreview：全屏图片预览（声明式 open/value 状态模型 + 全局 imagePreview.open 服务）
 - Picker：底部滚轮选择器（单列/级联、确认提交、iOS 原生 wheel）
 - AddressCascader：省市区级联选择（内置中国数据）

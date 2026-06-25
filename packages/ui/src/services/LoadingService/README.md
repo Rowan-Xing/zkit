@@ -1,210 +1,128 @@
 # LoadingService
 
-全局 Loading 服务，提供命令式 API 来显示/隐藏加载状态、成功/失败提示。
+全局加载 HUD 服务，用于短时阻塞、Promise 生命周期反馈和轻量结果态。`ComponentLibProvider` 已内置 `LoadingProvider`，普通业务入口只需要导入 `loading`。
 
-## 特性
+## 设计要点
 
-- ✅ 命令式调用，无需传递 props
-- ✅ 支持 loading、success、error 三种状态
-- ✅ 支持阻塞/非阻塞模式
-- ✅ 支持自动关闭
-- ✅ 支持 Promise 生命周期绑定
-- ✅ 15秒看门狗保护，防止 loading 卡死
-- ✅ 平滑的淡入淡出动画
+- `loading.show()` 返回 `LoadingHandle`，同一次异步流程后续用 handle 更新或收尾，避免旧请求覆盖新请求
+- 全局只展示一个 HUD；新请求默认替换旧请求，并向旧请求派发 `replace`
+- `loading.promise()` 绑定异步任务，成功/失败结果只会更新当前仍活跃的 handle
+- `loading` 默认 15s 超时自动关闭，`success/error` 默认短暂停留后关闭
+- Android 不使用 `elevation` 或额外阴影层；iOS/Web 阴影跟随同一动画层，退出完成后卸载，避免残影
+- 默认文案来自 i18n，可通过 `ComponentLibProvider loading` 或 `LoadingProvider defaults` 覆盖
 
-## 快速开始
+## 基础用法
 
 ```tsx
 import { loading } from 'y2kit-ui';
 
-// 显示 loading
-loading.show('正在加载');
+const handle = loading.show('正在保存');
 
-// 隐藏 loading
-loading.hide();
+try {
+  await save();
+  handle.success('保存成功');
+} catch (error) {
+  handle.error('保存失败');
+}
+```
 
-// 显示成功（自动关闭）
-loading.success('操作成功');
+## Promise 绑定
 
-// 显示失败（自动关闭）
-loading.error('操作失败');
+```tsx
+await loading.promise(save(), {
+  loading: '正在保存',
+  success: '保存成功',
+  error: '保存失败',
+});
+```
+
+`success` 和 `error` 可以返回配置对象，也可以返回 `false` 跳过结果态：
+
+```tsx
+await loading.promise(api.createOrder(), {
+  loading: { title: '创建订单中', blocking: true },
+  success: (res) => ({ title: `订单 ${res.id} 已创建`, duration: 1200 }),
+  error: (error) => ({ title: error instanceof Error ? error.message : '创建失败' }),
+  isSuccess: (res) => res.code === 0,
+});
 ```
 
 ## API
 
-### loading.show(textOrOptions)
-
-显示 loading 状态。
+### loading.show(options)
 
 ```tsx
-// 简单用法
-loading.show('正在加载');
-
-// 完整配置
-loading.show({
-  text: '正在加载',
-  blocking: true, // 是否阻塞用户交互，默认 true
+const handle = loading.show({
+  title: '同步中',
+  description: '请稍候',
+  blocking: true,
+  timeout: 15000,
 });
 ```
 
-### loading.hide()
+`options` 也可以直接传 ReactNode，作为 `title`。`show` 默认 `status="loading"`、`blocking=true`、`duration=0`。
 
-隐藏 loading。
-
-```tsx
-loading.hide();
-```
-
-### loading.success(textOrOptions)
-
-显示成功状态，默认 1.2 秒后自动关闭。
+### handle.update(patch)
 
 ```tsx
-// 简单用法
-loading.success('保存成功');
-
-// 完整配置
-loading.success({
-  text: '保存成功',
-  autoHide: true,      // 是否自动关闭，默认 true
-  hideDelay: 1200,     // 自动关闭延迟，默认 1200ms
-  blocking: false,     // 是否阻塞用户交互，默认 false
-});
+const handle = loading.show('上传中');
+handle.update({ title: '处理中', description: '马上完成' });
 ```
 
-### loading.error(textOrOptions)
-
-显示失败状态，默认 1.4 秒后自动关闭。
+### handle.success(options) / handle.error(options)
 
 ```tsx
-// 简单用法
-loading.error('保存失败');
-
-// 完整配置
-loading.error({
-  text: '保存失败',
-  autoHide: true,      // 是否自动关闭，默认 true
-  hideDelay: 1400,     // 自动关闭延迟，默认 1400ms
-  blocking: false,     // 是否阻塞用户交互，默认 false
-});
+handle.success({ title: '上传完成', duration: 1000 });
+handle.error({ title: '上传失败', description: '请稍后重试', duration: 1600 });
 ```
 
-### loading.withPromise(promise, options)
+结果态默认不阻塞交互；需要阻塞时传 `blocking: true`。
 
-绑定 Promise 的生命周期，自动显示 loading、成功、失败状态。
+### loading.hide(idOrHandle?)
 
 ```tsx
-// 基础用法
-const result = await loading.withPromise(fetchData());
-
-// 完整配置
-const result = await loading.withPromise(fetchData(), {
-  loadingText: '加载中',
-  successText: '加载成功',
-  errorText: '加载失败',
-  autoHide: true,
-  hideDelay: 1200,
-  blockingDuringLoading: true,  // 加载时是否阻塞
-  blockingOnResult: false,       // 结果展示时是否阻塞
-  
-  // 自定义成功判断
-  isSuccess: (result) => result.code === 0,
-  
-  // 自定义成功文案
-  successTextResolver: (result) => result.message,
-  
-  // 自定义失败文案
-  errorTextResolver: (result, error) => error?.message || result?.message || '操作失败',
-});
+loading.hide(handle);
+loading.hide(); // 隐藏当前 HUD
 ```
 
-## 类型定义
+## Provider 配置
 
-```typescript
-// show 方法选项
-type LoadingShowOptions = {
-  text?: string;
-  blocking?: boolean;
-};
+```tsx
+<ComponentLibProvider
+  loading={{
+    loadingTimeout: 20000,
+    successDuration: 1000,
+    errorDuration: 1800,
+    labels: {
+      loading: '处理中',
+      success: '完成',
+      error: '失败',
+    },
+    colors: {
+      backdrop: 'rgba(15, 23, 42, 0.12)',
+    },
+  }}
+>
+  <App />
+</ComponentLibProvider>
+```
 
-// success/error 方法选项
-type LoadingResultOptions = {
-  text?: string;
-  autoHide?: boolean;
-  hideDelay?: number;
-  blocking?: boolean;
-};
+## 关键类型
 
-// withPromise 方法选项
-type LoadingWithPromiseOptions<T> = {
-  loadingText?: string;
-  successText?: string;
-  errorText?: string;
-  autoHide?: boolean;
-  hideDelay?: number;
-  blockingDuringLoading?: boolean;
-  blockingOnResult?: boolean;
-  isSuccess?: (result: T) => boolean;
-  successTextResolver?: (result: T) => string | undefined;
-  errorTextResolver?: (result: T | undefined, error?: unknown) => string | undefined;
-};
-
-// 状态类型
+```ts
 type LoadingStatus = 'loading' | 'success' | 'error';
-```
+type LoadingDismissReason = 'api' | 'timeout' | 'replace' | 'provider-unmount';
 
-## 实际场景示例
-
-### 表单提交
-
-```tsx
-const handleSubmit = async () => {
-  try {
-    loading.show('正在提交');
-    await submitForm(formData);
-    loading.success('提交成功');
-  } catch (error) {
-    loading.error(error.message || '提交失败');
-  }
+type LoadingShowOptions = {
+  id?: string;
+  status?: LoadingStatus;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  blocking?: boolean;
+  duration?: number;
+  timeout?: number;
+  icon?: React.ReactNode | false | ((context: LoadingIconRenderContext) => React.ReactNode);
+  render?: (context: LoadingRenderContext) => React.ReactNode;
+  colors?: LoadingColors;
 };
 ```
-
-### 使用 withPromise 简化
-
-```tsx
-const handleSubmit = async () => {
-  await loading.withPromise(submitForm(formData), {
-    loadingText: '正在提交',
-    successText: '提交成功',
-    errorText: '提交失败',
-  });
-};
-```
-
-### 非阻塞 Loading
-
-```tsx
-// 用户可以继续操作其他区域
-loading.show({
-  text: '后台同步中',
-  blocking: false,
-});
-```
-
-### 自定义业务判断
-
-```tsx
-await loading.withPromise(api.createOrder(), {
-  loadingText: '创建订单中',
-  isSuccess: (res) => res.code === 0,
-  successTextResolver: (res) => `订单 ${res.data.orderId} 创建成功`,
-  errorTextResolver: (res) => res.message || '创建订单失败',
-});
-```
-
-## 注意事项
-
-1. **Provider 已集成**：`LoadingProvider` 已内置于 `ComponentLibProvider`，无需额外配置
-2. **看门狗保护**：loading 状态超过 15 秒会自动关闭，防止卡死
-3. **唯一实例**：全局只有一个 loading 实例，后调用会覆盖前一个；较早的 `withPromise` 结果不会覆盖较新的状态
-4. **动画性能**：使用 `useNativeDriver` 确保动画流畅

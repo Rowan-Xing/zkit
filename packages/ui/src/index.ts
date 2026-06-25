@@ -319,10 +319,30 @@ export type {
 } from './services/ActionDialogService/index';
 export { loading, LoadingProvider } from './services/LoadingService/index';
 export type {
-  LoadingShowOptions,
+  LoadingColors,
+  LoadingDefaults,
+  LoadingDismissReason,
+  LoadingHandle,
+  LoadingIconRenderContext,
+  LoadingInput,
+  LoadingItem,
+  LoadingLabels,
+  LoadingLiveRegion,
+  LoadingOpenChangeMeta,
+  LoadingOpenChangeReason,
+  LoadingPromiseErrorInput,
+  LoadingPromiseOptions,
+  LoadingPromiseResultInput,
+  LoadingProviderProps,
+  LoadingRenderContext,
+  LoadingResolvedDefaults,
+  LoadingResultInput,
   LoadingResultOptions,
-  LoadingWithPromiseOptions,
+  LoadingService,
+  LoadingShowOptions,
+  LoadingSnapshot,
   LoadingStatus,
+  LoadingUpdateOptions,
 } from './services/LoadingService/index';
 export {
   permissionPurposeDialog,

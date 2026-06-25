@@ -55,10 +55,10 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
   }, [t]);
 
   const handleLoading = React.useCallback(async () => {
-    await loading.withPromise(wait(900), {
-      loadingText: t('example.loading.loading'),
-      successText: t('example.loading.success'),
-      errorText: t('example.loading.error'),
+    await loading.promise(wait(900), {
+      loading: t('example.loading.loading'),
+      success: t('example.loading.success'),
+      error: t('example.loading.error'),
     });
   }, [t]);
 

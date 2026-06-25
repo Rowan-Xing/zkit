@@ -57,6 +57,11 @@ export const zhTW = {
   'actionDialog.cancel': '取消',
   'actionDialog.close': '關閉彈窗',
 
+  // Loading
+  'loading.loading': '正在載入',
+  'loading.success': '已完成',
+  'loading.error': '操作失敗',
+
   // SliderCaptcha
   'sliderCaptcha.title': '請拖動滑塊完成拼圖',
   'sliderCaptcha.verifyFailed': '驗證失敗，請重試',

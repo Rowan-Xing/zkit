@@ -57,6 +57,11 @@ export const enUS = {
   'actionDialog.cancel': 'Cancel',
   'actionDialog.close': 'Close dialog',
 
+  // Loading
+  'loading.loading': 'Loading',
+  'loading.success': 'Done',
+  'loading.error': 'Failed',
+
   // SliderCaptcha
   'sliderCaptcha.title': 'Drag slider to finish puzzle',
   'sliderCaptcha.verifyFailed': 'Verification failed',
