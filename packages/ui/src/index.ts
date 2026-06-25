@@ -32,11 +32,22 @@ export type {
   CheckedState,
 } from './ui/Checkbox/index';
 export { Text } from './ui/Text/index';
-export type { TextProps, TextRef, TextSize, TextTone, TextVariant, TextWeight } from './ui/Text/index';
-export { TextInput } from './ui/TextInput/index';
+export type {
+  TextProps,
+  TextRef,
+  TextSize,
+  TextSizeValue,
+  TextTone,
+  TextTruncate,
+  TextVariant,
+  TextWeight,
+} from './ui/Text/index';
+export { TextInput, TextInputPrimitive } from './ui/TextInput/index';
 export type {
   TextInputColors,
   TextInputLayout,
+  TextInputPrimitiveProps,
+  TextInputPrimitiveRef,
   TextInputProps,
   TextInputRef,
   TextInputSize,

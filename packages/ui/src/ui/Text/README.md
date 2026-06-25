@@ -1,14 +1,16 @@
 # Text
 
-`Text` 是组件库统一文字入口，用来集中处理字号、行高、主题色、字体缩放和跨平台字重表现。
+`Text` 是 y2kit 的统一文字原语。它集中处理排版 token、主题色、字体缩放、截断和跨端字重差异，让业务和公共组件都走同一套文字规则。
 
-设计原则：
+## 设计取舍
 
-- 优先使用 `variant / size / weight / tone` 表达文字语义
-- 默认接入主题色，避免业务里散落固定颜色
-- 所有内置字号与行高都通过 `wp(...)` 计算
-- 保留 React Native `Text` 的原生能力，`style` 作为最终 escape hatch
-- 统一 `maxFontSizeMultiplier` 与 `fontWeight`，减少 iOS / Android 表现差异
+- `Text` 是无状态组件，没有受控/非受控语义。
+- `variant` 表达排版语义，`tone` 表达颜色意图，`style` 只作为最终 escape hatch。
+- 内置字号和行高按设计像素声明，组件内部统一通过 `wp(...)` 计算。
+- 默认使用 `getMaxFontScale()` 限制字体缩放上限，单次可用 `maxFontSizeMultiplier` 覆盖。
+- Android 默认关闭 `includeFontPadding`，用明确 lineHeight 保证 iOS / Android / Web 视觉高度更一致。
+- `color` 支持主题 token、语义色 token 和原生可解析颜色；无效颜色会回落到 `tone`。
+- 屏幕宽度变化时会重新计算排版尺寸，横竖屏和分屏场景不会卡在初始化尺寸。
 
 ## 基础用法
 
@@ -24,10 +26,11 @@ export function Demo() {
 
 - `variant="body"`
 - `tone="default"`
-- 颜色使用 `theme.colors.onSurface`
-- 字体缩放上限使用 `getMaxFontScale()`
+- `size="md"`
+- `weight="regular"`
+- `maxFontSizeMultiplier={getMaxFontScale()}`
 
-## 语义预设
+## 排版语义
 
 ```tsx
 import { Text } from 'y2kit-ui';
@@ -38,183 +41,107 @@ export function Demo() {
       <Text variant="display">页面主标题</Text>
       <Text variant="heading">分区标题</Text>
       <Text variant="title">列表标题</Text>
-      <Text variant="subtitle" tone="muted">
-        辅助说明
-      </Text>
       <Text variant="body">正文内容</Text>
       <Text variant="label">表单标签</Text>
       <Text variant="caption" tone="muted">
-        弱提示
+        辅助说明
       </Text>
+      <Text variant="code">const ready = true;</Text>
     </>
   );
 }
 ```
 
-`variant` 只提供默认的 `size` 与 `weight`。如果传入 `size` 或 `weight`，会覆盖对应的预设值。
+`variant` 只决定默认 `size / weight / fontFamily`，显式传入 `size`、`weight` 或 `style` 时会覆盖对应值。
 
 ## 尺寸
 
 ```tsx
-import { Text } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <>
-      <Text size="xs">xs</Text>
-      <Text size="sm">sm</Text>
-      <Text size="md">md</Text>
-      <Text size="lg">lg</Text>
-      <Text size="xl">xl</Text>
-      <Text size="2xl">2xl</Text>
-      <Text size="3xl">3xl</Text>
-    </>
-  );
-}
+<>
+  <Text size="2xs">2xs</Text>
+  <Text size="xs">xs</Text>
+  <Text size="sm">sm</Text>
+  <Text size="md">md</Text>
+  <Text size="lg">lg</Text>
+  <Text size="xl">xl</Text>
+  <Text size="2xl">2xl</Text>
+  <Text size="3xl">3xl</Text>
+  <Text size="4xl">4xl</Text>
+  <Text size={18} lineHeight={26}>
+    自定义设计尺寸
+  </Text>
+</>
 ```
 
 内置尺寸：
 
-- `xs`：`fontSize: wp(12)`，`lineHeight: wp(16)`
-- `sm`：`fontSize: wp(13)`，`lineHeight: wp(18)`
-- `md`：`fontSize: wp(15)`，`lineHeight: wp(21)`
-- `lg`：`fontSize: wp(17)`，`lineHeight: wp(24)`
-- `xl`：`fontSize: wp(20)`，`lineHeight: wp(28)`
-- `2xl`：`fontSize: wp(24)`，`lineHeight: wp(32)`
-- `3xl`：`fontSize: wp(30)`，`lineHeight: wp(38)`
+| size | fontSize | lineHeight |
+| --- | ---: | ---: |
+| `2xs` | `wp(11)` | `wp(14)` |
+| `xs` | `wp(12)` | `wp(16)` |
+| `sm` | `wp(13)` | `wp(18)` |
+| `md` | `wp(15)` | `wp(21)` |
+| `lg` | `wp(17)` | `wp(24)` |
+| `xl` | `wp(20)` | `wp(28)` |
+| `2xl` | `wp(24)` | `wp(32)` |
+| `3xl` | `wp(30)` | `wp(38)` |
+| `4xl` | `wp(36)` | `wp(44)` |
+
+传入数字 `size` 或 `lineHeight` 时，数字代表未缩放的设计像素，组件内部会统一转换。
 
 ## 颜色
 
 ```tsx
-import { Text } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <>
-      <Text tone="default">默认文字</Text>
-      <Text tone="muted">弱化文字</Text>
-      <Text tone="primary">强调文字</Text>
-      <Text tone="disabled">禁用说明</Text>
-      <Text color="#DC2626">一次性自定义颜色</Text>
-    </>
-  );
-}
+<>
+  <Text tone="default">默认文字</Text>
+  <Text tone="muted">弱化文字</Text>
+  <Text tone="primary">强调文字</Text>
+  <Text tone="success">成功状态</Text>
+  <Text tone="warning">警示状态</Text>
+  <Text tone="danger">危险状态</Text>
+  <Text tone="disabled">禁用说明</Text>
+  <Text color="onPrimary">主题 token</Text>
+  <Text color="#DC2626">一次性颜色</Text>
+</>
 ```
 
-`tone` 与主题色的关系：
+常用 `tone`：
 
 - `default` / `neutral`：`theme.colors.onSurface`
 - `muted`：`theme.colors.muted`
+- `subtle` / `disabled`：`theme.colors.disabled`
 - `primary`：`theme.colors.primary`
-- `secondary`：`theme.colors.onSecondary`
-- `disabled`：`theme.colors.disabled`
-- `onPrimary`：`theme.colors.onPrimary`
+- `success` / `warning` / `danger` / `info`：内置语义状态色
+- `inverse` / `onPrimary`：`theme.colors.onPrimary`
 - `onSecondary`：`theme.colors.onSecondary`
-- `inherit`：不设置颜色，让文字继承父级 `Text` 的颜色
-
-当需要嵌套文字继承父级颜色时，给子级显式传 `tone="inherit"`：
+- `inherit`：不设置颜色，用于嵌套文字继承父级颜色
 
 ```tsx
-import { Text } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <Text tone="primary">
-      已选择 <Text tone="inherit" weight="bold">3</Text> 项
-    </Text>
-  );
-}
+<Text tone="primary">
+  已选择 <Text tone="inherit" weight="bold">3</Text> 项
+</Text>
 ```
 
-## 字重与对齐
+## 截断、字重和数字
 
 ```tsx
-import { Text } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <>
-      <Text weight="regular">Regular</Text>
-      <Text weight="medium">Medium</Text>
-      <Text weight="semibold">Semibold</Text>
-      <Text weight="bold">Bold</Text>
-      <Text weight="900" align="center">
-        居中重字重
-      </Text>
-    </>
-  );
-}
+<>
+  <Text truncate>单行省略</Text>
+  <Text truncate={2}>最多两行</Text>
+  <Text weight="semibold">语义字重</Text>
+  <Text weight="850">自定义字重会归一化到 100-900</Text>
+  <Text tabularNumbers>12:08 / 98%</Text>
+</>
 ```
 
-`weight` 支持语义值，也支持 React Native `fontWeight` 原生值。组件会统一归一化字重：
+- `truncate` 是 `numberOfLines` 和默认 `ellipsizeMode="tail"` 的语义化快捷方式。
+- `weight` 支持 `regular / medium / semibold / bold / heavy / black`，也支持 React Native 原生 `fontWeight`。
+- Web 常见字重名会被映射到稳定数字权重；Android API 28 以下会降级到 `normal / bold`。
+- `tabularNumbers` 用于计时器、金额、百分比等需要数字等宽的场景。
 
-- Web 常见命名如 `regular / semibold / black` 会映射到稳定数字权重
-- Android API 28 以下会降级为 `normal / bold`
-- `style.fontWeight` 也会参与归一化
+## 原生能力
 
-## 与 style 配合
-
-```tsx
-import { StyleSheet } from 'react-native';
-import { Text } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
-
-export function Demo() {
-  return (
-    <Text variant="label" tone="muted" style={styles.note}>
-      自定义细节
-    </Text>
-  );
-}
-
-const styles = StyleSheet.create({
-  note: {
-    marginTop: wp(8),
-    letterSpacing: 0,
-  },
-});
-```
-
-样式优先级从低到高：
-
-1. `variant` 推导出的默认 `size / weight`
-2. 显式 `size / weight / tone / color / align`
-3. `style`
-
-因此 `style` 可以覆盖 `fontSize / lineHeight / color / fontWeight / textAlign`。公共组件内部优先使用语义 props，只有局部特殊样式才使用 `style`。
-
-## 字体缩放
-
-`Text` 默认使用 `getMaxFontScale()` 作为 `maxFontSizeMultiplier`，保证组件库内文字缩放规则一致。
-
-```tsx
-import { Text } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <Text maxFontSizeMultiplier={1.1}>
-      单次覆盖缩放上限
-    </Text>
-  );
-}
-```
-
-如果传入 `allowFontScaling={false}`，会沿用 React Native 原生行为。
-
-## 常用 Props
-
-- `variant?: 'body' | 'label' | 'caption' | 'title' | 'subtitle' | 'heading' | 'display'`
-- `size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'`
-- `weight?: 'regular' | 'medium' | 'semibold' | 'heavy' | 'black' | TextStyle['fontWeight']`
-- `tone?: 'default' | 'neutral' | 'muted' | 'primary' | 'secondary' | 'disabled' | 'onPrimary' | 'onSecondary' | 'inherit'`
-- `color?: string`
-- `align?: TextStyle['textAlign']`
-- `style?: StyleProp<TextStyle>`
-- `children?: React.ReactNode`
-
-## 继承的 React Native Text Props
-
-`Text` 继承 React Native `Text` 的原生 props，例如：
+`Text` 继承 React Native `Text` 的原生能力，包括：
 
 - `numberOfLines`
 - `ellipsizeMode`
@@ -227,10 +154,4 @@ export function Demo() {
 - `accessibilityLabel`
 - `testID`
 
-## 使用建议
-
-- 页面标题优先用 `variant="heading"` 或 `variant="display"`
-- 表单标签、按钮内部文字、列表元信息优先用 `variant="label"`
-- 辅助说明优先用 `variant="caption"` 或 `tone="muted"`
-- 需要继承父级文字颜色时使用 `tone="inherit"`
-- 不要在业务里直接使用 React Native `Text`，避免缩放、字重和主题色规则分裂
+公共组件内部应优先使用 `variant / tone / size / weight / truncate`。只有确实需要局部覆盖布局、颜色或字体细节时再使用 `style`。

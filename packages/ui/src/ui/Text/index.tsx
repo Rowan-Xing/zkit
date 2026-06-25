@@ -3,23 +3,32 @@ import {
   Platform,
   StyleSheet,
   Text as RNText,
+  type AccessibilityState,
   type StyleProp,
   type TextProps as RNTextProps,
   type TextStyle,
+  processColor,
+  useWindowDimensions,
 } from 'react-native';
 import { getMaxFontScale, wp } from 'y2kit-tools';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
 
-export type TextVariant = 'body' | 'label' | 'caption' | 'title' | 'subtitle' | 'heading' | 'display';
-export type TextSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+export type TextVariant = 'body' | 'label' | 'caption' | 'title' | 'heading' | 'display' | 'code';
+export type TextSize = '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+export type TextSizeValue = TextSize | number;
 export type TextTone =
   | 'default'
   | 'neutral'
   | 'muted'
+  | 'subtle'
   | 'primary'
-  | 'secondary'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info'
   | 'disabled'
+  | 'inverse'
   | 'onPrimary'
   | 'onSecondary'
   | 'inherit';
@@ -27,79 +36,85 @@ export type TextWeight =
   | 'regular'
   | 'medium'
   | 'semibold'
+  | 'bold'
   | 'heavy'
   | 'black'
   | NonNullable<TextStyle['fontWeight']>;
+export type TextTruncate = boolean | number;
 
-type NativeTextProps = Omit<RNTextProps, 'style'>;
-type TextStyleLike = StyleProp<TextStyle> | readonly TextStyleLike[];
+type NativeTextProps = Omit<RNTextProps, 'style' | 'disabled' | 'numberOfLines' | 'ellipsizeMode'>;
 
 export type TextRef = React.ComponentRef<typeof RNText>;
 
 export interface TextProps extends NativeTextProps {
   /**
-   * 语义化排版预设；`style` 只作为最终 escape hatch。
+   * Semantic typography preset. Prefer this over raw font styles.
    */
   variant?: TextVariant;
-  size?: TextSize;
+  /**
+   * Named type scale token, or an unscaled design pixel size that will be resolved through wp(...).
+   */
+  size?: TextSizeValue;
+  /**
+   * Optional line height in design pixels. Style still wins as the final escape hatch.
+   */
+  lineHeight?: number;
   weight?: TextWeight;
   tone?: TextTone;
+  /**
+   * Theme color token, semantic token, or processable native color.
+   */
   color?: string;
   align?: TextStyle['textAlign'];
+  transform?: TextStyle['textTransform'];
+  truncate?: TextTruncate;
+  tabularNumbers?: boolean;
+  disabled?: boolean;
+  numberOfLines?: RNTextProps['numberOfLines'];
+  ellipsizeMode?: RNTextProps['ellipsizeMode'];
   style?: StyleProp<TextStyle>;
 }
 
-const WEB_NAMED_WEIGHT_MAP: Record<string, number> = {
-  hairline: 100,
-  thin: 100,
-  ultralight: 200,
-  extralight: 200,
-  light: 300,
-  normal: 400,
-  regular: 400,
-  book: 400,
-  medium: 500,
-  semibold: 600,
-  demibold: 600,
-  bold: 700,
-  extrabold: 800,
-  ultrabold: 800,
-  black: 900,
-  heavy: 900,
+type TypographyToken = {
+  fontSize: number;
+  lineHeight: number;
 };
 
-const TEXT_SIZE_STYLES = StyleSheet.create<Record<TextSize, TextStyle>>({
-  xs: {
-    fontSize: wp(12),
-    lineHeight: wp(16),
-  },
-  sm: {
-    fontSize: wp(13),
-    lineHeight: wp(18),
-  },
-  md: {
-    fontSize: wp(15),
-    lineHeight: wp(21),
-  },
-  lg: {
-    fontSize: wp(17),
-    lineHeight: wp(24),
-  },
-  xl: {
-    fontSize: wp(20),
-    lineHeight: wp(28),
-  },
-  '2xl': {
-    fontSize: wp(24),
-    lineHeight: wp(32),
-  },
-  '3xl': {
-    fontSize: wp(30),
-    lineHeight: wp(38),
-  },
+type VariantToken = {
+  size: TextSize;
+  weight: TextWeight;
+  fontFamily?: TextStyle['fontFamily'];
+};
+
+const SEMANTIC_COLORS = {
+  danger: '#DC2626',
+  error: '#DC2626',
+  info: '#2563EB',
+  success: '#16A34A',
+  warn: '#D97706',
+  warning: '#D97706',
+} as const;
+
+const SIZE_TOKENS = {
+  '2xs': { fontSize: 11, lineHeight: 14 },
+  xs: { fontSize: 12, lineHeight: 16 },
+  sm: { fontSize: 13, lineHeight: 18 },
+  md: { fontSize: 15, lineHeight: 21 },
+  lg: { fontSize: 17, lineHeight: 24 },
+  xl: { fontSize: 20, lineHeight: 28 },
+  '2xl': { fontSize: 24, lineHeight: 32 },
+  '3xl': { fontSize: 30, lineHeight: 38 },
+  '4xl': { fontSize: 36, lineHeight: 44 },
+} as const satisfies Record<TextSize, TypographyToken>;
+
+const MONOSPACE_FONT_FAMILY = Platform.select({
+  android: 'monospace',
+  ios: 'Menlo',
+  web: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+  default: 'monospace',
 });
 
-const VARIANT_DEFAULTS = {
+const VARIANT_TOKENS = {
   body: {
     size: 'md',
     weight: 'regular',
@@ -116,10 +131,6 @@ const VARIANT_DEFAULTS = {
     size: 'lg',
     weight: 'semibold',
   },
-  subtitle: {
-    size: 'md',
-    weight: 'regular',
-  },
   heading: {
     size: '2xl',
     weight: 'bold',
@@ -128,14 +139,48 @@ const VARIANT_DEFAULTS = {
     size: '3xl',
     weight: 'bold',
   },
-} as const satisfies Record<TextVariant, { size: TextSize; weight: TextWeight }>;
+  code: {
+    size: 'sm',
+    weight: 'regular',
+    fontFamily: MONOSPACE_FONT_FAMILY,
+  },
+} as const satisfies Record<TextVariant, VariantToken>;
 
-/**
- * 统一 fontWeight 在不同平台的格式
- * iOS: 完整支持 'normal', 'bold', '100'-'900'
- * Android 9.0+: 完整支持数字权重 '100'-'900'
- * Android < 9.0: 只支持 'normal', 'bold'，中间值会被映射
- */
+const WEB_NAMED_WEIGHT_MAP: Record<string, number> = {
+  black: 900,
+  bold: 700,
+  book: 400,
+  demibold: 600,
+  extrabold: 800,
+  extralight: 200,
+  hairline: 100,
+  heavy: 900,
+  light: 300,
+  medium: 500,
+  normal: 400,
+  regular: 400,
+  semibold: 600,
+  thin: 100,
+  ultrabold: 800,
+  ultralight: 200,
+};
+
+const baseStyles = StyleSheet.create({
+  root: {
+    includeFontPadding: false,
+    margin: 0,
+    padding: 0,
+  },
+});
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isProcessableColor(color: string) {
+  return processColor(color) != null;
+}
+
 function normalizeFontWeight(weight: TextStyle['fontWeight']): TextStyle['fontWeight'] {
   if (weight == null) return undefined;
 
@@ -144,7 +189,6 @@ function normalizeFontWeight(weight: TextStyle['fontWeight']): TextStyle['fontWe
 
   let normalizedNumericWeight: number | undefined;
 
-  // Web 常见的相对权重。由于 RN 无父级字重上下文，这里选择可预期的固定映射。
   if (compactWeight === 'lighter') normalizedNumericWeight = 300;
   if (compactWeight === 'bolder') normalizedNumericWeight = 700;
 
@@ -154,18 +198,14 @@ function normalizeFontWeight(weight: TextStyle['fontWeight']): TextStyle['fontWe
 
   if (normalizedNumericWeight == null) {
     const parsed = Number.parseInt(weightStr, 10);
-    if (Number.isNaN(parsed)) {
-      return 'normal';
-    }
-    // 与 web 心智一致：允许传入任意数字，统一到 100~900 且步长 100
+    if (Number.isNaN(parsed)) return 'normal';
     normalizedNumericWeight = Math.round(parsed / 100) * 100;
   }
 
   const clamped = Math.max(100, Math.min(900, normalizedNumericWeight));
-
-  // Android < 9 (API 28) 无法稳定支持中间字重，显式降级避免不同机型表现不一致
   const androidApiLevel =
     typeof Platform.Version === 'number' ? Platform.Version : Number.parseInt(String(Platform.Version), 10);
+
   if (Platform.OS === 'android' && Number.isFinite(androidApiLevel) && androidApiLevel < 28) {
     return clamped >= 600 ? 'bold' : 'normal';
   }
@@ -183,6 +223,8 @@ function resolveTextWeight(weight: TextWeight): TextStyle['fontWeight'] {
       return '500';
     case 'semibold':
       return '600';
+    case 'bold':
+      return '700';
     case 'heavy':
       return '800';
     case 'black':
@@ -192,18 +234,27 @@ function resolveTextWeight(weight: TextWeight): TextStyle['fontWeight'] {
   }
 }
 
-function resolveToneColor(colors: Theme['colors'], tone: TextTone | undefined): string | undefined {
-  switch (tone ?? 'default') {
+function resolveToneColor(colors: Theme['colors'], tone: TextTone): string | undefined {
+  switch (tone) {
     case 'inherit':
       return undefined;
     case 'primary':
       return colors.primary;
-    case 'secondary':
-      return colors.onSecondary;
+    case 'success':
+      return SEMANTIC_COLORS.success;
+    case 'warning':
+      return SEMANTIC_COLORS.warning;
+    case 'danger':
+      return SEMANTIC_COLORS.danger;
+    case 'info':
+      return SEMANTIC_COLORS.info;
     case 'muted':
       return colors.muted;
+    case 'subtle':
+      return colors.disabled;
     case 'disabled':
       return colors.disabled;
+    case 'inverse':
     case 'onPrimary':
       return colors.onPrimary;
     case 'onSecondary':
@@ -215,41 +266,87 @@ function resolveToneColor(colors: Theme['colors'], tone: TextTone | undefined): 
   }
 }
 
-function normalizeStyleFontWeight(style: TextStyleLike): TextStyleLike {
-  if (!style) return style;
+function resolveColorToken(input: string | undefined, fallback: string | undefined, theme: Theme) {
+  if (input == null) return fallback;
 
-  if (Array.isArray(style)) {
-    let normalizedItems: TextStyleLike[] | undefined;
+  const key = input.trim();
+  if (!key) return fallback;
 
-    for (let index = 0; index < style.length; index += 1) {
-      const item = style[index] as TextStyleLike;
-      const normalizedItem = normalizeStyleFontWeight(item);
+  const resolved =
+    key === 'default' || key === 'neutral' || key === 'onSurface'
+      ? theme.colors.onSurface
+      : key === 'primary'
+        ? theme.colors.primary
+        : key === 'onPrimary' || key === 'inverse'
+          ? theme.colors.onPrimary
+          : key === 'secondary'
+            ? theme.colors.secondary
+            : key === 'onSecondary'
+              ? theme.colors.onSecondary
+              : key === 'surface'
+                ? theme.colors.surface
+                : key === 'border'
+                  ? theme.colors.border
+                  : key === 'muted'
+                    ? theme.colors.muted
+                    : key === 'subtle' || key === 'disabled'
+                      ? theme.colors.disabled
+                      : SEMANTIC_COLORS[key as keyof typeof SEMANTIC_COLORS] ?? key;
 
-      if (normalizedItem !== item) {
-        if (!normalizedItems) {
-          normalizedItems = style.slice(0, index) as TextStyleLike[];
-        }
-        normalizedItems.push(normalizedItem);
-      } else if (normalizedItems) {
-        normalizedItems.push(item);
-      }
-    }
+  return isProcessableColor(resolved) ? resolved : fallback;
+}
 
-    return normalizedItems ?? style;
+function resolveTypographyToken(size: TextSizeValue): TypographyToken {
+  if (typeof size === 'string') {
+    return SIZE_TOKENS[size] ?? SIZE_TOKENS.md;
   }
 
-  if (typeof style !== 'object') return style;
+  if (!isFiniteNumber(size)) return SIZE_TOKENS.md;
 
-  const textStyle = style as TextStyle;
-  const fontWeight = textStyle.fontWeight;
+  const fontSize = Math.max(0, size);
+  return {
+    fontSize,
+    lineHeight: Math.ceil(fontSize * 1.4),
+  };
+}
+
+function resolveTypographyStyle(size: TextSizeValue, explicitLineHeight: number | undefined): TextStyle {
+  const token = resolveTypographyToken(size);
+  return {
+    fontSize: wp(token.fontSize),
+    lineHeight: wp(isFiniteNumber(explicitLineHeight) ? Math.max(0, explicitLineHeight) : token.lineHeight),
+  };
+}
+
+function normalizeStyleFontWeight(style: StyleProp<TextStyle>): StyleProp<TextStyle> {
+  if (!style) return style;
+
+  const flattened = StyleSheet.flatten(style);
+  const fontWeight = flattened?.fontWeight;
   if (fontWeight == null) return style;
 
   const normalizedFontWeight = normalizeFontWeight(fontWeight);
   if (normalizedFontWeight === fontWeight) return style;
 
+  return [style, { fontWeight: normalizedFontWeight }];
+}
+
+function resolveNumberOfLines(truncate: TextTruncate | undefined, numberOfLines: RNTextProps['numberOfLines']) {
+  if (truncate === true) return 1;
+  if (typeof truncate === 'number' && Number.isFinite(truncate)) {
+    return Math.max(1, Math.floor(truncate));
+  }
+  return numberOfLines;
+}
+
+function resolveAccessibilityState(
+  disabled: boolean,
+  accessibilityState: AccessibilityState | undefined
+): AccessibilityState | undefined {
+  if (!disabled) return accessibilityState;
   return {
-    ...textStyle,
-    fontWeight: normalizedFontWeight,
+    ...accessibilityState,
+    disabled: true,
   };
 }
 
@@ -257,52 +354,89 @@ const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
   {
     variant = 'body',
     size,
+    lineHeight,
     weight,
     tone = 'default',
     color,
     align,
+    transform,
+    truncate,
+    tabularNumbers = false,
+    disabled = false,
     style,
     maxFontSizeMultiplier,
+    allowFontScaling,
+    numberOfLines,
+    ellipsizeMode,
+    accessibilityState,
     children,
     ...rest
   },
   ref
 ) {
   const theme = useTheme();
-  const variantDefaults = VARIANT_DEFAULTS[variant];
-  const resolvedSize = size ?? variantDefaults.size;
-  const resolvedWeight = weight ?? variantDefaults.weight;
-  const resolvedColor = color ?? resolveToneColor(theme.colors, tone);
+  const { width: viewportWidth } = useWindowDimensions();
+  const variantToken: VariantToken = VARIANT_TOKENS[variant] ?? VARIANT_TOKENS.body;
+  const resolvedSize = size ?? variantToken.size;
+  const resolvedWeight = weight ?? variantToken.weight;
+  const toneColor = resolveToneColor(theme.colors, disabled ? 'disabled' : tone);
+  const resolvedColor = resolveColorToken(color, toneColor, theme);
+  const resolvedNumberOfLines = resolveNumberOfLines(truncate, numberOfLines);
+  const resolvedEllipsizeMode = truncate ? (ellipsizeMode ?? 'tail') : ellipsizeMode;
+  const resolvedAccessibilityState = React.useMemo(
+    () => resolveAccessibilityState(disabled, accessibilityState),
+    [accessibilityState, disabled]
+  );
+
+  const typographyStyle = React.useMemo(
+    () => resolveTypographyStyle(resolvedSize, lineHeight),
+    [lineHeight, resolvedSize, viewportWidth]
+  );
 
   const semanticStyle = React.useMemo<TextStyle>(() => {
     const nextStyle: TextStyle = {
+      fontFamily: variantToken.fontFamily,
+      fontVariant: tabularNumbers ? ['tabular-nums'] : undefined,
       fontWeight: normalizeFontWeight(resolveTextWeight(resolvedWeight)),
+      textAlign: align,
+      textTransform: transform,
     };
 
     if (resolvedColor !== undefined) {
       nextStyle.color = resolvedColor;
     }
 
-    if (align !== undefined) {
-      nextStyle.textAlign = align;
-    }
-
     return nextStyle;
-  }, [align, resolvedColor, resolvedWeight]);
+  }, [
+    align,
+    resolvedColor,
+    resolvedWeight,
+    tabularNumbers,
+    transform,
+    variantToken.fontFamily,
+  ]);
 
-  const normalizedStyle = React.useMemo(() => normalizeStyleFontWeight(style) as StyleProp<TextStyle>, [style]);
-  const sizeStyle = TEXT_SIZE_STYLES[resolvedSize];
-
+  const normalizedStyle = React.useMemo(() => normalizeStyleFontWeight(style), [style]);
   const finalStyle = React.useMemo<StyleProp<TextStyle>>(
-    () => (normalizedStyle ? [sizeStyle, semanticStyle, normalizedStyle] : [sizeStyle, semanticStyle]),
-    [normalizedStyle, semanticStyle, sizeStyle]
+    () =>
+      normalizedStyle
+        ? [baseStyles.root, typographyStyle, semanticStyle, normalizedStyle]
+        : [baseStyles.root, typographyStyle, semanticStyle],
+    [normalizedStyle, semanticStyle, typographyStyle]
   );
 
   return (
     <RNText
       ref={ref}
       {...rest}
-      maxFontSizeMultiplier={maxFontSizeMultiplier ?? getMaxFontScale()}
+      accessibilityState={resolvedAccessibilityState}
+      allowFontScaling={allowFontScaling}
+      disabled={disabled}
+      ellipsizeMode={resolvedEllipsizeMode}
+      maxFontSizeMultiplier={
+        allowFontScaling === false ? maxFontSizeMultiplier : (maxFontSizeMultiplier ?? getMaxFontScale())
+      }
+      numberOfLines={resolvedNumberOfLines}
       style={finalStyle}
     >
       {children}
@@ -312,4 +446,5 @@ const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
 
 TextBase.displayName = 'Text';
 
-export const Text = TextBase;
+export const Text = React.memo(TextBase);
+Text.displayName = 'Text';

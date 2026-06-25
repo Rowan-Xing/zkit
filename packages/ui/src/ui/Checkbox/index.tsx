@@ -329,11 +329,8 @@ export function Checkbox({
     if (label) {
       return (
         <Text
-          style={[
-            styles.label,
-            { color: theme.colors.onSurface },
-            resolvedDisabled ? { color: theme.colors.disabled } : null,
-          ]}
+          disabled={resolvedDisabled}
+          variant="body"
         >
           {label}
         </Text>
@@ -346,8 +343,6 @@ export function Checkbox({
     isIndeterminate,
     label,
     resolvedDisabled,
-    theme.colors.disabled,
-    theme.colors.onSurface,
     toggle,
     value,
   ]);
@@ -569,9 +564,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  label: {
-    fontSize: wp(15),
   },
   labelWrap: {
     flexShrink: 1,

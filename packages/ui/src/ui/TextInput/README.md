@@ -2,6 +2,8 @@
 
 `TextInput` 是组件库统一的文本输入入口。它不是 React Native `TextInput` 的换名导出，而是一个完整 Field 组件：负责标签、描述、错误、计数、清除按钮、主题色、尺寸、禁用/只读和跨端输入默认值。
 
+同目录同时导出 `TextInputPrimitive`：它接近 React Native 原生 `TextInput`，只统一字体缩放、选区/光标颜色和 Android 光标颜色稳定性。高级 `TextInput` 底层基于 `TextInputPrimitive` 渲染。
+
 设计取舍：
 
 - 对外统一使用 `value / defaultValue / onChange`，`onChange` 直接返回字符串
@@ -29,6 +31,24 @@ export function Demo() {
   );
 }
 ```
+
+## 原生薄封装
+
+```tsx
+import { TextInputPrimitive } from 'y2kit-ui';
+import { wp } from 'y2kit-tools';
+
+export function Demo() {
+  return (
+    <TextInputPrimitive
+      placeholder="接近原生 TextInput"
+      style={{ minHeight: wp(44) }}
+    />
+  );
+}
+```
+
+`TextInputPrimitive` 的 props 基本等同 React Native `TextInputProps`。它适合动画文本、特殊原生测量、完全自定义输入框外观，或需要最大限度保持 RN 原生行为的场景。
 
 ## 非受控
 

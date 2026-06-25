@@ -13,15 +13,23 @@ import {
   Pressable,
   processColor,
   StyleSheet,
-  TextInput as RNTextInput,
-  type TextInputProps as RNTextInputNativeProps,
   View,
 } from 'react-native';
-import { getMaxFontScale, wp } from 'y2kit-tools';
+import { wp } from 'y2kit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../Text';
+import {
+  TextInputPrimitive,
+  type TextInputPrimitiveProps,
+  type TextInputPrimitiveRef,
+} from './TextInputPrimitive';
+export {
+  TextInputPrimitive,
+  type TextInputPrimitiveProps,
+  type TextInputPrimitiveRef,
+} from './TextInputPrimitive';
 
 export type TextInputVariant = 'outline' | 'filled' | 'plain';
 export type TextInputTone = 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info';
@@ -61,7 +69,7 @@ export type TextInputColors = {
 };
 
 type NativeTextInputProps = Omit<
-  RNTextInputNativeProps,
+  TextInputPrimitiveProps,
   | 'defaultValue'
   | 'editable'
   | 'onChange'
@@ -72,16 +80,16 @@ type NativeTextInputProps = Omit<
 >;
 
 type SubmitEditingEvent = Parameters<
-  NonNullable<RNTextInputNativeProps['onSubmitEditing']>
+  NonNullable<TextInputPrimitiveProps['onSubmitEditing']>
 >[0];
 
-export type TextInputRef = React.ComponentRef<typeof RNTextInput>;
+export type TextInputRef = TextInputPrimitiveRef;
 
 export interface TextInputProps extends NativeTextInputProps {
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  onNativeChange?: RNTextInputNativeProps['onChange'];
+  onNativeChange?: TextInputPrimitiveProps['onChange'];
   onSubmit?: (value: string, event: SubmitEditingEvent) => void;
 
   disabled?: boolean;
@@ -151,8 +159,6 @@ type TextInputVisualColors = {
   countColor: string;
   iconColor: string;
 };
-
-const isAndroid = Platform.OS === 'android';
 
 const SEMANTIC_COLORS: Record<string, string> = {
   danger: '#DC2626',
@@ -643,7 +649,6 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   const finalSelectionColor = selectionColor ?? accentColor;
   const finalCursorColor = cursorColor ?? finalSelectionColor;
   const finalHandleColor = selectionHandleColor ?? finalSelectionColor;
-  const androidRemountKey = isAndroid ? String(finalCursorColor) : undefined;
   const computedAccessibilityLabel =
     accessibilityLabel ?? extractReadableText(label) ?? nativeProps.placeholder;
   const computedAccessibilityHint =
@@ -670,14 +675,14 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   );
 
   const handleNativeChange = React.useCallback(
-    (event: Parameters<NonNullable<RNTextInputNativeProps['onChange']>>[0]) => {
+    (event: Parameters<NonNullable<TextInputPrimitiveProps['onChange']>>[0]) => {
       onNativeChange?.(event);
     },
     [onNativeChange]
   );
 
   const handleFocus = React.useCallback(
-    (event: Parameters<NonNullable<RNTextInputNativeProps['onFocus']>>[0]) => {
+    (event: Parameters<NonNullable<TextInputPrimitiveProps['onFocus']>>[0]) => {
       setFocused(true);
       onFocus?.(event);
     },
@@ -685,7 +690,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   );
 
   const handleBlur = React.useCallback(
-    (event: Parameters<NonNullable<RNTextInputNativeProps['onBlur']>>[0]) => {
+    (event: Parameters<NonNullable<TextInputPrimitiveProps['onBlur']>>[0]) => {
       setFocused(false);
       onBlur?.(event);
     },
@@ -714,22 +719,21 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
 
   const labelNode = renderTextNode(label, {
     variant: 'label',
+    color: visualColors.labelColor,
     weight: 'semibold',
-    style: [styles.labelText, { color: visualColors.labelColor }, labelStyle],
+    style: [styles.labelText, labelStyle],
   });
   const messageNode =
     resolvedStatus === 'error' && error != null
       ? renderTextNode(error, {
           variant: 'caption',
-          style: [styles.messageText, { color: visualColors.messageColor }, errorStyle],
+          color: visualColors.messageColor,
+          style: [styles.messageText, errorStyle],
         })
       : renderTextNode(description, {
           variant: 'caption',
-          style: [
-            styles.messageText,
-            { color: visualColors.messageColor },
-            descriptionStyle,
-          ],
+          color: visualColors.messageColor,
+          style: [styles.messageText, descriptionStyle],
         });
   const countNode =
     showCount || renderCount
@@ -738,7 +742,8 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
             (maxLength != null ? `${count}/${maxLength}` : String(count)),
           {
             variant: 'caption',
-            style: [styles.countText, { color: visualColors.countColor }, countStyle],
+            color: visualColors.countColor,
+            style: [styles.countText, countStyle],
           }
         )
       : null;
@@ -767,8 +772,9 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
             {required && labelNode ? (
               <Text
                 accessibilityElementsHidden
+                tone="danger"
                 importantForAccessibility="no"
-                style={[styles.requiredMark, { color: SEMANTIC_COLORS.danger }]}
+                style={styles.requiredMark}
               >
                 *
               </Text>
@@ -781,8 +787,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
       <View style={[styles.field, fieldSizeStyle, fieldVisualStyle, fieldStyle]}>
         {prefixNode}
 
-        <RNTextInput
-          key={androidRemountKey}
+        <TextInputPrimitive
           ref={setInputRef}
           {...nativeProps}
           accessibilityHint={computedAccessibilityHint}
@@ -794,7 +799,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
           cursorColor={finalCursorColor}
           defaultValue={isControlled ? undefined : initialValueRef.current}
           editable={interactive}
-          maxFontSizeMultiplier={maxFontSizeMultiplier ?? getMaxFontScale()}
+          maxFontSizeMultiplier={maxFontSizeMultiplier}
           maxLength={maxLength}
           multiline={multiline}
           numberOfLines={multiline ? resolvedMinRows : numberOfLines}
@@ -858,7 +863,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
 
 TextInputBase.displayName = 'TextInput';
 
-export const TextInput = Object.assign(TextInputBase, { State: RNTextInput.State });
+export const TextInput = Object.assign(TextInputBase, { State: TextInputPrimitive.State });
 
 const styles = StyleSheet.create({
   root: {
