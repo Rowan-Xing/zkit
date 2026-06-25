@@ -278,9 +278,11 @@ export const InputsSection = React.memo(function InputsSection({
           </View>
           <Switch
             checked={enabled}
-            checkedLabel={t('example.forms.on')}
-            uncheckedLabel={t('example.forms.off')}
-            onChange={onEnabledChange}
+            stateText={{
+              checked: t('example.forms.on'),
+              unchecked: t('example.forms.off'),
+            }}
+            onCheckedChange={onEnabledChange}
           />
         </View>
 
@@ -302,8 +304,10 @@ export const InputsSection = React.memo(function InputsSection({
             defaultChecked
             size="lg"
             tone="success"
-            checkedLabel={t('example.forms.live')}
-            uncheckedLabel={t('example.forms.hold')}
+            stateText={{
+              checked: t('example.forms.live'),
+              unchecked: t('example.forms.hold'),
+            }}
           />
         </View>
 
@@ -359,8 +363,8 @@ export const SelectionSection = React.memo(function SelectionSection({
           </View>
           <CheckboxGroup
             value={checkedItems}
-            onValueChange={onCheckedItemsChange}
-            direction="column"
+            onChange={onCheckedItemsChange}
+            orientation="vertical"
             gap={wp(10)}
           >
             <Checkbox value="motion" label={t('example.choice.motionTokens')} />
@@ -383,15 +387,15 @@ export const SelectionSection = React.memo(function SelectionSection({
           </View>
           <RadioGroup<Density>
             value={density}
-            onValueChange={(next) => {
-              if (next) onDensityChange(next);
+            onChange={(next) => {
+              if (next != null) onDensityChange(next);
             }}
-            direction="column"
+            orientation="vertical"
             gap={wp(10)}
           >
-            <Radio itemValue="compact" label={t('example.choice.compact')} />
-            <Radio itemValue="comfortable" label={t('example.choice.comfortable')} />
-            <Radio itemValue="spacious" label={t('example.choice.spacious')} />
+            <Radio value="compact" label={t('example.choice.compact')} />
+            <Radio value="comfortable" label={t('example.choice.comfortable')} />
+            <Radio value="spacious" label={t('example.choice.spacious')} />
           </RadioGroup>
         </View>
       </View>

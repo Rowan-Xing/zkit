@@ -104,6 +104,9 @@ function Demo() {
 ## 组件清单
 
 - Accordion：手风琴/折叠面板（Reanimated 高度与指示器动画）
+- Checkbox：三端一致的复选框/复选框组（受控/非受控、三态、Reanimated 指示器动画）
+- Radio：三端一致的单选框/单选组（受控/非受控、可清空组、Reanimated 指示器动画）
+- Switch：三端一致的布尔开关（受控/非受控、Reanimated 轨道与 thumb 动画）
 - TextInput / TextInputPrimitive：统一文本输入 Field 与接近 RN 原生能力的薄封装
 - AddressCascader：省市区级联选择（内置中国数据）
 - DatePicker：年月日选择（输出 YYYY-MM-DD）

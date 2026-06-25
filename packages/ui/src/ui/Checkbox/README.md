@@ -1,13 +1,20 @@
 # Checkbox
 
-Checkbox 提供两种用法：
+Checkbox 是三端一致的复选框组件，适合协议勾选、多选列表、批量选择和“全选/部分选中”入口。组件使用自绘 Pressable + Reanimated 路径，而不是依赖平台原生 checkbox，以保证 iOS / Android / Web 的尺寸、动效、主题和三态表现一致。
 
-1) 单个复选框：`checked/defaultChecked` + `onChange/onCheckedChange`
-2) 复选框组：`CheckboxGroup` 管理选中值数组，单个 `Checkbox` 通过 `value` 参与组内选择
+## 设计约定
 
-## 单个 Checkbox（最常用）
+- 状态模型统一为 `checked/defaultChecked/onChange`
+- 三态只通过 `checked="indeterminate"` 表达，不再提供独立 `indeterminate` 覆盖字段
+- 受控模式完全跟随外部 `checked`，不会乐观漂移
+- 非受控模式先在 UI 线程推进动画，再同步内部状态
+- `CheckboxGroup` 使用 `value/defaultValue/onChange` 管理选中集合
+- 默认触控热区至少补到 `wp(44)`，小尺寸也保持可点性
+
+## 基础用法
 
 ```tsx
+import * as React from 'react';
 import { Checkbox } from 'y2kit-ui';
 
 export function Demo() {
@@ -15,238 +22,190 @@ export function Demo() {
 
   return (
     <Checkbox
-      label="我已阅读并同意"
       checked={checked}
       onChange={setChecked}
-      shape="circle"
+      label="我已阅读并同意"
     />
   );
 }
 ```
 
-## 半选 indeterminate（全选场景）
+## 三态与全选
+
+`checked` 支持 `false | true | 'indeterminate'`。用户点击半选态时会切换到 `true`，适合“部分选中 -> 全选”的直觉路径。
 
 ```tsx
-import { Checkbox } from 'y2kit-ui';
+const allChecked = selected.length === items.length;
+const partiallyChecked = selected.length > 0 && !allChecked;
 
-export function Demo() {
-  return <Checkbox label="全部" indeterminate />;
-}
+<Checkbox
+  checked={partiallyChecked ? 'indeterminate' : allChecked}
+  onChange={(next) => {
+    setSelected(next ? items.map((item) => item.id) : []);
+  }}
+  label="全部"
+/>;
 ```
 
-`onCheckedChange` 使用三态类型：`false | true | 'indeterminate'`。  
-用户点击半选态时会切换到 `true`；`onChange` 只会收到二态：`false | true`。
-
-## CheckboxGroup（选中集合）
+## CheckboxGroup
 
 ```tsx
 import { Checkbox, CheckboxGroup } from 'y2kit-ui';
+import { wp } from 'y2kit-tools';
 
-const list = [
-  { id: '1', label: '苹果' },
-  { id: '2', label: '香蕉' },
-  { id: '3', label: '豆腐' },
+const options = [
+  { id: 'motion', label: '动画 tokens' },
+  { id: 'forms', label: '表单控件' },
+  { id: 'overlays', label: '浮层服务' },
 ];
 
 export function Demo() {
-  const [values, setValues] = React.useState(['2']);
+  const [value, setValue] = React.useState<string[]>(['motion']);
 
   return (
-    <CheckboxGroup value={values} onValueChange={setValues} direction="column" gap={12}>
-      {list.map((it) => (
-        <Checkbox key={it.id} value={it.id} label={it.label} />
+    <CheckboxGroup
+      value={value}
+      onChange={setValue}
+      orientation="vertical"
+      gap={wp(10)}
+      tone="success"
+    >
+      {options.map((option) => (
+        <Checkbox key={option.id} value={option.id} label={option.label} />
       ))}
     </CheckboxGroup>
   );
 }
 ```
 
-## 自定义内容（slot / render-prop）
-
-当你需要根据选中态切换样式、或需要拿到 `toggle()` 做更复杂的组合时，使用函数 children：
+## 外观与主题
 
 ```tsx
-import { Checkbox } from 'y2kit-ui';
-
-export function Demo() {
-  return (
-    <Checkbox hiddenCheckbox>
-      {({ checked, toggle }) => (
-        <YourRow onPress={toggle} selected={checked}>
-          <Checkbox checked={checked} onCheckedChange={() => {}} />
-          <YourText>点击整行切换</YourText>
-        </YourRow>
-      )}
-    </Checkbox>
-  );
-}
+<Checkbox label="默认" />
+<Checkbox label="柔和" variant="soft" />
+<Checkbox label="描边" variant="outline" />
+<Checkbox label="成功色" tone="success" />
+<Checkbox label="圆形" shape="circle" />
+<Checkbox label="自定义主色" color="#0EA5E9" />
 ```
 
-## 常用 Props
+像素类自定义值应在调用侧用 `wp(...)` 计算后传入：
 
-- `checked` / `defaultChecked`：受控/非受控
-- `onChange(checked:boolean)`：二态回调
-- `onCheckedChange(checked:boolean|'indeterminate')`：三态回调
-- `indeterminate`：强制半选态
-- `color`：选中态主色（背景/边框）
-- `unCheckColor`：未选中边框色
-- `icon`：自定义选中图标（默认使用组件库内置 `check.svg`）
-- `size` / `borderWidth` / `radius` / `shape`：尺寸与形状
-- `label` / `labelSpace`：快捷文案与间距
-- `hiddenCheckbox`：隐藏方块，仅复用交互/状态
+```tsx
+<Checkbox
+  label="大尺寸"
+  layout={{
+    indicatorSize: wp(24),
+    indicatorRadius: wp(7),
+    gap: wp(12),
+  }}
+/>
+```
 
-## Props（完整清单）
+## 自定义内容
 
-Checkbox 继承 React Native `Pressable` 的所有 props，并额外提供以下扩展 props。  
-注意：为了保证交互与动画一致，Checkbox 不支持传入 `Pressable` 的 `onPressIn/onPressOut`（已在类型层面剔除），并将 `style/children` 作为自定义 props 重新定义。
+`children` 支持 render-prop。根节点本身就是可点击区域，子节点通常只读取状态做视觉变化，不需要再绑定一次点击。
 
-### Checkbox
+```tsx
+<Checkbox checked={checked} onChange={setChecked} showIndicator={false}>
+  {({ checked }) => (
+    <Text tone={checked ? 'primary' : 'muted'}>
+      {checked ? '已选择' : '未选择'}
+    </Text>
+  )}
+</Checkbox>
+```
 
-- `value?: string | number`
-  - 默认：`undefined`
-  - 说明：配合 `CheckboxGroup` 使用的唯一值；同组内不可重复。组内勾选由 `value` 决定。
+需要完全替换指示器时使用 `indicator`，或在自定义内容中放置 `CheckboxIndicator`：
 
-- `checked?: boolean | 'indeterminate'`
-  - 默认：`undefined`
-  - 说明：受控选中态。传入后组件不再维护内部选中状态。
-  - 取值：
-    - `false`：未选中
-    - `true`：选中
-    - `'indeterminate'`：半选（mixed）
+```tsx
+<Checkbox
+  checked={checked}
+  onChange={setChecked}
+  indicator={({ indeterminate }) => (
+    <YourIcon name={indeterminate ? 'minus' : 'check'} />
+  )}
+  label="自定义指示器"
+/>
+```
 
-- `defaultChecked?: boolean | 'indeterminate'`
-  - 默认：`false`
-  - 说明：非受控初始化值；仅在 `checked` 未传入时生效。
+## Props
 
-- `onCheckedChange?: (checked: boolean | 'indeterminate') => void`
-  - 默认：`undefined`
-  - 说明：三态回调；用于需要区分 `indeterminate` 的场景。
+Checkbox 透传 React Native `Pressable` 的常用属性和事件；组件自身固定使用 `accessibilityRole="checkbox"`，并维护 `checked/disabled` 状态。
 
-- `onChange?: (checked: boolean) => void`
-  - 默认：`undefined`
-  - 说明：二态回调；适合普通勾选场景。
+### 状态
 
-- `disabled?: boolean`
-  - 默认：`false`
-  - 说明：禁用交互；在 `CheckboxGroup` 内会与 group 的 `disabled` 叠加。
+- `checked?: boolean | 'indeterminate'`：受控选中态。
+- `defaultChecked?: boolean | 'indeterminate'`：非受控初始状态，默认 `false`。
+- `onChange?: (checked: boolean | 'indeterminate') => void`：状态变化回调。
+- `disabled?: boolean`：禁用，默认 `false`。
+- `value?: string | number`：在 `CheckboxGroup` 内参与选中集合。
 
-- `label?: string`
-  - 默认：`undefined`
-  - 说明：快捷文案；当 `children` 未提供时渲染。
+### 外观
 
-- `children?: ReactNode | ((slot) => ReactNode)`
-  - 默认：`undefined`
-  - 说明：自定义内容：
-    - 传入 `ReactNode`：纯展示内容
-    - 传入函数：render-prop（slot）模式，可拿到状态与 `toggle()`
-  - `slot` 结构：
-    - `checked: boolean`：当前是否选中（当为半选时为 `false`）
-    - `indeterminate: boolean`：当前是否半选
-    - `value?: string | number`
-    - `disabled: boolean`
-    - `toggle: () => void`：手动切换（等价于点击 Checkbox）
+- `size?: 'sm' | 'md' | 'lg'`：尺寸，默认 `'md'`。
+- `tone?: 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info'`：语义色，默认 `'primary'`。
+- `variant?: 'solid' | 'soft' | 'outline'`：选中态视觉样式，默认 `'solid'`。
+- `shape?: 'rounded' | 'square' | 'circle'`：指示器形状，默认 `'rounded'`。
+- `color?: string`：主色覆盖，支持主题 token、语义色或颜色字符串。
+- `colors?: CheckboxColors`：结构化颜色覆盖。
+- `layout?: CheckboxLayout`：结构化尺寸覆盖。
+- `duration?: number`：状态切换动画时长，默认 `170`。
 
-- `style?: StyleProp<ViewStyle>`
-  - 默认：`undefined`
-  - 说明：外层布局样式（作用于整行容器）。
+### 内容
 
-- `boxStyle?: StyleProp<ViewStyle>`
-  - 默认：`undefined`
-  - 说明：仅作用于“方块/圆形勾选区”的样式，不影响外层布局。
+- `label?: ReactNode`：快捷主文案；字符串会使用组件库 `Text` 渲染，并可推导 `accessibilityLabel`。
+- `description?: ReactNode`：快捷辅助文案。
+- `labelPlacement?: 'start' | 'end'`：文案位于指示器的逻辑起点或终点，默认 `'end'`，RTL 下会自动调整视觉顺序。
+- `children?: ReactNode | ((slot: CheckboxSlotProps) => ReactNode)`：自定义内容区域。
+- `showIndicator?: boolean`：是否渲染内置指示器，默认 `true`。
+- `indicator?: ReactNode | ((slot: CheckboxSlotProps) => ReactNode)`：自定义指示器内容。
 
-- `labelSpace?: number`
-  - 默认：`wp(10)`
-  - 说明：方块与 label 之间的间距（仅当同时渲染方块与 label 时生效）。
+### 样式 escape hatch
 
-- `hiddenCheckbox?: boolean`
-  - 默认：`false`
-  - 说明：隐藏方块区域，仅复用交互/状态；你可以在 `children(slot)` 里完全自定义 UI。
-
-- `icon?: ReactNode | string`
-  - 默认：内置 `check.svg`
-  - 说明：自定义选中图标节点。传入字符串不会被解析为图标名，会回退到默认图标。
-
-- `unCheckColor?: string`
-  - 默认：`theme.colors.border`
-  - 说明：未选中时的边框色。
-
-- `indeterminate?: boolean`
-  - 默认：`undefined`
-  - 说明：强制半选态（mixed）。传入后会覆盖 `checked/defaultChecked` 的结果。
-
-- `duration?: number`
-  - 默认：`180`
-  - 说明：动画时长（ms），用于按压/勾选/半选的过渡。
-
-- `size?: number`
-  - 默认：`wp(20)`
-  - 说明：方块区域的边长。
-
-- `borderWidth?: number`
-  - 默认：`wp(1.5)`
-  - 说明：方块区域边框宽度。
-
-- `radius?: number`
-  - 默认：
-    - `shape === 'circle'`：`size / 2`
-    - 否则：`wp(4)`
-  - 说明：方块区域圆角半径；传入后会覆盖 `shape` 的默认逻辑。
-
-- `color?: string`
-  - 默认：`theme.colors.primary`
-  - 说明：选中态主色（背景/边框）。
-
-- `shape?: 'square' | 'circle'`
-  - 默认：`'square'`
-  - 说明：方块区域形状。
-  - 取值：
-    - `'square'`：方形
-    - `'circle'`：圆形
-
-- `testID?: string`
-  - 默认：`undefined`
-  - 说明：测试标识。
-
-### CheckboxIndicator
-
-Checkbox 内置的勾选指示器（对外导出，便于替换内部内容）。
-
-- `children?: ReactNode`
-  - 默认：`undefined`
-  - 说明：自定义指示器内容；不传时使用 Checkbox 的 `icon`（默认 check.svg）。
-
-- `style?: StyleProp<ViewStyle>`
-  - 默认：`undefined`
-  - 说明：指示器容器样式。
+- `style?: Pressable['style']`：根 Pressable 样式。
+- `contentStyle?: StyleProp<ViewStyle>`：内容行样式。
+- `indicatorStyle?: StyleProp<ViewStyle>`：指示器样式。
+- `labelStyle?: StyleProp<TextStyle>`：快捷主文案样式。
+- `descriptionStyle?: StyleProp<TextStyle>`：快捷辅助文案样式。
 
 ### CheckboxGroup
 
-CheckboxGroup 继承 React Native `View` 的所有 props，并额外提供以下 props：
+- `value?: readonly Array<string | number>`：受控选中值数组。
+- `defaultValue?: readonly Array<string | number>`：非受控初始选中值数组。
+- `onChange?: (value: Array<string | number>) => void`：选中集合变化回调。
+- `disabled?: boolean`：组禁用。
+- `orientation?: 'horizontal' | 'vertical'`：布局方向，默认 `'horizontal'`。
+- `align?: 'start' | 'center' | 'end' | 'stretch'`：交叉轴对齐，默认 `'start'`。
+- `wrap?: boolean`：横向布局是否换行，默认 `false`。
+- `gap?: number` / `rowGap?: number` / `columnGap?: number`：组内间距，默认 `wp(12)`。
+- `size` / `tone` / `variant` / `shape` / `color` / `colors` / `layout`：作为组内 Checkbox 的默认外观配置，单个 Checkbox 传入同名 props 时优先生效。
 
-- `value?: Array<string | number>`
-  - 默认：`undefined`
-  - 说明：受控选中值数组；传入后由外部完全接管选中集合。
+## 类型
 
-- `defaultValue?: Array<string | number>`
-  - 默认：`[]`
-  - 说明：非受控初始化选中值数组；仅在 `value` 未传入时生效。
+```ts
+type CheckboxCheckedState = boolean | 'indeterminate';
 
-- `onValueChange?: (value: Array<string | number>) => void`
-  - 默认：`undefined`
-  - 说明：选中集合变化回调（推荐使用）。
+type CheckboxColors = {
+  checkedBackground?: string;
+  checkedBorder?: string;
+  checkedIndicator?: string;
+  indeterminateBackground?: string;
+  indeterminateBorder?: string;
+  indeterminateIndicator?: string;
+  uncheckedBackground?: string;
+  uncheckedBorder?: string;
+  focusRing?: string;
+};
 
-- `disabled?: boolean`
-  - 默认：`false`
-  - 说明：组禁用；组内所有 Checkbox 会被禁用。
-
-- `direction?: 'row' | 'column'`
-  - 默认：`'row'`
-  - 说明：组内布局方向。
-
-- `align?: 'left' | 'center' | 'right'`
-  - 默认：`'left'`
-  - 说明：组内容对齐方式。
-
-- `gap?: number | string | [number | string, number | string]`
-  - 默认：`0`
-  - 说明：组内间距；数组时分别表示 `columnGap` 与 `rowGap`。
+type CheckboxLayout = {
+  indicatorSize?: number;
+  indicatorRadius?: number;
+  indicatorBorderWidth?: number;
+  indicatorIconSize?: number;
+  gap?: number;
+  minTouchTarget?: number;
+  focusRingWidth?: number;
+  focusRingOffset?: number;
+};
+```
