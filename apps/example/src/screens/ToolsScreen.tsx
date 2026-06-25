@@ -37,20 +37,20 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
 
     if (!result) return;
     setServiceChoice(String(result.value));
-    toast.info(t('example.toast.selected', { label: result.label }), 1200);
+    toast.info(t('example.toast.selected', { label: result.label }), { duration: 1200 });
   }, [serviceChoice, t]);
 
   const handleDialog = React.useCallback(async () => {
     const confirmed = await actionDialog.confirm({
       title: t('example.dialog.title'),
-      content: t('example.dialog.content'),
-      confirmText: t('example.dialog.confirm'),
-      cancelText: t('example.common.cancel'),
+      message: t('example.dialog.content'),
+      confirmLabel: t('example.dialog.confirm'),
+      cancelLabel: t('example.common.cancel'),
       footer: { layout: 'row' },
     });
 
     if (confirmed) {
-      toast.success(t('example.dialog.confirmed'), 1200);
+      toast.success(t('example.dialog.confirmed'), { duration: 1200 });
     }
   }, [t]);
 
@@ -95,7 +95,7 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
 
   const handleCaptchaVerified = React.useCallback(() => {
     setCaptchaVisible(false);
-    toast.success(t('example.captcha.verifiedToast'), 1200);
+    toast.success(t('example.captcha.verifiedToast'), { duration: 1200 });
   }, [t]);
 
   const handleDebuggerOpen = React.useCallback(() => {
@@ -126,7 +126,7 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
     destroy();
 
     setRouterGuardStatus(events.length === 2 ? t('example.router.blocked') : events.join(' -> '));
-    toast.info(t('example.router.tested'), 1200);
+    toast.info(t('example.router.tested'), { duration: 1200 });
   }, [t]);
 
   return (

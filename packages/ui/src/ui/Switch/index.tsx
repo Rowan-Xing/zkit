@@ -185,8 +185,6 @@ const SIZE_TOKENS = {
   Omit<SwitchMetrics, 'minTouchTarget' | 'focusRingWidth' | 'focusRingOffset'>
 >;
 
-const TRACK_PRESSED_SCALE = 0.985;
-const THUMB_PRESSED_SCALE = 0.96;
 const DISABLED_OPACITY = 0.48;
 const PRESSED_OPACITY = 0.92;
 const STATE_TEXT_WIDTH_FACTOR = 0.58;
@@ -459,6 +457,7 @@ function SwitchImpl(
     () => resolveColorToken(colors?.loading, checked ? checkedTrackColor : theme.colors.muted, theme),
     [checked, checkedTrackColor, colors?.loading, theme]
   );
+  const thumbColorChanges = checkedThumbColor !== uncheckedThumbColor;
 
   const trackHeight = resolvePositiveNumber(layout?.height, metrics.height);
   const baseTrackWidth = Math.max(trackHeight, resolvePositiveNumber(layout?.width, metrics.width));
@@ -489,8 +488,6 @@ function SwitchImpl(
   const travelDirection = isRTL ? -1 : 1;
   const trackRadius = Math.max(0, layout?.radius ?? trackHeight / 2);
   const thumbRadius = Math.max(0, Math.min(thumbSize / 2, trackRadius - resolvedThumbInset));
-  const textShift = Math.min(wp(3), Math.max(0, stateTextInset * 0.5));
-
   const defaultHitSlop = React.useMemo(
     () => resolveHitSlop(trackWidth, trackHeight, metrics.minTouchTarget),
     [metrics.minTouchTarget, trackHeight, trackWidth]
@@ -597,11 +594,7 @@ function SwitchImpl(
   const visualAnimatedStyle = useAnimatedStyle(() => {
     const pressedOpacity = interpolate(pressSv.value, [0, 1], [1, PRESSED_OPACITY]);
     const opacity = disabled ? DISABLED_OPACITY : pressedOpacity;
-    const scale = interpolate(pressSv.value, [0, 1], [1, TRACK_PRESSED_SCALE]);
-    return {
-      opacity,
-      transform: [{ scale }],
-    };
+    return { opacity };
   }, [disabled]);
 
   const focusRingAnimatedStyle = useAnimatedStyle(() => {
@@ -613,36 +606,30 @@ function SwitchImpl(
     };
   });
 
-  const trackAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      backgroundColor: interpolateColor(progressSv.value, [0, 1], [uncheckedTrackColor, checkedTrackColor]),
-    };
-  }, [checkedTrackColor, uncheckedTrackColor]);
+  const checkedTrackAnimatedStyle = useAnimatedStyle(() => {
+    return { opacity: progressSv.value };
+  });
 
   const thumbAnimatedStyle = useAnimatedStyle(() => {
-    const pressedScale = interpolate(pressSv.value, [0, 1], [1, THUMB_PRESSED_SCALE]);
+    if (!thumbColorChanges) {
+      return {
+        transform: [{ translateX: travel * travelDirection * progressSv.value }],
+      };
+    }
+
     return {
       backgroundColor: interpolateColor(progressSv.value, [0, 1], [uncheckedThumbColor, checkedThumbColor]),
-      transform: [
-        { translateX: travel * travelDirection * progressSv.value },
-        { scale: pressedScale },
-      ],
+      transform: [{ translateX: travel * travelDirection * progressSv.value }],
     };
-  }, [checkedThumbColor, travel, travelDirection, uncheckedThumbColor]);
+  }, [checkedThumbColor, thumbColorChanges, travel, travelDirection, uncheckedThumbColor]);
 
   const checkedTextAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: progressSv.value,
-      transform: [{ translateX: interpolate(progressSv.value, [0, 1], [-textShift, 0]) }],
-    };
-  }, [textShift]);
+    return { opacity: progressSv.value };
+  });
 
   const uncheckedTextAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: 1 - progressSv.value,
-      transform: [{ translateX: interpolate(progressSv.value, [0, 1], [0, textShift]) }],
-    };
-  }, [textShift]);
+    return { opacity: 1 - progressSv.value };
+  });
 
   const checkedTextSlotStyle = React.useMemo<ViewStyle>(
     () =>
@@ -777,14 +764,25 @@ function SwitchImpl(
           focusRingAnimatedStyle,
         ]}
       />
-      <Animated.View
+      <View
         style={[
           StyleSheet.absoluteFillObject,
           {
             borderRadius: trackRadius,
+            backgroundColor: uncheckedTrackColor,
           },
-          trackAnimatedStyle,
           trackStyle,
+        ]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            borderRadius: trackRadius,
+            backgroundColor: checkedTrackColor,
+          },
+          checkedTrackAnimatedStyle,
         ]}
       />
 
@@ -838,6 +836,7 @@ function SwitchImpl(
             left: thumbStart,
             top: resolvedThumbInset,
             borderRadius: thumbRadius,
+            backgroundColor: uncheckedThumbColor,
           },
           thumbAnimatedStyle,
           thumbShadowStyle,

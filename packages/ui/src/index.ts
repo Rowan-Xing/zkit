@@ -65,11 +65,30 @@ export type {
   TextInputTone,
   TextInputVariant,
 } from './ui/TextInput/index';
-export { BottomSheet } from './ui/BottomSheet/index';
+export {
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetProvider,
+} from './ui/BottomSheet/index';
 export type {
+  BottomSheetBackdropConfig,
+  BottomSheetCloseReason,
   BottomSheetDetent,
+  BottomSheetDetentChangePayload,
+  BottomSheetFooterProps,
+  BottomSheetHandleConfig,
+  BottomSheetHeaderProps,
+  BottomSheetMountStrategy,
+  BottomSheetNativeProps,
+  BottomSheetOpenChangeMeta,
+  BottomSheetOpenChangeReason,
+  BottomSheetProviderProps,
   BottomSheetProps,
   BottomSheetRef,
+  BottomSheetRenderContext,
+  BottomSheetState,
 } from './ui/BottomSheet/index';
 export {
   Accordion,
@@ -239,38 +258,64 @@ export type {
   PickBetweenTimeOptions,
   PickerResult,
 } from './services/PickerService/index';
-export { toast, cardToast, CardToastProvider } from './services/CardToastService/index';
+export { toast, ToastProvider } from './services/CardToastService/index';
 export type {
+  ToastAction,
+  ToastActionContext,
+  ToastCustomOptions,
   ToastDefaults,
-  ToastMessageOptions,
+  ToastDismissReason,
+  ToastHandle,
+  ToastIconRenderContext,
+  ToastItem,
+  ToastOpenChangeMeta,
+  ToastOpenChangeReason,
   ToastOptions,
-  ToastPosition,
+  ToastPlacement,
+  ToastProviderProps,
+  ToastRenderContext,
+  ToastService,
   ToastShortcutOptions,
+  ToastStrategy,
   ToastTone,
-  ToastType,
+  ToastUpdateOptions,
 } from './services/CardToastService/index';
-export { actionDialog, ActionDialogProvider } from './services/ActionDialogService/index';
+export { ActionDialog, actionDialog, ActionDialogProvider } from './services/ActionDialogService/index';
 export type {
   ActionDialogAction,
-  ActionDialogActionHandlerContext,
+  ActionDialogActionContext,
+  ActionDialogActionResult,
   ActionDialogActionRole,
+  ActionDialogActionTone,
   ActionDialogActionVariant,
   ActionDialogAlertOptions,
+  ActionDialogCollisionStrategy,
+  ActionDialogColors,
   ActionDialogConfirmOptions,
   ActionDialogDismissOptions,
   ActionDialogDismissReason,
+  ActionDialogDismissResult,
   ActionDialogFooterLayout,
   ActionDialogFooterOptions,
-  ActionDialogFooterRenderAction,
   ActionDialogFooterRenderContext,
   ActionDialogHandle,
+  ActionDialogHostMode,
   ActionDialogKeyboardOptions,
+  ActionDialogLabels,
   ActionDialogLayerOptions,
   ActionDialogLayoutOptions,
+  ActionDialogMotion,
+  ActionDialogOpenChangeMeta,
+  ActionDialogOpenChangeReason,
   ActionDialogOpenOptions,
-  ActionDialogOptions,
+  ActionDialogProps,
+  ActionDialogRef,
+  ActionDialogResolvedAction,
+  ActionDialogResolvedFooterLayout,
   ActionDialogResult,
+  ActionDialogSemanticActionOptions,
   ActionDialogService,
+  ActionDialogSnapshot,
 } from './services/ActionDialogService/index';
 export { loading, LoadingProvider } from './services/LoadingService/index';
 export type {
@@ -294,8 +339,31 @@ export type {
   OTAUpdateManagerProps,
   OTADevSimulationConfig,
 } from './services/OTAUpdateService/index';
-export { imagePreview, ImagePreviewProvider } from './services/ImagePreviewService/index';
-export type { ImagePreviewOptions, ImagePreviewImage } from './services/ImagePreviewService/index';
+export { imagePreview, ImagePreview, ImagePreviewProvider } from './services/ImagePreviewService/index';
+export type {
+  ImagePreviewChangeMeta,
+  ImagePreviewChangeReason,
+  ImagePreviewCloseReason,
+  ImagePreviewColors,
+  ImagePreviewImage,
+  ImagePreviewImageDescriptor,
+  ImagePreviewImageProps,
+  ImagePreviewInteractions,
+  ImagePreviewLabels,
+  ImagePreviewOpenChangeMeta,
+  ImagePreviewOpenChangeReason,
+  ImagePreviewOpenOptions,
+  ImagePreviewPrefetchCachePolicy,
+  ImagePreviewProps,
+  ImagePreviewRef,
+  ImagePreviewRenderContext,
+  ImagePreviewResolvedImage,
+  ImagePreviewResult,
+  ImagePreviewServiceHandle,
+  ImagePreviewServiceSnapshot,
+  ImagePreviewSource,
+  ImagePreviewTapBehavior,
+} from './services/ImagePreviewService/index';
 export { ErrorBoundary } from './debug/ErrorBoundary';
 export type { ErrorBoundaryProps } from './debug/ErrorBoundary';
 export { FloatingDebugger, FloatingDebuggerController } from './debug/FloatingDebugger';

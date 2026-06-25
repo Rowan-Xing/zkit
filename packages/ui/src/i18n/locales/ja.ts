@@ -45,6 +45,18 @@ export const ja = {
   'imageCropper.loadFailed': '画像の読み込みに失敗しました。もう一度お試しください。',
   'imageCropper.processFailed': '画像の切り抜きに失敗しました。もう一度お試しください。',
 
+  // ImagePreview
+  'imagePreview.preview': '画像プレビュー',
+  'imagePreview.close': '画像プレビューを閉じる',
+  'imagePreview.loadFailed': '画像の読み込みに失敗しました',
+  'imagePreview.counter': '{total}枚中{current}枚目',
+  'imagePreview.image': '{total}枚中{current}枚目の画像',
+
+  // ActionDialog
+  'actionDialog.confirm': '確認',
+  'actionDialog.cancel': 'キャンセル',
+  'actionDialog.close': 'ダイアログを閉じる',
+
   // SliderCaptcha
   'sliderCaptcha.title': 'スライドで認証',
   'sliderCaptcha.verifyFailed': '認証失敗',

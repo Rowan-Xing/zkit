@@ -1,93 +1,85 @@
-# ActionDialogService
+# ActionDialog
 
-命令式对话框服务，`y2kit-ui` 内只保留新 API：
+顶层操作对话框，提供两种入口：
 
-- `open(options)`：底层主入口
-- `confirm(options)`：语义化确认框，返回 `Promise<boolean>`
-- `alert(options)`：语义化提示框，返回 `Promise<boolean>`
-- `hide()`：关闭当前弹窗
-- `hideByScope(scopeKey)`：按作用域关闭当前弹窗
+- `ActionDialog`：声明式组件，支持 `open/defaultOpen/onOpenChange`
+- `actionDialog`：全局命令式服务，适合路由守卫、请求确认、跨组件业务流程
 
-## 前置条件
+`ComponentLibProvider` 已内置 `ActionDialogProvider`；只有单独使用 `actionDialog` 服务时才需要确认 Provider 已挂载。
 
-确保应用根组件已包裹 `ComponentLibProvider`（已内置 `ActionDialogProvider`）：
+## 设计取舍
+
+- 声明式组件拥有状态模型；service 只调度宿主实例，避免半受控状态竞争。
+- `message` 承载简单正文，`children` 承载复杂内容；不再使用含糊的 `content`。
+- action 的 `role` 决定结果语义，`tone/variant` 决定视觉，不把业务结果和样式绑死。
+- 默认同一时刻只显示一个全局 dialog；新调用会替换旧调用并以 `replace` 结算。需要串行展示时传 `collisionStrategy: 'queue'`。
+- 默认不点蒙层关闭，Android back / iOS accessibility escape 可关闭；这是确认类弹窗更稳妥的默认行为。
+- `actionDialog` 全局服务默认使用顶层 `inline` 宿主，避开 Android 触发时创建原生 Modal 窗口的延迟；声明式组件默认仍用 `modal`，也可按场景切到 `hostMode="inline"`。
+- 默认过渡是低成本 `motion="fade"`，只做遮罩与卡片透明度变化；需要更明显的中心弹出感时再显式使用 `motion="scale"`。
+
+## 声明式使用
 
 ```tsx
-import { ComponentLibProvider } from 'y2kit-ui';
+import { ActionDialog } from 'y2kit-ui';
 
-export default function App() {
-  return (
-    <ComponentLibProvider>
-      {/* 你的应用内容 */}
-    </ComponentLibProvider>
-  );
-}
+<ActionDialog
+  open={open}
+  onOpenChange={setOpen}
+  title="删除确认"
+  message="确定要删除这条记录吗？"
+  actions={[
+    { key: 'cancel', role: 'cancel' },
+    { key: 'delete', role: 'confirm', label: '删除', tone: 'danger' },
+  ]}
+/>;
 ```
 
-## 使用方式
+## 命令式确认
 
 ```tsx
 import { actionDialog } from 'y2kit-ui';
-```
 
-## 分层约定
-
-- `y2kit-ui`：只提供新的、语义清晰的 dialog API
-- `apps/*/dialogService`：负责兼容历史项目里的 `buttons / onConfirm / closeOnConfirm` 等旧参数
-
-也就是说：
-
-- 新项目或新代码，应该直接面向 `actionDialog.open / confirm / alert`
-- 不再在 `y2kit-ui` 中保留 `show / custom` 这类同能力别名
-- 老项目迁移时，不要再把 legacy 能力加回 `y2kit-ui`，而是在项目自己的 wrapper 里做参数转译
-
-### 确认框
-
-```tsx
 const confirmed = await actionDialog.confirm({
   title: '删除确认',
-  content: '确定要删除这条记录吗？',
-  intent: 'danger',
-  confirmText: '删除',
-  footer: { layout: 'row' },
+  message: '确定要删除这条记录吗？',
+  tone: 'danger',
+  confirmLabel: '删除',
 });
 ```
 
-### 提示框
-
-```tsx
-await actionDialog.alert({
-  content: '操作成功！',
-  confirmText: '知道了',
-});
-```
-
-### 自定义 actions
+## 自定义动作
 
 ```tsx
 const handle = actionDialog.open({
   title: '发布确认',
-  content: '确认立即发布当前内容？',
-  footer: { layout: 'row' },
+  message: '确认立即发布当前内容？',
   actions: [
-    { key: 'cancel', role: 'cancel', label: '取消' },
-    { key: 'publish', role: 'confirm', label: '发布', variant: 'primary' },
+    { key: 'cancel', role: 'cancel' },
+    {
+      key: 'publish',
+      role: 'confirm',
+      label: '发布',
+      onPress: async () => {
+        await publish();
+      },
+    },
   ],
 });
 
 const result = await handle.result;
-console.log(result);
 ```
 
-### 自定义 footer render
+`onPress` 返回 `false` 会阻止默认关闭；返回 Promise 时按钮会进入防重入 loading 态。
+
+## 自定义 Footer
 
 ```tsx
 actionDialog.open({
   title: '高级操作',
-  content: '这里可以完全接管底部区域',
+  message: '底部区域可以完全接管，但仍复用 action 语义。',
   actions: [
-    { key: 'cancel', role: 'cancel', label: '取消' },
-    { key: 'save', role: 'confirm', label: '保存', variant: 'primary' },
+    { key: 'cancel', role: 'cancel' },
+    { key: 'save', role: 'confirm', label: '保存' },
   ],
   footer: {
     render: ({ pressAction, close }) => (
@@ -97,96 +89,41 @@ actionDialog.open({
 });
 ```
 
-### 项目侧兼容层示例
+## 常用 API
 
-如果项目里已有历史调用：
+### `ActionDialog`
 
-```tsx
-dialogService.confirm({
-  content: '确定删除？',
-  buttons: ['取消', '删除'],
-  onConfirm: handleDelete,
-  closeOnConfirm: true,
-});
-```
+| 参数 | 说明 |
+| --- | --- |
+| `open/defaultOpen/onOpenChange` | 标准受控/非受控打开状态 |
+| `title` | 标题区域 |
+| `message` | 简单正文 |
+| `children` | 复杂内容 |
+| `actions` | 底部动作列表 |
+| `footer.layout` | `'auto' \| 'row' \| 'stack' \| 'bar'` |
+| `dismiss.overlayPress` | 点击蒙层关闭，默认 `false` |
+| `dismiss.backPress` | Android back / accessibility escape 关闭，默认 `true` |
+| `keyboard.avoid` | 键盘出现时避让，默认 `true` |
+| `hostMode` | `'modal' \| 'inline'`，声明式默认 `modal` |
+| `motion` | `'none' \| 'fade' \| 'scale'`，默认 `fade` |
+| `layout` | `width/maxWidth/contentPadding/radius`，设计尺寸会通过 `wp(...)` 换算 |
+| `colors/labels` | 颜色与文案 escape hatch |
 
-推荐做法是：
+### `actionDialog`
 
-- 保留项目自己的 `dialogService.confirm(...)` 老签名
-- 在 wrapper 内部把它转换成 `actionDialog.open(...)` 或 `actionDialog.confirm(...)`
-- 不再把这些 legacy 参数透回 `y2kit-ui`
+| 方法 | 说明 |
+| --- | --- |
+| `open(options)` | 打开自定义对话框，返回 `ActionDialogHandle` |
+| `confirm(options)` | 打开确认框，确认返回 `true`，其它关闭返回 `false` |
+| `alert(options)` | 打开提示框，关闭后 resolve |
+| `close()` | 关闭当前对话框 |
+| `closeByScope(scopeKey)` | 关闭命中 scope 的当前或排队对话框 |
+| `closeAll()` | 关闭当前并清空队列 |
+| `getSnapshot()` | 读取当前打开态、active id 与队列数量 |
 
-## API
+`ActionDialogHandle` 包含：
 
-### actionDialog.open(options)
-
-核心入口，返回 `ActionDialogHandle`：
-
-- `id`：当前对话框 id
-- `result`：`Promise<ActionDialogResult>`
-- `close()`：主动关闭当前对话框
-- `update(patch)`：更新当前对话框配置
-
-如果打开新弹窗时已有弹窗未结束，旧弹窗会以 `{ type: 'dismiss', reason: 'replace' }` 结算。
-
-常用字段：
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| title | ReactNode | 标题区域 |
-| content | string \| ReactNode | 内容区域 |
-| actions | ActionDialogAction[] | 底部动作数组 |
-| footer.layout | `'bar' \| 'row' \| 'stacked'` | 底部布局 |
-| footer.render | `(ctx) => ReactNode` | 完全自定义 footer |
-| dismiss.overlayPress | boolean | 点击蒙层是否关闭 |
-| dismiss.backPress | boolean | Android 返回键是否关闭 |
-| keyboard.dismissOnOverlayPress | boolean | 点击蒙层是否先收起键盘 |
-| keyboard.dismissOnClose | boolean | 关闭时是否收起键盘 |
-| layout.width | number | 对话框宽度 |
-| layout.contentPadding | number | 内容区内边距 |
-| layer.zIndex | number | 浮层层级，默认 `2000` |
-
-### actionDialog.confirm(options)
-
-语义化确认框，返回 `Promise<boolean>`。
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| title | ReactNode | 标题区域 |
-| content | string \| ReactNode | 对话框内容 |
-| confirmText | string | 确认按钮文案，默认 `'确定'` |
-| cancelText | string | 取消按钮文案，默认 `'取消'` |
-| confirmAction | Partial<ActionDialogAction> | 自定义确认按钮样式与行为 |
-| cancelAction | Partial<ActionDialogAction> | 自定义取消按钮样式与行为 |
-| intent | `'default' \| 'danger'` | 快速切换确认按钮语义 |
-| footer.layout | `'bar' \| 'row' \| 'stacked'` | 底部布局 |
-
-### actionDialog.alert(options)
-
-语义化提示框，返回 `Promise<boolean>`。
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| title | ReactNode | 标题区域 |
-| content | string \| ReactNode | 对话框内容 |
-| confirmText | string | 确认按钮文案，默认 `'确定'` |
-| confirmAction | Partial<ActionDialogAction> | 自定义确认按钮样式与行为 |
-| intent | `'default' \| 'danger'` | 快速切换确认按钮语义 |
-| footer.layout | `'bar' \| 'row' \| 'stacked'` | 底部布局 |
-
-### actionDialog.hide()
-
-关闭当前弹窗，并让当前 `result` 以 `{ type: 'dismiss', reason: 'api' }` 结算。
-
-### actionDialog.hideByScope(scopeKey)
-
-只在当前弹窗的 `scopeKey` 命中时关闭弹窗，适合“同一业务域只保留一个弹窗”的场景。
-
-## 设计说明
-
-- `y2kit-ui` 只保留新模型，不再内置 legacy `buttons / onConfirm / closeOnConfirm` 兼容。
-- `open` 是唯一底层入口，避免 `open / show / custom` 多个同能力名字并存。
-- 语义和视觉解耦：`role` 决定结果语义，`variant` 决定按钮样式，`footer.layout` 决定布局。
-- Provider 绑定与结果结算是内部生命周期细节，不作为 `actionDialog` 公开接口暴露。
-- 项目级兼容建议放在各自的 `dialogService` 中做参数转译。
-- 长期演进建议优先补 `Provider defaults/presets` 与语义化 theme tokens，而不是继续扩展 legacy 参数。
+- `id`
+- `result: Promise<ActionDialogResult>`
+- `close()`
+- `update(patch)`

@@ -1,8 +1,5 @@
 import * as React from 'react';
 import {
-  Animated,
-  Easing,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -17,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'y2kit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
-import { BottomSheet, type BottomSheetRef } from '../BottomSheet';
+import { BottomSheet, type BottomSheetOpenChangeMeta } from '../BottomSheet';
 import { Button } from '../Button';
 import { Text } from '../Text';
 import {
@@ -37,7 +34,6 @@ const VISIBLE_ITEMS = WHEEL_VISIBLE_ITEMS;
 
 type ModelType = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second';
 type Side = 'start' | 'end';
-type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
 
 type BetweenTimeConfirmPayload = {
   value: string[];
@@ -151,13 +147,6 @@ const STANDARD_INPUT_FORMATS = [
 
 function clampNumber(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
-}
-
-function silentlyCatchPromise(value: unknown) {
-  const maybePromise = value as { catch?: (onRejected: () => void) => unknown } | null | undefined;
-  if (typeof maybePromise?.catch === 'function') {
-    maybePromise.catch(() => {});
-  }
 }
 
 function toIntOrNull(v: string) {
@@ -458,73 +447,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   const [innerOpen, setInnerOpen] = React.useState(defaultOpen);
   const isOpenControlled = openProp !== undefined;
   const visible = isOpenControlled ? !!openProp : innerOpen;
-  const [sheetMounted, setSheetMounted] = React.useState(visible);
   const [contentMounted, setContentMounted] = React.useState(!lazyContent);
-  const sheetRef = React.useRef<BottomSheetRef>(null);
-  const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
-  const pendingDismissRef = React.useRef(false);
-  const activeSheetLifecycleRef = React.useRef(!!visible);
-  const visibleRef = React.useRef(!!visible);
-
-  React.useEffect(() => {
-    visibleRef.current = !!visible;
-  }, [visible]);
-
-  const finishClosedLifecycle = React.useCallback((shouldSyncOpenState: boolean) => {
-    sheetPhaseRef.current = 'idle';
-    pendingDismissRef.current = false;
-
-    if (shouldSyncOpenState) {
-      onOpenChange?.(false);
-      if (!isOpenControlled) setInnerOpen(false);
-    }
-
-    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
-
-    if (activeSheetLifecycleRef.current) {
-      activeSheetLifecycleRef.current = false;
-      onDismissComplete?.();
-    }
-  }, [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]);
-
-  const requestSheetDismiss = React.useCallback(() => {
-    const phase = sheetPhaseRef.current;
-
-    if (phase === 'dismissing') return;
-
-    if (phase === 'presenting') {
-      pendingDismissRef.current = true;
-      return;
-    }
-
-    if (phase === 'presented') {
-      const sheet = sheetRef.current;
-      if (!sheet) {
-        finishClosedLifecycle(true);
-        return;
-      }
-
-      pendingDismissRef.current = false;
-      sheetPhaseRef.current = 'dismissing';
-      silentlyCatchPromise(sheet.dismiss());
-      return;
-    }
-
-    if (activeSheetLifecycleRef.current) {
-      finishClosedLifecycle(true);
-    }
-  }, [finishClosedLifecycle]);
-
-  React.useEffect(() => {
-    if (visible && !sheetMounted) {
-      activeSheetLifecycleRef.current = true;
-      pendingDismissRef.current = false;
-      setSheetMounted(true);
-    }
-    if (visible && sheetMounted) {
-      activeSheetLifecycleRef.current = true;
-    }
-  }, [sheetMounted, visible]);
 
   const detents = React.useMemo<Array<'auto' | number>>(() => {
     if (drawerSize == null) return ['auto'];
@@ -576,19 +499,19 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     return key;
   }, [t]);
 
+  const setPickerOpen = React.useCallback((nextOpen: boolean) => {
+    onOpenChange?.(nextOpen);
+    if (!isOpenControlled) setInnerOpen(nextOpen);
+  }, [isOpenControlled, onOpenChange]);
+
   const close = React.useCallback(() => {
-    onOpenChange?.(false);
-    if (!isOpenControlled) {
-      setInnerOpen(false);
-    }
-    requestSheetDismiss();
-  }, [isOpenControlled, onOpenChange, requestSheetDismiss]);
+    setPickerOpen(false);
+  }, [setPickerOpen]);
 
   const openPicker = React.useCallback(() => {
     if (disabled) return;
     if (!visible) {
-      if (!isOpenControlled) setInnerOpen(true);
-      onOpenChange?.(true);
+      setPickerOpen(true);
     }
 
     const pair = resolveInitialPair(value, bounds, type);
@@ -597,32 +520,12 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     if (lazyContent && !contentMounted) {
       setContentMounted(true);
     }
-  }, [bounds, contentMounted, disabled, isOpenControlled, lazyContent, onOpenChange, type, value, visible]);
+  }, [bounds, contentMounted, disabled, lazyContent, setPickerOpen, type, value, visible]);
 
   React.useImperativeHandle(ref, () => ({
     open: openPicker,
     close,
   }), [openPicker, close]);
-
-  React.useEffect(() => {
-    if (visible && sheetMounted) {
-      const rafId = requestAnimationFrame(() => {
-        if (!visibleRef.current) return;
-        if (sheetPhaseRef.current !== 'idle') return;
-
-        const sheet = sheetRef.current;
-        if (!sheet) return;
-
-        pendingDismissRef.current = false;
-        sheetPhaseRef.current = 'presenting';
-        silentlyCatchPromise(sheet.present());
-      });
-      return () => cancelAnimationFrame(rafId);
-    }
-    if (!visible && sheetMounted) {
-      requestSheetDismiss();
-    }
-  }, [requestSheetDismiss, sheetMounted, visible]);
 
   const columnsCount = React.useMemo(() => getColumnsCount(type), [type]);
   const wheelsRef = React.useRef<Array<WheelColumnHandle | null>>([]);
@@ -784,73 +687,32 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     [children, disabled, openPicker]
   );
 
-  const handleSheetDidPresent = React.useCallback(() => {
-    sheetPhaseRef.current = 'presented';
-    if (pendingDismissRef.current || !visibleRef.current) {
-      requestSheetDismiss();
+  const handleSheetOpenChange = React.useCallback((nextOpen: boolean, meta: BottomSheetOpenChangeMeta) => {
+    if (!nextOpen && visible && meta.reason !== 'api') {
+      onCancel?.();
+      const pair = resolveInitialPair(value, bounds, type);
+      setDraft({ draftStart: pair.start, draftEnd: pair.end });
     }
-  }, [requestSheetDismiss]);
+    setPickerOpen(nextOpen);
+  }, [bounds, onCancel, setPickerOpen, type, value, visible]);
 
-  const handleSheetDidDismiss = React.useCallback(() => {
-    const wasProgrammaticDismiss = sheetPhaseRef.current === 'dismissing' || pendingDismissRef.current;
-    const shouldSyncOpenState = !visibleRef.current || !wasProgrammaticDismiss;
-    finishClosedLifecycle(shouldSyncOpenState);
-  }, [finishClosedLifecycle]);
-
-  const handleBackdropPress = React.useCallback(() => {
-    if (disabled || !visible) return;
-    onCancel?.();
-    const pair = resolveInitialPair(value, bounds, type);
-    setDraft({ draftStart: pair.start, draftEnd: pair.end });
-    close();
-  }, [bounds, close, disabled, onCancel, type, value, visible]);
-
-  const useManualIOSBackdrop = Platform.OS === 'ios';
-  const backdropOpacity = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const [backdropMounted, setBackdropMounted] = React.useState(useManualIOSBackdrop && visible);
-
-  React.useEffect(() => {
-    if (!useManualIOSBackdrop) return;
-
-    backdropOpacity.stopAnimation();
-
-    if (visible) {
-      setBackdropMounted(true);
-      Animated.timing(backdropOpacity, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-
-    Animated.timing(backdropOpacity, {
-      toValue: 0,
-      duration: 120,
-      easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished && !visibleRef.current) {
-        setBackdropMounted(false);
-      }
-    });
-  }, [backdropOpacity, useManualIOSBackdrop, visible]);
+  const handleSheetDismissComplete = React.useCallback(() => {
+    if (lazyContent) setContentMounted(false);
+    onDismissComplete?.();
+  }, [lazyContent, onDismissComplete]);
 
   const sheetNode = (
     <BottomSheet
-      ref={sheetRef}
+      open={visible}
+      onOpenChange={handleSheetOpenChange}
+      onDismissComplete={handleSheetDismissComplete}
       detents={detents}
       backgroundColor={theme.colors.surface}
-      cornerRadius={undefined}
-      grabber={false}
+      handle={false}
       draggable={false}
-      dimmed={!useManualIOSBackdrop}
-      dimmedDetentIndex={0}
-      insetAdjustment="never"
-      dismissible={Platform.OS === 'ios' ? false : !disabled}
-      onDidPresent={handleSheetDidPresent}
-      onDidDismiss={handleSheetDidDismiss}
+      dismissible={!disabled}
+      mountStrategy={lazyContent ? 'unmountOnExit' : 'lazy'}
+      nativeProps={{ insetAdjustment: 'never' }}
     >
       <View
         style={[
@@ -1026,45 +888,12 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   return (
     <>
       {triggerNode}
-      {sheetMounted ? (
-        useManualIOSBackdrop ? (
-          <Modal
-            visible
-            transparent
-            animationType="none"
-            statusBarTranslucent
-            presentationStyle="overFullScreen"
-            onRequestClose={handleBackdropPress}
-          >
-            <View style={styles.modalRoot} pointerEvents="box-none">
-              {backdropMounted ? (
-                <Pressable
-                  style={StyleSheet.absoluteFill}
-                  onPress={handleBackdropPress}
-                  disabled={disabled || !visible}
-                >
-                  <Animated.View style={[styles.iosBackdrop, { opacity: backdropOpacity }]} />
-                </Pressable>
-              ) : null}
-              {sheetNode}
-            </View>
-          </Modal>
-        ) : (
-          sheetNode
-        )
-      ) : null}
+      {sheetNode}
     </>
   );
 });
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-  },
-  iosBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
-  },
   sheetInner: {
     width: '100%',
     paddingHorizontal: wp(16),

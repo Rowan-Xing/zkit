@@ -1,115 +1,127 @@
 # CardToastService
 
-命令式卡片 Toast 服务。默认只展示当前最新的一条提示，适合轻量结果反馈。
+全局卡片 Toast 服务，适合保存成功、网络失败、轻量操作反馈这类不应打断用户流程的提示。
 
-## 前置条件
-
-确保应用根组件已包裹 `ComponentLibProvider`（已内置 `CardToastProvider`）：
+`ComponentLibProvider` 已内置 `ToastProvider`。如果单独接入，需要把 `ToastProvider` 放在应用根部。
 
 ```tsx
-import { ComponentLibProvider } from 'y2kit-ui';
+import { ToastProvider } from 'y2kit-ui';
 
-export default function App() {
-  return (
-    <ComponentLibProvider>
-      {/* app */}
-    </ComponentLibProvider>
-  );
+export function App() {
+  return <ToastProvider>{/* app */}</ToastProvider>;
 }
 ```
 
-## 全局配置
+## 默认行为
 
-应用启动时可通过 `toast.configure(...)` 设定全局默认行为，每条 toast 的同名字段未传时会回落到这里。单条 toast 的 options 优先级更高。
+- 默认视觉保持原卡片 Toast：语义 webp 图标、淡色背景、细边框、`wp(320)` 宽度、`wp(10)` 圆角和 iOS sheen 动效不变。
+- 默认 `placement: 'top'`，位置会叠加 safe area，额外偏移保持原来的 `35` 设计像素。
+- 默认 `strategy: 'replace'`，新提示替换当前提示，避免连续操作时堆积。
+- 默认 `duration: 2400`，传 `duration: 0` 时不会自动关闭，并会自动显示关闭按钮。
+- 动画只使用 opacity / transform，避免布局动画和 JS 高频驱动。
+
+## 使用方式
 
 ```ts
 import { toast } from 'y2kit-ui';
 
-toast.configure({
-  position: 'top',   // 'top' | 'bottom'，默认 'top'
-  offset: 35,        // 设计尺寸，相对 safeArea 的额外偏移，默认 35
-  duration: 1500,    // 默认显示时长（毫秒），传 0 时不自动关闭，默认 1000
-});
-```
-
-## 使用方式
-
-```tsx
-import { toast } from 'y2kit-ui';
-
 toast.success('保存成功');
-toast.error('网络错误');
-toast.warning('请检查输入');
-toast.info('已刷新');
+toast.error('网络错误', {
+  description: '请检查网络后重试',
+  duration: 3200,
+});
+toast.info('已刷新', { placement: 'bottom' });
 ```
 
-带标题、自定义位置或时长（单条配置覆盖全局）：
+完整配置入口：
+
+```ts
+const handle = toast.show({
+  tone: 'warning',
+  title: '资料未完整',
+  description: '请补充手机号后继续',
+  action: {
+    label: '去补充',
+    onPress: () => {
+      // navigate(...)
+    },
+  },
+});
+
+handle.update({ tone: 'success', title: '已补充', description: undefined });
+handle.dismiss();
+```
+
+## 队列策略
+
+```ts
+toast.info('按顺序展示', { strategy: 'queue' });
+toast.success('可堆叠提示', { strategy: 'stack', maxVisible: 3 });
+```
+
+| strategy | 行为 |
+| --- | --- |
+| `replace` | 关闭当前可见 Toast，展示最新一条。默认值 |
+| `queue` | 当前 Toast 完整退出后，再展示下一条 |
+| `stack` | 同位置最多展示 `maxVisible` 条，超出时关闭最旧一条 |
+
+## 全局默认值
+
+```ts
+toast.configure({
+  placement: 'top',
+  offset: 35,
+  duration: 2400,
+  strategy: 'replace',
+  maxVisible: 3,
+  closeButton: false,
+});
+```
+
+单条 Toast 的 options 优先级高于 `configure`。
+
+## 自定义渲染
 
 ```tsx
-toast.success('资料已同步', {
-  title: '保存成功',
-  duration: 2400,
-});
-
-toast.error('上传失败', {
-  position: 'bottom',
-  offset: 48,
-});
+toast.custom(
+  ({ dismiss }) => (
+    <Pressable onPress={() => dismiss()}>
+      <Text>自定义 Toast</Text>
+    </Pressable>
+  ),
+  {
+    accessibilityLabel: '自定义 Toast',
+    duration: 0,
+  }
+);
 ```
 
-通用入口：
+自定义渲染仍由 `ToastProvider` 管理生命周期、队列、safe area 和退出清理。自定义内容里的像素尺寸仍应使用 `wp(...)`。
 
-```tsx
-const toastId = toast.show({
-  tone: 'success',
-  title: '保存成功',
-  message: '资料已同步',
-  duration: 2400,
-  position: 'bottom',
-  offset: 24,
-});
+## API 摘要
 
-toast.dismiss(toastId);
-toast.dismissAll();
-```
+| API | 说明 |
+| --- | --- |
+| `toast.show(options)` | 展示完整配置的 Toast，返回 `ToastHandle` |
+| `toast.success/error/warning/info/neutral(title, options?)` | 语义快捷入口 |
+| `toast.custom(render, options?)` | 自定义内容入口 |
+| `toast.update(idOrHandle, patch)` | 更新可见或排队中的 Toast |
+| `toast.dismiss(idOrHandle?)` | 关闭指定 Toast；不传时关闭最新可见 Toast |
+| `toast.dismissAll()` | 关闭所有可见和排队 Toast |
+| `toast.configure(defaults)` | 设置全局默认值 |
 
-`duration: 0` 表示不自动关闭，需要手动调用 `dismiss` / `dismissAll`。
+常用 options：
 
-## API
-
-### toast.configure(defaults)
-
-设置全局默认配置，未传字段保留当前值。优先级：`单条 options` > `configure 设定` > 内置默认值。
-
-| 字段 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| position | 'top' \| 'bottom' | 'top' | Toast 出现位置 |
-| offset | number | 35 | 相对 safeArea 的额外偏移（设计尺寸） |
-| duration | number | 1000 | 默认显示时长（毫秒），传 0 不自动关闭 |
-
-### toast.show(options)
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| id | string | - | Toast 唯一标识，不传则自动生成 |
-| tone | 'success' \| 'error' \| 'warning' \| 'info' | - | Toast 语义色，默认 'info' |
-| title | unknown | - | 标题 |
-| message | unknown | - | 提示内容，支持字符串、数字、boolean、Error 对象 |
-| duration | number | - | 显示时长（毫秒），未传继承全局配置 |
-| position | 'top' \| 'bottom' | - | 位置，未传继承全局配置 |
-| offset | number | - | 偏移（设计尺寸），未传继承全局配置 |
-
-### toast.success/error/warning/info(message, options?)
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| message | unknown | ✓ | 提示内容 |
-| options | number \| ToastShortcutOptions | - | 传数字时表示 duration；传对象时可配置 id、title、duration、position、offset |
-
-### toast.dismiss(id?)
-
-关闭当前或指定 Toast。
-
-### toast.dismissAll()
-
-关闭当前 Toast。
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `tone` | `'success' \| 'error' \| 'warning' \| 'info' \| 'neutral'` | 语义色 |
+| `title` | `ReactNode` | 主文案 |
+| `description` | `ReactNode` | 辅助文案 |
+| `duration` | `number` | 自动关闭时长，`0` 表示常驻 |
+| `placement` | `'top' \| 'bottom'` | 出现位置 |
+| `offset` | `number` | 相对 safe area 的设计像素偏移 |
+| `strategy` | `'replace' \| 'queue' \| 'stack'` | 连续触发策略 |
+| `action` | `ToastAction` | 可点击动作 |
+| `closeButton` | `boolean` | 是否展示关闭按钮 |
+| `icon` | `ReactNode \| false \| render` | 自定义图标或隐藏图标 |
+| `render` | `(context) => ReactNode` | 完全自定义内容 |

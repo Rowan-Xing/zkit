@@ -1,8 +1,5 @@
 import * as React from 'react';
 import {
-  Animated,
-  Easing,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -15,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'y2kit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
-import { BottomSheet, type BottomSheetRef } from '../BottomSheet';
+import { BottomSheet, type BottomSheetOpenChangeMeta } from '../BottomSheet';
 import { Button } from '../Button';
 import { Text } from '../Text';
 import {
@@ -76,8 +73,6 @@ const VISIBLE_ITEMS = WHEEL_VISIBLE_ITEMS;
 const DEFAULT_MAX_COLUMNS = 5;
 const MAX_COLUMNS_LIMIT = 8;
 
-type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
-
 type TriggerChildProps = {
   onPress?: (...args: unknown[]) => void;
   disabled?: boolean;
@@ -95,13 +90,6 @@ type WheelColumnSlotProps<TOption> = {
   disabled: boolean;
   wheelsRef: React.MutableRefObject<Array<WheelColumnHandle | null>>;
 };
-
-function silentlyCatchPromise(value: unknown) {
-  const maybePromise = value as { catch?: (onRejected: () => void) => unknown } | null | undefined;
-  if (typeof maybePromise?.catch === 'function') {
-    maybePromise.catch(() => {});
-  }
-}
 
 function toWheelOptions<TOption>(
   options: TOption[],
@@ -278,20 +266,8 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const isOpenControlled = openProp !== undefined;
   const [innerOpen, setInnerOpen] = React.useState(!!defaultOpen);
   const visible = isOpenControlled ? !!openProp : innerOpen;
-  const [sheetMounted, setSheetMounted] = React.useState(visible);
-  const [contentMounted, setContentMounted] = React.useState(() => !lazyContent || visible);
-
-  const sheetRef = React.useRef<BottomSheetRef>(null);
-  const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
-  const pendingDismissRef = React.useRef(false);
-  const activeSheetLifecycleRef = React.useRef(visible);
-  const visibleRef = React.useRef(visible);
   const wheelsRef = React.useRef<Array<WheelColumnHandle | null>>([]);
   const confirmingRef = React.useRef(false);
-
-  React.useEffect(() => {
-    visibleRef.current = visible;
-  }, [visible]);
 
   const resolveFromValue = React.useCallback(
     (nextValue: PickerValue | undefined) =>
@@ -321,8 +297,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   React.useEffect(() => {
     if (!visible) return;
     setDraft(resolveFromValue(value));
-    if (lazyContent) setContentMounted(true);
-  }, [lazyContent, resolveFromValue, value, visible]);
+  }, [resolveFromValue, value, visible]);
 
   const committedSelection = React.useMemo<PickerSelection<TOption>>(() => {
     const state = value === undefined ? createEmptyCascadeState<TOption>() : resolveFromValue(value);
@@ -342,120 +317,29 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
 
   const draftSelection = React.useMemo(() => createSelection(draftState), [createSelection, draftState]);
 
-  const finishClosedLifecycle = React.useCallback(
-    (shouldSyncOpenState: boolean) => {
-      sheetPhaseRef.current = 'idle';
-      pendingDismissRef.current = false;
-      confirmingRef.current = false;
-
-      if (shouldSyncOpenState) {
-        onOpenChange?.(false);
-        if (!isOpenControlled) setInnerOpen(false);
-      }
-
-      if (lazyContent) {
-        setContentMounted(false);
-      }
-
-      if (Platform.OS === 'ios' || lazyContent) {
-        setSheetMounted(false);
-      }
-
-      if (activeSheetLifecycleRef.current) {
-        activeSheetLifecycleRef.current = false;
-        onDismissComplete?.();
-      }
-    },
-    [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]
-  );
-
-  const requestSheetDismiss = React.useCallback(() => {
-    const phase = sheetPhaseRef.current;
-
-    if (phase === 'dismissing') return;
-
-    if (phase === 'presenting') {
-      pendingDismissRef.current = true;
-      return;
-    }
-
-    if (phase === 'presented') {
-      const sheet = sheetRef.current;
-      if (!sheet) {
-        finishClosedLifecycle(true);
-        return;
-      }
-
-      pendingDismissRef.current = false;
-      sheetPhaseRef.current = 'dismissing';
-      silentlyCatchPromise(sheet.dismiss());
-      return;
-    }
-
-    if (activeSheetLifecycleRef.current) {
-      finishClosedLifecycle(true);
-    }
-  }, [finishClosedLifecycle]);
-
-  React.useEffect(() => {
-    if (visible && !sheetMounted) {
-      activeSheetLifecycleRef.current = true;
-      pendingDismissRef.current = false;
-      setSheetMounted(true);
-    }
-
-    if (visible && sheetMounted) {
-      activeSheetLifecycleRef.current = true;
-    }
-  }, [sheetMounted, visible]);
-
-  React.useEffect(() => {
-    if (visible && sheetMounted) {
-      const rafId = requestAnimationFrame(() => {
-        if (!visibleRef.current) return;
-        if (sheetPhaseRef.current !== 'idle') return;
-
-        const sheet = sheetRef.current;
-        if (!sheet) return;
-
-        pendingDismissRef.current = false;
-        sheetPhaseRef.current = 'presenting';
-        silentlyCatchPromise(sheet.present());
-      });
-
-      return () => cancelAnimationFrame(rafId);
-    }
-
-    if (!visible && sheetMounted) {
-      requestSheetDismiss();
-    }
-
-    return undefined;
-  }, [requestSheetDismiss, sheetMounted, visible]);
-
   const detents = React.useMemo<Array<'auto' | number>>(() => {
     if (sheetHeight === 'auto' || sheetHeight == null) return ['auto'];
     if (!Number.isFinite(sheetHeight) || sheetHeight <= 0) return ['auto'];
     return [clampNumber(sheetHeight / screenH, 0.1, 0.92)];
   }, [screenH, sheetHeight]);
 
+  const setPickerOpen = React.useCallback((nextOpen: boolean) => {
+    onOpenChange?.(nextOpen);
+    if (!isOpenControlled) setInnerOpen(nextOpen);
+  }, [isOpenControlled, onOpenChange]);
+
   const close = React.useCallback(() => {
-    onOpenChange?.(false);
-    if (!isOpenControlled) setInnerOpen(false);
-    requestSheetDismiss();
-  }, [isOpenControlled, onOpenChange, requestSheetDismiss]);
+    setPickerOpen(false);
+  }, [setPickerOpen]);
 
   const openPicker = React.useCallback(() => {
     if (disabled) return;
 
     setDraft(resolveFromValue(value));
-    if (lazyContent) setContentMounted(true);
-
     if (!visible) {
-      if (!isOpenControlled) setInnerOpen(true);
-      onOpenChange?.(true);
+      setPickerOpen(true);
     }
-  }, [disabled, isOpenControlled, lazyContent, onOpenChange, resolveFromValue, value, visible]);
+  }, [disabled, resolveFromValue, setPickerOpen, value, visible]);
 
   React.useImperativeHandle(
     ref,
@@ -594,24 +478,12 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     }
   }, [close, confirmDisabled, createSelection, isValueControlled, onChange, onConfirm, syncDraftFromWheels]);
 
-  const handleSheetDidPresent = React.useCallback(() => {
-    sheetPhaseRef.current = 'presented';
-    if (pendingDismissRef.current || !visibleRef.current) {
-      requestSheetDismiss();
+  const handleSheetOpenChange = React.useCallback((nextOpen: boolean, meta: BottomSheetOpenChangeMeta) => {
+    if (!nextOpen && visible && meta.reason !== 'api') {
+      onCancel?.();
     }
-  }, [requestSheetDismiss]);
-
-  const handleSheetDidDismiss = React.useCallback(() => {
-    const wasProgrammaticDismiss = sheetPhaseRef.current === 'dismissing' || pendingDismissRef.current;
-    const shouldSyncOpenState = !visibleRef.current || !wasProgrammaticDismiss;
-    finishClosedLifecycle(shouldSyncOpenState);
-  }, [finishClosedLifecycle]);
-
-  const handleBackdropPress = React.useCallback(() => {
-    if (disabled || !visible) return;
-    onCancel?.();
-    close();
-  }, [close, disabled, onCancel, visible]);
+    setPickerOpen(nextOpen);
+  }, [onCancel, setPickerOpen, visible]);
 
   const triggerContext = React.useMemo<PickerTriggerContext<TOption>>(
     () => ({
@@ -631,52 +503,18 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     [children, triggerContext]
   );
 
-  const useManualIOSBackdrop = Platform.OS === 'ios';
-  const backdropOpacity = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const [backdropMounted, setBackdropMounted] = React.useState(useManualIOSBackdrop && visible);
-
-  React.useEffect(() => {
-    if (!useManualIOSBackdrop) return;
-
-    backdropOpacity.stopAnimation();
-
-    if (visible) {
-      setBackdropMounted(true);
-      Animated.timing(backdropOpacity, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-
-    Animated.timing(backdropOpacity, {
-      toValue: 0,
-      duration: 120,
-      easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished && !visibleRef.current) {
-        setBackdropMounted(false);
-      }
-    });
-  }, [backdropOpacity, useManualIOSBackdrop, visible]);
-
   const sheetNode = (
     <BottomSheet
-      ref={sheetRef}
+      open={visible}
+      onOpenChange={handleSheetOpenChange}
+      onDismissComplete={onDismissComplete}
       detents={detents}
       backgroundColor={theme.colors.surface}
-      cornerRadius={undefined}
-      grabber={false}
+      handle={false}
       draggable={false}
-      dimmed={!useManualIOSBackdrop}
-      dimmedDetentIndex={0}
-      insetAdjustment="never"
-      dismissible={Platform.OS === 'ios' ? false : !disabled}
-      onDidPresent={handleSheetDidPresent}
-      onDidDismiss={handleSheetDidDismiss}
+      dismissible={!disabled}
+      mountStrategy={lazyContent ? 'unmountOnExit' : 'lazy'}
+      nativeProps={{ insetAdjustment: 'never' }}
     >
       <View
         accessibilityViewIsModal
@@ -695,76 +533,72 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
           </Text>
         </View>
 
-        {contentMounted ? (
-          draftColumns.length > 0 ? (
-            <View style={styles.pickerArea}>
-              {renderColumnHeader && (
-                <View style={styles.columnLabelsRow}>
-                  {draftColumns.slice(0, columnsCount).map((columnOptions, columnIndex) => {
-                    const headerContext: PickerColumnHeaderContext<TOption> = {
-                      columnIndex,
-                      columnCount: columnsCount,
-                      options: columnOptions,
-                      selectedItem: draftItems[columnIndex],
-                      selectedValue: draftValues[columnIndex],
-                      selectedLabel: draftLabels[columnIndex],
-                    };
+        {draftColumns.length > 0 ? (
+          <View style={styles.pickerArea}>
+            {renderColumnHeader && (
+              <View style={styles.columnLabelsRow}>
+                {draftColumns.slice(0, columnsCount).map((columnOptions, columnIndex) => {
+                  const headerContext: PickerColumnHeaderContext<TOption> = {
+                    columnIndex,
+                    columnCount: columnsCount,
+                    options: columnOptions,
+                    selectedItem: draftItems[columnIndex],
+                    selectedValue: draftValues[columnIndex],
+                    selectedLabel: draftLabels[columnIndex],
+                  };
 
-                    return (
-                      <View key={`header-${columnIndex}`} style={[styles.columnLabelItem, { width: columnWidth }]}>
-                        {renderColumnHeader(headerContext)}
-                      </View>
-                    );
-                  })}
-                </View>
+                  return (
+                    <View key={`header-${columnIndex}`} style={[styles.columnLabelItem, { width: columnWidth }]}>
+                      {renderColumnHeader(headerContext)}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            <View style={styles.pickerWrapper}>
+              {Platform.OS !== 'ios' && (
+                <View
+                  style={[styles.highlightBar, { backgroundColor: theme.colors.secondary }]}
+                  pointerEvents="none"
+                />
               )}
 
-              <View style={styles.pickerWrapper}>
-                {Platform.OS !== 'ios' && (
-                  <View
-                    style={[styles.highlightBar, { backgroundColor: theme.colors.secondary }]}
-                    pointerEvents="none"
+              <View style={styles.columnsRow}>
+                {draftColumns.slice(0, columnsCount).map((columnOptions, columnIndex) => (
+                  <WheelColumnSlot
+                    key={`column-${columnIndex}-${columnsCount}`}
+                    options={columnOptions}
+                    columnIndex={columnIndex}
+                    parentPath={draftItems.slice(0, columnIndex)}
+                    accessors={accessors}
+                    selectedIndex={Math.max(0, draftIndices[columnIndex] ?? 0)}
+                    onIndexChange={handleWheelIndexChange}
+                    width={columnWidth}
+                    disabled={disabled}
+                    wheelsRef={wheelsRef}
                   />
-                )}
-
-                <View style={styles.columnsRow}>
-                  {draftColumns.slice(0, columnsCount).map((columnOptions, columnIndex) => (
-                    <WheelColumnSlot
-                      key={`column-${columnIndex}-${columnsCount}`}
-                      options={columnOptions}
-                      columnIndex={columnIndex}
-                      parentPath={draftItems.slice(0, columnIndex)}
-                      accessors={accessors}
-                      selectedIndex={Math.max(0, draftIndices[columnIndex] ?? 0)}
-                      onIndexChange={handleWheelIndexChange}
-                      width={columnWidth}
-                      disabled={disabled}
-                      wheelsRef={wheelsRef}
-                    />
-                  ))}
-                </View>
-
-                {Platform.OS !== 'ios' && (
-                  <View style={styles.topMask} pointerEvents="none">
-                    <LinearGradient colors={[theme.colors.surface, transparentSurface]} style={StyleSheet.absoluteFill} />
-                  </View>
-                )}
-                {Platform.OS !== 'ios' && (
-                  <View style={styles.bottomMask} pointerEvents="none">
-                    <LinearGradient colors={[transparentSurface, theme.colors.surface]} style={StyleSheet.absoluteFill} />
-                  </View>
-                )}
+                ))}
               </View>
+
+              {Platform.OS !== 'ios' && (
+                <View style={styles.topMask} pointerEvents="none">
+                  <LinearGradient colors={[theme.colors.surface, transparentSurface]} style={StyleSheet.absoluteFill} />
+                </View>
+              )}
+              {Platform.OS !== 'ios' && (
+                <View style={styles.bottomMask} pointerEvents="none">
+                  <LinearGradient colors={[transparentSurface, theme.colors.surface]} style={StyleSheet.absoluteFill} />
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text tone="muted" align="center">
-                {emptyText ?? t('picker.empty')}
-              </Text>
-            </View>
-          )
+          </View>
         ) : (
-          <View style={[styles.pickerArea, { height: WHEEL_AREA_HEIGHT + wp(18) }]} />
+          <View style={styles.emptyState}>
+            <Text tone="muted" align="center">
+              {emptyText ?? t('picker.empty')}
+            </Text>
+          </View>
         )}
 
         <View style={styles.footer}>
@@ -797,33 +631,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   return (
     <>
       {triggerNode}
-      {sheetMounted ? (
-        useManualIOSBackdrop ? (
-          <Modal
-            visible
-            transparent
-            animationType="none"
-            statusBarTranslucent
-            presentationStyle="overFullScreen"
-            onRequestClose={handleBackdropPress}
-          >
-            <View style={styles.modalRoot} pointerEvents="box-none">
-              {backdropMounted ? (
-                <Pressable
-                  style={StyleSheet.absoluteFill}
-                  onPress={handleBackdropPress}
-                  disabled={disabled || !visible}
-                >
-                  <Animated.View style={[styles.iosBackdrop, { opacity: backdropOpacity }]} />
-                </Pressable>
-              ) : null}
-              {sheetNode}
-            </View>
-          </Modal>
-        ) : (
-          sheetNode
-        )
-      ) : null}
+      {sheetNode}
     </>
   );
 }) as <TOption = import('./types').PickerOption>(
@@ -831,13 +639,6 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
 ) => React.ReactElement | null;
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-  },
-  iosBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
-  },
   sheetInner: {
     width: '100%',
     paddingHorizontal: wp(16),

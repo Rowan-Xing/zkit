@@ -28,7 +28,7 @@ import { Button } from 'y2kit-ui';
 
 默认主题在 [defaultTheme.ts](src/theme/defaultTheme.ts)。
 
-### 推荐用法：统一 Provider（主题 + i18n）
+### 推荐用法：统一 Provider（主题 + i18n + 全局浮层）
 
 ```tsx
 import { ComponentLibProvider } from 'y2kit-ui';
@@ -108,6 +108,8 @@ function Demo() {
 - Radio：三端一致的单选框/单选组（受控/非受控、可清空组、Reanimated 指示器动画）
 - Switch：三端一致的布尔开关（受控/非受控、Reanimated 轨道与 thumb 动画）
 - TextInput / TextInputPrimitive：统一文本输入 Field 与接近 RN 原生能力的薄封装
+- BottomSheet：跨 iOS / Android / Web 的底部浮层基础件（受控/非受控 open、detents、统一遮罩与 Provider）
+- ImagePreview：全屏图片预览（声明式 open/value 状态模型 + 全局 imagePreview.open 服务）
 - Picker：底部滚轮选择器（单列/级联、确认提交、iOS 原生 wheel）
 - AddressCascader：省市区级联选择（内置中国数据）
 - DatePicker：年/月/日日期选择（空值、范围、精度与确认提交语义）
@@ -149,6 +151,24 @@ export function DemoAccordion() {
 ```
 
 `Accordion` 使用 `value/defaultValue/onChange` 状态模型。默认 `type="single"` 且可折叠，空值为 `null`；`type="multiple"` 时值为数组。内容默认 `mountStrategy="eager"` 以保留内部状态，可按需切到 `lazy` 或 `unmountOnExit`。
+
+### ImagePreview 用法
+
+```tsx
+import { ImagePreview, imagePreview } from 'y2kit-ui';
+
+<ImagePreview
+  images={images}
+  open={previewOpen}
+  value={previewIndex}
+  onChange={setPreviewIndex}
+  onOpenChange={setPreviewOpen}
+/>;
+
+imagePreview.open({ images, index: 0 });
+```
+
+`ImagePreview` 使用 `open/defaultOpen/onOpenChange` 管理显隐，使用 `value/defaultValue/onChange` 管理当前图片索引。全局 `imagePreview.open()` 返回 handle，可通过 `handle.result` 获取关闭原因和最终索引；`ComponentLibProvider` 已内置 `ImagePreviewProvider`。
 
 ### 目录与导出
 

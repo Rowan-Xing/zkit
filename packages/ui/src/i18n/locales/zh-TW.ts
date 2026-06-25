@@ -45,6 +45,18 @@ export const zhTW = {
   'imageCropper.loadFailed': '圖片載入失敗，請稍後再試',
   'imageCropper.processFailed': '圖片裁剪失敗，請稍後再試',
 
+  // ImagePreview
+  'imagePreview.preview': '圖片預覽',
+  'imagePreview.close': '關閉圖片預覽',
+  'imagePreview.loadFailed': '圖片載入失敗',
+  'imagePreview.counter': '第{current}張，共{total}張',
+  'imagePreview.image': '第{current}張圖片，共{total}張',
+
+  // ActionDialog
+  'actionDialog.confirm': '確認',
+  'actionDialog.cancel': '取消',
+  'actionDialog.close': '關閉彈窗',
+
   // SliderCaptcha
   'sliderCaptcha.title': '請拖動滑塊完成拼圖',
   'sliderCaptcha.verifyFailed': '驗證失敗，請重試',

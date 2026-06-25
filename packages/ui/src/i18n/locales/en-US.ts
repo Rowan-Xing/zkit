@@ -45,6 +45,18 @@ export const enUS = {
   'imageCropper.loadFailed': 'Failed to load image. Please try again.',
   'imageCropper.processFailed': 'Failed to crop image. Please try again.',
 
+  // ImagePreview
+  'imagePreview.preview': 'Image preview',
+  'imagePreview.close': 'Close image preview',
+  'imagePreview.loadFailed': 'Failed to load image',
+  'imagePreview.counter': 'Image {current} of {total}',
+  'imagePreview.image': 'Image {current} of {total}',
+
+  // ActionDialog
+  'actionDialog.confirm': 'Confirm',
+  'actionDialog.cancel': 'Cancel',
+  'actionDialog.close': 'Close dialog',
+
   // SliderCaptcha
   'sliderCaptcha.title': 'Drag slider to finish puzzle',
   'sliderCaptcha.verifyFailed': 'Verification failed',

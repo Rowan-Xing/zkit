@@ -45,6 +45,18 @@ export const zhCN = {
   'imageCropper.loadFailed': '图片加载失败，请重试',
   'imageCropper.processFailed': '图片裁剪失败，请重试',
 
+  // ImagePreview
+  'imagePreview.preview': '图片预览',
+  'imagePreview.close': '关闭图片预览',
+  'imagePreview.loadFailed': '图片加载失败',
+  'imagePreview.counter': '第{current}张，共{total}张',
+  'imagePreview.image': '第{current}张图片，共{total}张',
+
+  // ActionDialog
+  'actionDialog.confirm': '确认',
+  'actionDialog.cancel': '取消',
+  'actionDialog.close': '关闭弹窗',
+
   // SliderCaptcha
   'sliderCaptcha.title': '请拖动滑块完成拼图',
   'sliderCaptcha.verifyFailed': '验证失败，请重试',

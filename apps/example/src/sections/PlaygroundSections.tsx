@@ -409,11 +409,11 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
   const sheetRef = React.useRef<BottomSheetRef>(null);
 
   const openSheet = React.useCallback(() => {
-    void sheetRef.current?.present();
+    void sheetRef.current?.open();
   }, []);
 
   const closeSheet = React.useCallback(() => {
-    void sheetRef.current?.dismiss();
+    void sheetRef.current?.close();
   }, []);
 
   return (
@@ -474,17 +474,16 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
 
       <BottomSheet
         ref={sheetRef}
-        detents={['auto', 0.72]}
+        detents={['content', 0.72]}
         backgroundColor={theme.colors.surface}
-        cornerRadius={wp(8)}
-        grabberOptions={{
+        handle={{
           width: wp(36),
           height: wp(4),
           topMargin: wp(10),
-          cornerRadius: wp(2),
+          radius: wp(2),
           color: theme.colors.border,
         }}
-        maxContentHeight={wp(420)}
+        maxHeight={wp(420)}
       >
         <View style={styles.sheetContent}>
           <View>
@@ -709,10 +708,10 @@ export const ServicesSection = React.memo(function ServicesSection({
       });
 
       if (result) {
-        toast.success(t('example.services.cropperSuccess'), 1400);
+        toast.success(t('example.services.cropperSuccess'), { duration: 1400 });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('example.services.cropperFailed'), 1800);
+      toast.error(error instanceof Error ? error.message : t('example.services.cropperFailed'), { duration: 1800 });
     }
   }, [t]);
 
@@ -722,7 +721,7 @@ export const ServicesSection = React.memo(function ServicesSection({
       return;
     }
 
-    toast.info(t('example.services.otaRelease'), 1600);
+    toast.info(t('example.services.otaRelease'), { duration: 1600 });
   }, [t]);
 
   return (
@@ -739,7 +738,7 @@ export const ServicesSection = React.memo(function ServicesSection({
           subtitle={t('example.services.toastSubtitle')}
           color="#0F9F6E"
           buttonLabel={t('example.common.show')}
-          onPress={() => toast.success(t('example.services.toastSaved'), 1400)}
+          onPress={() => toast.success(t('example.services.toastSaved'), { duration: 1400 })}
         />
         <ServiceActionCard
           iconName="layers"
@@ -779,7 +778,7 @@ export const ServicesSection = React.memo(function ServicesSection({
           subtitle={t('example.services.previewSubtitle')}
           color="#334155"
           buttonLabel={t('example.common.preview')}
-          onPress={() => imagePreview.show({ images: previewImages })}
+          onPress={() => imagePreview.open({ images: previewImages })}
         />
         <ServiceActionCard
           iconName="crop"

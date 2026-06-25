@@ -2,7 +2,7 @@ import type * as React from 'react';
 import { I18nProvider } from './i18n/I18nProvider';
 import type { I18nMessages, I18nMissingKeyPolicy } from './i18n/types';
 import { ActionDialogProvider } from './services/ActionDialogService/index';
-import { CardToastProvider } from './services/CardToastService/index';
+import { ToastProvider } from './services/CardToastService/index';
 import { ImageCropperProvider } from './services/ImageCropperService/index';
 import { ImagePreviewProvider } from './services/ImagePreviewService/index';
 import { LoadingProvider } from './services/LoadingService/index';
@@ -10,6 +10,7 @@ import { PermissionPurposeDialogProvider } from './services/PermissionPurposeDia
 import { PickerServiceProvider } from './services/PickerService/index';
 import { ThemeProvider } from './theme/ThemeProvider';
 import type { Theme, ThemeOverride } from './theme/types';
+import { BottomSheetProvider } from './ui/BottomSheet/index';
 
 export type ComponentLibProviderProps = {
   // baseTheme 用于传入完整主题作为基线（例如品牌主题）
@@ -36,19 +37,21 @@ export function ComponentLibProvider({
   return (
     <ThemeProvider baseTheme={baseTheme} theme={theme}>
       <I18nProvider locale={locale} messages={messages} missingKeyPolicy={missingKeyPolicy}>
-        <PickerServiceProvider>
-          <CardToastProvider>
-            <ActionDialogProvider>
-              <LoadingProvider>
-                <PermissionPurposeDialogProvider>
-                  <ImagePreviewProvider>
-                    <ImageCropperProvider>{children}</ImageCropperProvider>
-                  </ImagePreviewProvider>
-                </PermissionPurposeDialogProvider>
-              </LoadingProvider>
-            </ActionDialogProvider>
-          </CardToastProvider>
-        </PickerServiceProvider>
+        <BottomSheetProvider>
+          <PickerServiceProvider>
+            <ToastProvider>
+              <ActionDialogProvider>
+                <LoadingProvider>
+                  <PermissionPurposeDialogProvider>
+                    <ImagePreviewProvider>
+                      <ImageCropperProvider>{children}</ImageCropperProvider>
+                    </ImagePreviewProvider>
+                  </PermissionPurposeDialogProvider>
+                </LoadingProvider>
+              </ActionDialogProvider>
+            </ToastProvider>
+          </PickerServiceProvider>
+        </BottomSheetProvider>
       </I18nProvider>
     </ThemeProvider>
   );

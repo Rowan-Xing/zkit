@@ -3,8 +3,6 @@ import * as React from 'react';
 import {
   Animated,
   Easing,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'y2kit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
-import { BottomSheet, type BottomSheetRef } from '../BottomSheet';
+import { BottomSheet, type BottomSheetOpenChangeMeta } from '../BottomSheet';
 import { Button } from '../Button';
 import { Text } from '../Text';
 import type { PickerTreeNode } from '../Picker';
@@ -143,7 +141,6 @@ type AddressOption = {
 };
 
 type Primitive = string | number;
-type SheetNativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
 
 const MAX_LEVELS = 3;
 const LEVELS = Array.from({ length: MAX_LEVELS }, (_, level) => level);
@@ -154,13 +151,6 @@ const SELECTED_OPTION_VIEW_POSITION = 0.18;
 
 function clampNumber(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
-}
-
-function silentlyCatchPromise(value: unknown) {
-  const maybePromise = value as { catch?: (onRejected: () => void) => unknown } | null | undefined;
-  if (typeof maybePromise?.catch === 'function') {
-    maybePromise.catch(() => {});
-  }
 }
 
 function pickPrimitive(node: PickerTreeNode, keys: string[], fallback?: Primitive): Primitive | undefined {
@@ -388,13 +378,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const [innerOpen, setInnerOpen] = React.useState(defaultOpen);
   const isOpenControlled = openProp !== undefined;
   const visible = openProp !== undefined ? !!openProp : innerOpen;
-  const [sheetMounted, setSheetMounted] = React.useState(visible);
   const [contentMounted, setContentMounted] = React.useState(() => !lazyContent || visible);
-  const sheetRef = React.useRef<BottomSheetRef>(null);
-  const sheetPhaseRef = React.useRef<SheetNativePhase>('idle');
-  const pendingDismissRef = React.useRef(false);
-  const activeSheetLifecycleRef = React.useRef(!!visible);
-  const visibleRef = React.useRef(!!visible);
 
   const [innerLabel, setInnerLabel] = React.useState(defaultLabel ?? '');
   const [draft, setDraft] = React.useState(() => createDraft(areaData, value));
@@ -415,10 +399,6 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   }, [defaultLevelLabels, levelLabels]);
 
   React.useEffect(() => {
-    visibleRef.current = !!visible;
-  }, [visible]);
-
-  React.useEffect(() => {
     const nextDraft = createDraft(areaData, value);
     draftRef.current = nextDraft;
     setDraft(nextDraft);
@@ -435,17 +415,6 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  React.useEffect(() => {
-    if (visible && !sheetMounted) {
-      activeSheetLifecycleRef.current = true;
-      pendingDismissRef.current = false;
-      setSheetMounted(true);
-    }
-    if (visible && sheetMounted) {
-      activeSheetLifecycleRef.current = true;
-    }
-  }, [sheetMounted, visible]);
-
   const sheetHeight = React.useMemo(() => {
     const maxHeight = Math.max(wp(320), screenH - Math.max(insets.top, wp(24)));
     const n = typeof drawerSize === 'number' ? drawerSize : drawerSize == null ? undefined : Number.parseFloat(drawerSize);
@@ -460,94 +429,30 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     [screenH, sheetHeight]
   );
 
-  const finishClosedLifecycle = React.useCallback((shouldSyncOpenState: boolean) => {
-    sheetPhaseRef.current = 'idle';
-    pendingDismissRef.current = false;
-
-    if (shouldSyncOpenState) {
-      onOpenChange?.(false);
-      if (!isOpenControlled) setInnerOpen(false);
-    }
-
-    if (lazyContent) setContentMounted(false);
-    if (Platform.OS === 'ios' || lazyContent) setSheetMounted(false);
-
-    if (activeSheetLifecycleRef.current) {
-      activeSheetLifecycleRef.current = false;
-      onDismissComplete?.();
-    }
-  }, [isOpenControlled, lazyContent, onDismissComplete, onOpenChange]);
-
-  const requestSheetDismiss = React.useCallback(() => {
-    const phase = sheetPhaseRef.current;
-
-    if (phase === 'dismissing') return;
-
-    if (phase === 'presenting') {
-      pendingDismissRef.current = true;
-      return;
-    }
-
-    if (phase === 'presented') {
-      const sheet = sheetRef.current;
-      if (!sheet) {
-        finishClosedLifecycle(true);
-        return;
-      }
-
-      pendingDismissRef.current = false;
-      sheetPhaseRef.current = 'dismissing';
-      silentlyCatchPromise(sheet.dismiss());
-      return;
-    }
-
-    if (activeSheetLifecycleRef.current) {
-      finishClosedLifecycle(true);
-    }
-  }, [finishClosedLifecycle]);
+  const setCascaderOpen = React.useCallback((nextOpen: boolean) => {
+    onOpenChange?.(nextOpen);
+    if (!isOpenControlled) setInnerOpen(nextOpen);
+  }, [isOpenControlled, onOpenChange]);
 
   const close = React.useCallback(() => {
-    onOpenChange?.(false);
-    if (!isOpenControlled) setInnerOpen(false);
-    requestSheetDismiss();
-  }, [isOpenControlled, onOpenChange, requestSheetDismiss]);
+    setCascaderOpen(false);
+  }, [setCascaderOpen]);
 
   const openPicker = React.useCallback(() => {
     if (disabled) return;
     if (!visible) {
-      if (!isOpenControlled) setInnerOpen(true);
-      onOpenChange?.(true);
+      setCascaderOpen(true);
     }
     const nextDraft = createDraft(areaData, value);
     draftRef.current = nextDraft;
     setDraft(nextDraft);
     if (lazyContent) setContentMounted(true);
-  }, [areaData, disabled, isOpenControlled, lazyContent, onOpenChange, value, visible]);
+  }, [areaData, disabled, lazyContent, setCascaderOpen, value, visible]);
 
   React.useImperativeHandle(ref, () => ({
     open: openPicker,
     close,
   }), [close, openPicker]);
-
-  React.useEffect(() => {
-    if (visible && sheetMounted) {
-      const rafId = requestAnimationFrame(() => {
-        if (!visibleRef.current) return;
-        if (sheetPhaseRef.current !== 'idle') return;
-
-        const sheet = sheetRef.current;
-        if (!sheet) return;
-
-        pendingDismissRef.current = false;
-        sheetPhaseRef.current = 'presenting';
-        silentlyCatchPromise(sheet.present());
-      });
-      return () => cancelAnimationFrame(rafId);
-    }
-    if (!visible && sheetMounted) {
-      requestSheetDismiss();
-    }
-  }, [requestSheetDismiss, sheetMounted, visible]);
 
   const committed = React.useMemo(() => resolvePath(areaData, value), [areaData, value]);
   const committedLabel = React.useMemo(() => buildLabel(committed.labels, separator), [committed.labels, separator]);
@@ -845,24 +750,17 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     separator,
   ]);
 
-  const handleSheetDidPresent = React.useCallback(() => {
-    sheetPhaseRef.current = 'presented';
-    if (pendingDismissRef.current || !visibleRef.current) {
-      requestSheetDismiss();
+  const handleSheetOpenChange = React.useCallback((nextOpen: boolean, meta: BottomSheetOpenChangeMeta) => {
+    if (!nextOpen && visible && meta.reason !== 'api') {
+      onCancel?.();
     }
-  }, [requestSheetDismiss]);
+    setCascaderOpen(nextOpen);
+  }, [onCancel, setCascaderOpen, visible]);
 
-  const handleSheetDidDismiss = React.useCallback(() => {
-    const wasProgrammaticDismiss = sheetPhaseRef.current === 'dismissing' || pendingDismissRef.current;
-    const shouldSyncOpenState = !visibleRef.current || !wasProgrammaticDismiss;
-    finishClosedLifecycle(shouldSyncOpenState);
-  }, [finishClosedLifecycle]);
-
-  const handleBackdropPress = React.useCallback(() => {
-    if (disabled || !visible) return;
-    onCancel?.();
-    close();
-  }, [close, disabled, onCancel, visible]);
+  const handleSheetDismissComplete = React.useCallback(() => {
+    if (lazyContent) setContentMounted(false);
+    onDismissComplete?.();
+  }, [lazyContent, onDismissComplete]);
 
   const triggerNode = React.useMemo(
     () => (children != null ? composeTrigger(children, openPicker, disabled, effectiveCtx) : null),
@@ -971,52 +869,19 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
     () => <View style={[styles.separatorLine, { backgroundColor: theme.colors.border }]} />,
     [theme.colors.border]
   );
-  const useManualIOSBackdrop = Platform.OS === 'ios';
-  const backdropOpacity = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const [backdropMounted, setBackdropMounted] = React.useState(useManualIOSBackdrop && visible);
-
-  React.useEffect(() => {
-    if (!useManualIOSBackdrop) return;
-
-    backdropOpacity.stopAnimation();
-
-    if (visible) {
-      setBackdropMounted(true);
-      Animated.timing(backdropOpacity, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-
-    Animated.timing(backdropOpacity, {
-      toValue: 0,
-      duration: 120,
-      easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished && !visibleRef.current) {
-        setBackdropMounted(false);
-      }
-    });
-  }, [backdropOpacity, useManualIOSBackdrop, visible]);
 
   const sheetNode = (
     <BottomSheet
-      ref={sheetRef}
+      open={visible}
+      onOpenChange={handleSheetOpenChange}
+      onDismissComplete={handleSheetDismissComplete}
       detents={detents}
       backgroundColor={theme.colors.surface}
-      cornerRadius={undefined}
-      grabber={false}
+      handle={false}
       draggable={false}
-      dimmed={!useManualIOSBackdrop}
-      dimmedDetentIndex={0}
-      insetAdjustment="never"
-      dismissible={Platform.OS === 'ios' ? false : !disabled}
-      onDidPresent={handleSheetDidPresent}
-      onDidDismiss={handleSheetDidDismiss}
+      dismissible={!disabled}
+      mountStrategy={lazyContent ? 'unmountOnExit' : 'lazy'}
+      nativeProps={{ insetAdjustment: 'never' }}
     >
       <View
         style={[
@@ -1110,45 +975,12 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   return (
     <>
       {triggerNode}
-      {sheetMounted ? (
-        useManualIOSBackdrop ? (
-          <Modal
-            visible
-            transparent
-            animationType="none"
-            statusBarTranslucent
-            presentationStyle="overFullScreen"
-            onRequestClose={handleBackdropPress}
-          >
-            <View style={styles.modalRoot} pointerEvents="box-none">
-              {backdropMounted ? (
-                <Pressable
-                  style={StyleSheet.absoluteFill}
-                  onPress={handleBackdropPress}
-                  disabled={disabled || !visible}
-                >
-                  <Animated.View style={[styles.iosBackdrop, { opacity: backdropOpacity }]} />
-                </Pressable>
-              ) : null}
-              {sheetNode}
-            </View>
-          </Modal>
-        ) : (
-          sheetNode
-        )
-      ) : null}
+      {sheetNode}
     </>
   );
 });
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-  },
-  iosBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.22)',
-  },
   sheetInner: {
     paddingHorizontal: wp(16),
     paddingTop: wp(12),
