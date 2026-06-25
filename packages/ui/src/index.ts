@@ -34,7 +34,16 @@ export type {
 export { Text } from './ui/Text/index';
 export type { TextProps, TextRef, TextSize, TextTone, TextVariant, TextWeight } from './ui/Text/index';
 export { TextInput } from './ui/TextInput/index';
-export type { TextInputProps } from './ui/TextInput/index';
+export type {
+  TextInputColors,
+  TextInputLayout,
+  TextInputProps,
+  TextInputRef,
+  TextInputSize,
+  TextInputStatus,
+  TextInputTone,
+  TextInputVariant,
+} from './ui/TextInput/index';
 export { BottomSheet } from './ui/BottomSheet/index';
 export type {
   BottomSheetDetent,

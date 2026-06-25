@@ -48,6 +48,9 @@ export const enUS = {
   'sliderCaptcha.verifyFailed': 'Verification failed',
   'sliderCaptcha.verifySuccess': 'Verified',
 
+  // TextInput
+  'textInput.clear': 'Clear input',
+
   // OTA Update
   'ota.retryPreparing.title': 'Preparing Update Retry',
   'ota.retryPreparing.subtitle': 'Cleaning up the failed attempt and checking again…',

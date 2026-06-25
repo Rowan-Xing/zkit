@@ -48,6 +48,9 @@ export const ja = {
   'sliderCaptcha.verifyFailed': '認証失敗',
   'sliderCaptcha.verifySuccess': '認証成功',
 
+  // TextInput
+  'textInput.clear': '入力をクリア',
+
   // OTA Update
   'ota.retryPreparing.title': '更新を再準備中',
   'ota.retryPreparing.subtitle': '前回の失敗状態を整理し、更新を再確認しています',

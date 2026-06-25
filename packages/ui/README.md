@@ -104,6 +104,7 @@ function Demo() {
 ## 组件清单
 
 - Accordion：手风琴/折叠面板（Reanimated 高度与指示器动画）
+- TextInput：统一文本输入 Field（标签、描述、错误、清除、计数、跨端默认值）
 - AddressCascader：省市区级联选择（内置中国数据）
 - DatePicker：年月日选择（输出 YYYY-MM-DD）
 - WheelColumn：单列滚轮选择（iOS 原生 wheel，Android/Web 自绘高性能路径）

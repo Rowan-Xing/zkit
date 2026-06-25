@@ -48,6 +48,9 @@ export const zhCN = {
   'sliderCaptcha.verifyFailed': '验证失败，请重试',
   'sliderCaptcha.verifySuccess': '验证成功',
 
+  // TextInput
+  'textInput.clear': '清空输入',
+
   // OTA Update
   'ota.retryPreparing.title': '正在重新准备更新',
   'ota.retryPreparing.subtitle': '正在清理上次失败状态并重新检查更新，请稍候',

@@ -48,6 +48,9 @@ export const zhTW = {
   'sliderCaptcha.verifyFailed': '驗證失敗，請重試',
   'sliderCaptcha.verifySuccess': '驗證成功',
 
+  // TextInput
+  'textInput.clear': '清空輸入',
+
   // OTA Update
   'ota.retryPreparing.title': '正在重新準備更新',
   'ota.retryPreparing.subtitle': '正在清理上次失敗狀態並重新檢查更新，請稍候',

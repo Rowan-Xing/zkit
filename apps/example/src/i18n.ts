@@ -224,6 +224,8 @@ const enUS: I18nMessages = {
   'example.forms.eyebrow': 'Forms',
   'example.forms.title': 'Input controls',
   'example.forms.subtitle': 'TextInput, Switch, disabled state, and inline feedback',
+  'example.forms.noteLabel': 'Note',
+  'example.forms.noteDescription': 'A controlled input with clear action and character count.',
   'example.forms.placeholder': 'Type a note',
   'example.forms.notifications': 'Notifications',
   'example.forms.enabled': 'Enabled',

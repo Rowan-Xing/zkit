@@ -252,17 +252,14 @@ export const InputsSection = React.memo(function InputsSection({
       <View style={styles.fieldStack}>
         <TextInput
           value={note}
-          onChangeText={onNoteChange}
+          onChange={onNoteChange}
+          label={t('example.forms.noteLabel')}
+          description={t('example.forms.noteDescription')}
           placeholder={t('example.forms.placeholder')}
-          placeholderTextColor={theme.colors.muted}
-          style={[
-            styles.textInput,
-            {
-              borderColor: theme.colors.border,
-              color: theme.colors.onSurface,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
+          clearable
+          maxLength={120}
+          returnKeyType="done"
+          showCount
         />
 
         <View
