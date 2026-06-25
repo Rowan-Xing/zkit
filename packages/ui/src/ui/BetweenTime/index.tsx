@@ -870,10 +870,8 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
             variant="ghost"
             onPress={handleClear}
             disabled={disabled}
-            fontSize={sp(14)}
-            textColor={theme.colors.muted}
-            minHeight={wp(32)}
-            paddingHorizontal={wp(8)}
+            colors={{ text: theme.colors.muted }}
+            layout={{ minHeight: wp(32), paddingHorizontal: wp(8), textSize: sp(14) }}
           >
             {t('betweenTime.clear')}
           </Button>
@@ -1005,9 +1003,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
               onPress={handleCancel}
               disabled={disabled}
               block
-              minHeight={wp(44)}
-              radius={wp(14)}
-              fontSize={sp(16)}
+              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
             >
               {t('betweenTime.cancel')}
             </Button>
@@ -1017,9 +1013,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
               onPress={handleConfirm}
               disabled={disabled}
               block
-              minHeight={wp(44)}
-              radius={wp(14)}
-              fontSize={sp(16)}
+              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
             >
               {t('betweenTime.confirm')}
             </Button>

@@ -71,8 +71,8 @@ const DEFAULT_FOOTER_LAYOUT = 'row';
 const DEFAULT_Z_INDEX = 2000;
 /** 危险态按钮的临时语义色，后续更理想的是收敛到 theme token。 */
 const DANGER_COLOR = '#CF3050';
-/** 默认 action 按钮使用背景变暗反馈，避免和组件库 Button 默认缩放反馈发散。 */
-const ACTION_BUTTON_PRESS_EFFECT = 'darken' as const;
+/** 默认 action 按钮使用轻量高亮反馈，避免在弹窗底部产生明显缩放位移。 */
+const ACTION_BUTTON_PRESS_EFFECT = 'highlight' as const;
 
 /**
  * 动作语义角色。
@@ -1315,12 +1315,13 @@ function ActionDialogCard({
               variant="ghost"
               shape="square"
               pressEffect={ACTION_BUTTON_PRESS_EFFECT}
-              minHeight={wp(45)}
-              paddingHorizontal={0}
-              paddingVertical={wp(12)}
               color={textColor}
-              textColor={textColor}
-              disabledTextColor={theme.colors.disabled}
+              colors={{ text: textColor, disabledText: theme.colors.disabled }}
+              layout={{
+                minHeight: wp(45),
+                paddingHorizontal: 0,
+                paddingVertical: wp(12),
+              }}
               style={[styles.barButtonRoot, action.disabled ? styles.barButtonDisabledRoot : null]}
               contentStyle={styles.barButton}
               textStyle={styles.buttonText}
@@ -1342,15 +1343,19 @@ function ActionDialogCard({
             variant="solid"
             shape="rounded"
             pressEffect={ACTION_BUTTON_PRESS_EFFECT}
-            radius={wp(12)}
-            minHeight={wp(44)}
-            paddingHorizontal={wp(16)}
-            paddingVertical={0}
-            backgroundColor={colors.backgroundColor}
-            textColor={colors.textColor}
-            disabledBackgroundColor={colors.backgroundColor}
-            disabledTextColor={colors.textColor}
-            borderWidth={colors.filled ? undefined : StyleSheet.hairlineWidth}
+            colors={{
+              background: colors.backgroundColor,
+              text: colors.textColor,
+              disabledBackground: colors.backgroundColor,
+              disabledText: colors.textColor,
+            }}
+            border={colors.filled ? undefined : { width: wp(1) }}
+            layout={{
+              minHeight: wp(44),
+              paddingHorizontal: wp(16),
+              paddingVertical: 0,
+              radius: wp(12),
+            }}
             style={action.disabled ? styles.panelButtonDisabledRoot : null}
             contentStyle={[
               styles.panelButton,

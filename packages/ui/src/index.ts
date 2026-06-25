@@ -1,9 +1,13 @@
 export { Button } from './ui/Button/index';
 export type {
+  ButtonBorder,
   ButtonBorderStyle,
+  ButtonColors,
   ButtonGradient,
   ButtonGradientDirection,
   ButtonGradientPoint,
+  ButtonIconPlacement,
+  ButtonLayout,
   ButtonLoadingMode,
   ButtonPressEffect,
   ButtonProps,

@@ -1372,9 +1372,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
               onPress={handleCancel}
               disabled={disabled}
               block
-              minHeight={wp(44)}
-              radius={wp(14)}
-              fontSize={sp(16)}
+              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
             >
               {t('picker.cancel')}
             </Button>
@@ -1384,9 +1382,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
               onPress={handleConfirm}
               disabled={confirmDisabled}
               block
-              minHeight={wp(44)}
-              radius={wp(14)}
-              fontSize={sp(16)}
+              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
             >
               {t('picker.confirm')}
             </Button>

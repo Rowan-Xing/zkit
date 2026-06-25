@@ -1311,7 +1311,7 @@ const OTAUpdateOverlay = React.memo(({
                   <Button
                     block
                     variant="ghost"
-                    textColor="#999"
+                    colors={{ text: '#999' }}
                     disabled={isRetrying}
                     onPress={onDismiss}
                   >
@@ -1324,8 +1324,8 @@ const OTAUpdateOverlay = React.memo(({
               {isReady && (
                 <View style={s.btnGroup}>
                   <Button
-                    height={wp(48)}
                     block
+                    layout={{ height: wp(48) }}
                     onPress={onReload}
                     icon={<MaterialIcons name="refresh" size={wp(20)} color="#FFFFFF" />}
                   >

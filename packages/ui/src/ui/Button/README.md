@@ -1,14 +1,6 @@
 # Button
 
-`Button` 只保留语义化 API：`variant / tone / shape / size / pressEffect / iconOnly / loadingMode`。
-
-设计原则：
-
-- 优先用语义化 props 组织按钮风格
-- `size` 控制默认尺寸，显式数值仍可覆盖
-- 默认尺寸会随窗口宽度变化重新计算，适配横竖屏和分屏
-- 小尺寸按钮会补足默认触控热区，不放大视觉尺寸
-- 旧 API 已移除，不再保留 deprecated 兼容层
+`Button` 是组件库的主操作入口。默认 API 只需要 `variant / tone / size / shape`，精确覆盖统一放进 `layout / colors / border`，避免把零散样式 props 扩散成长期公共契约。
 
 ## 基础用法
 
@@ -20,7 +12,7 @@ export function Demo() {
 }
 ```
 
-## 外观
+## 外观语义
 
 ```tsx
 import { Button } from 'y2kit-ui';
@@ -38,33 +30,41 @@ export function Demo() {
 }
 ```
 
-## 尺寸
+- `variant` 控制层级：`solid / soft / outline / ghost / link`
+- `tone` 控制语义色：`primary / neutral / success / warning / danger / info`
+- `color` 可直接覆盖语义主色，`colors` 用于覆盖背景、文字、边框和禁用态
+
+## 尺寸与布局
 
 ```tsx
 import { Button } from 'y2kit-ui';
+import { sp, wp } from 'y2kit-tools';
 
 export function Demo() {
   return (
     <>
-      <Button size="sm">小号</Button>
-      <Button size="lg">大号</Button>
-      <Button size="sm" height={44} paddingHorizontal={20} fontSize={16}>
-        显式尺寸覆盖
+      <Button size="xs">XS</Button>
+      <Button size="md">MD</Button>
+      <Button size="xl">XL</Button>
+      <Button
+        size="sm"
+        layout={{
+          minHeight: wp(44),
+          paddingHorizontal: wp(20),
+          radius: wp(14),
+          textSize: sp(16),
+        }}
+      >
+        自定义尺寸
       </Button>
     </>
   );
 }
 ```
 
-优先级规则：
+内置尺寸、圆角、间距、图标占位和默认触控热区都通过 `wp(...)` 计算。业务侧传入自定义像素值时也应使用 `wp(...)` 或 `sp(...)`。
 
-- `width / height / minHeight`
-- `paddingHorizontal / paddingVertical`
-- `fontSize / iconSize / loadingSize / radius`
-- `size`
-- 组件默认值
-
-## 图标按钮
+## 图标
 
 ```tsx
 import { Button } from 'y2kit-ui';
@@ -74,21 +74,22 @@ export function Demo() {
   return (
     <>
       <Button icon={<YourIcon size={wp(18)} color="#fff" />}>收藏</Button>
-      <Button icon={<YourIcon size={wp(18)} color="#fff" />} iconPosition="end">
+      <Button icon={<YourIcon size={wp(18)} color="#fff" />} iconPlacement="end">
         下一步
       </Button>
       <Button
         iconOnly
         shape="pill"
-        width={wp(48)}
-        height={wp(48)}
         icon={<YourIcon size={wp(20)} color="#fff" />}
+        layout={{ width: wp(48), height: wp(48) }}
         accessibilityLabel="刷新"
       />
     </>
   );
 }
 ```
+
+`iconSize` 在 `layout` 中只控制图标槽位，不会强改传入 icon 节点自身的绘制尺寸。
 
 ## 加载状态
 
@@ -99,18 +100,42 @@ export function Demo() {
   return (
     <>
       <Button loading loadingMode="inline">保存</Button>
-      <Button loading loadingMode="replace">保存</Button>
       <Button loading loadingMode="overlay">保存</Button>
     </>
   );
 }
 ```
 
-- `inline`：默认模式，spinner 从左侧进入，文字保持可见
-- `replace`：加载时隐藏原内容，spinner 在按钮内水平垂直居中
-- `overlay`：原内容保留占位但淡出透明，spinner 在按钮内水平垂直居中
+- `loading` 会禁用交互并设置 `accessibilityState.busy`
+- `inline`：spinner 从内容起点进入，文字保持可见
+- `overlay`：spinner 居中，原内容保留布局并淡出，避免按钮宽度跳动
 
-## 渐变与阴影
+## 精确覆盖
+
+```tsx
+import { Button } from 'y2kit-ui';
+import { wp } from 'y2kit-tools';
+
+export function Demo() {
+  return (
+    <Button
+      variant="solid"
+      colors={{
+        background: '#111827',
+        text: '#FFFFFF',
+        disabledBackground: '#E5E7EB',
+        disabledText: '#9CA3AF',
+      }}
+      border={{ width: wp(1), color: '#111827' }}
+      layout={{ minHeight: wp(44), radius: wp(12) }}
+    >
+      精确按钮
+    </Button>
+  );
+}
+```
+
+## 渐变、阴影与按压反馈
 
 ```tsx
 import { Button } from 'y2kit-ui';
@@ -118,58 +143,43 @@ import { Button } from 'y2kit-ui';
 export function Demo() {
   return (
     <>
-      <Button gradient={{ direction: 'to right', colors: ['#FFEB3A', '#4DEF8E'] }}>
+      <Button gradient={{ direction: 'to right', colors: ['#2563EB', '#0F9F6E'] }}>
         渐变按钮
       </Button>
       <Button shadow="md">带阴影</Button>
+      <Button pressEffect="highlight">高亮反馈</Button>
     </>
   );
 }
 ```
 
+渐变依赖 `expo-linear-gradient`，缺失时会使用第一段颜色作为稳定兜底。按压、loading 显隐与内容切换都走 Reanimated，减少 JS 抖动对关键帧的影响。
+
 ## 常用 Props
 
 - `variant?: 'solid' | 'soft' | 'outline' | 'ghost' | 'link'`
 - `tone?: 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info'`
+- `size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'`
 - `shape?: 'rounded' | 'pill' | 'square'`
-- `size?: 'sm' | 'md' | 'lg'`
-- `pressEffect?: 'auto' | 'none' | 'opacity' | 'scale' | 'darken' | 'scale-darken' | 'scale-opacity'`
-- `iconOnly?: boolean`
-- `iconPosition?: 'start' | 'end'`
 - `block?: boolean`
 - `disabled?: boolean`
 - `loading?: boolean`
-- `loadingMode?: 'inline' | 'replace' | 'overlay'`
+- `loadingMode?: 'inline' | 'overlay'`
+- `pressEffect?: 'auto' | 'none' | 'opacity' | 'scale' | 'highlight' | 'scale-highlight' | 'scale-opacity'`
+- `icon?: ReactNode`
+- `iconPlacement?: 'start' | 'end'`
+- `iconOnly?: boolean`
+- `color?: string`
+- `colors?: ButtonColors`
+- `border?: ButtonBorder`
+- `layout?: ButtonLayout`
 - `gradient?: ButtonGradient`
 - `shadow?: 'none' | 'sm' | 'md' | 'lg' | ButtonShadowConfig`
-- `style?: ViewStyle`
-- `contentStyle?: ViewStyle`
-- `textStyle?: TextStyle`
-
-## 覆盖 Props
-
-- `color?: string`
-- `backgroundColor?: string`
-- `textColor?: string`
-- `disabledBackgroundColor?: string`
-- `disabledTextColor?: string`
-- `disabledBorderColor?: string`
-- `borderWidth?: number`
-- `borderStyle?: 'solid' | 'dashed'`
-- `width?: number | string`
-- `height?: number | string`
-- `minHeight?: number`
-- `paddingHorizontal?: number`
-- `paddingVertical?: number`
-- `fontSize?: number`
-- `iconSize?: number`
-- `loadingSize?: number`
-- `gap?: number`
-- `radius?: number`
+- `style / contentStyle / textStyle`：最后级 escape hatch
 
 ## 行为说明
 
-- `loading` 会禁用点击，但不强制置灰
-- `disabled` 会禁用点击，并进入禁用视觉
-- 显式传入 `hitSlop` 时以业务侧为准
-- `iconSize` 影响 icon 的占位布局尺寸，不强改传入 icon 节点自身大小
+- `disabled` 会禁用交互并进入禁用视觉；`loading` 只禁用交互，不强制置灰
+- 显式传入 `hitSlop` 时以调用侧为准；否则小尺寸和 `link` 会自动补足触控热区
+- `accessibilityRole` 固定为 `button`
+- `iconOnly` 必须提供可读的 `accessibilityLabel`，除非 children 是可作为标签的文本
