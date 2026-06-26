@@ -95,6 +95,9 @@ const KEYBOARD_CLEARANCE = wp(12);
 const CARD_ENTER_SCALE = 0.92;
 const CARD_EXIT_SCALE = 0.985;
 const BAR_FOOTER_HEIGHT = wp(52);
+const COMPACT_ROW_ACTION_BUTTON_LAYOUT: React.ComponentProps<typeof Button>['layout'] = {
+  paddingHorizontal: wp(10),
+};
 const BAR_ACTION_BUTTON_LAYOUT: React.ComponentProps<typeof Button>['layout'] = {
   height: BAR_FOOTER_HEIGHT,
   minHeight: BAR_FOOTER_HEIGHT,
@@ -198,7 +201,7 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
     () => resolveActions(actions, resolvedLabels),
     [actions, resolvedLabels]
   );
-  const resolvedFooterLayout = resolveFooterLayout(footer?.layout, resolvedActions.length);
+  const resolvedFooterLayout = resolveFooterLayout(footer?.layout, resolvedActions);
   const resolvedDismiss = resolveDismissOptions(dismissible, dismiss);
   const resolvedKeyboard = resolveKeyboardOptions(keyboard);
   const resolvedLayout = resolveLayout(layout);
@@ -498,6 +501,11 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
             accessibilityLabel={action.accessibilityLabel}
             block
             disabled={actionDisabled}
+            layout={
+              resolvedFooterLayout === 'row' && resolvedActions.length > 2
+                ? COMPACT_ROW_ACTION_BUTTON_LAYOUT
+                : undefined
+            }
             loading={actionLoading}
             onPress={() => void pressAction(action.key)}
             pressEffect="highlight"
@@ -516,6 +524,7 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
       disabled,
       pressAction,
       resolvedColors.border,
+      resolvedActions.length,
       resolvedFooterLayout,
     ]
   );

@@ -277,7 +277,6 @@ export const ActionDialogsGuidePage = React.memo(function ActionDialogsGuidePage
         { key: 'later', role: 'neutral', label: label('稍后', 'Later'), tone: 'neutral', variant: 'ghost' },
         { key: 'ship', role: 'confirm', label: label('发布', 'Ship'), tone: 'primary', variant: 'solid' },
       ],
-      footer: { layout: 'stack' },
     });
 
     watchHandle(label('动作语义', 'Action semantics'), handle);
@@ -334,7 +333,7 @@ export const ActionDialogsGuidePage = React.memo(function ActionDialogsGuidePage
         {
           key: 'context-close',
           role: 'confirm',
-          label: 'context.close',
+          label: 'close',
           onPress: ({ close }) => {
             close();
             return false;
@@ -350,7 +349,6 @@ export const ActionDialogsGuidePage = React.memo(function ActionDialogsGuidePage
           },
         },
       ],
-      footer: { layout: 'stack' },
     });
 
     watchHandle(label('手动关闭', 'Manual close'), handle);
@@ -361,11 +359,10 @@ export const ActionDialogsGuidePage = React.memo(function ActionDialogsGuidePage
       title: label('动作状态', 'Action states'),
       message: label('disabled 与 loading 动作不会触发；底部仍保留可取消动作。', 'disabled and loading actions cannot be triggered; a cancel action remains available.'),
       actions: [
-        { key: 'disabled', role: 'neutral', label: label('禁用', 'Disabled'), disabled: true },
-        { key: 'loading', role: 'neutral', label: label('加载中', 'Loading'), loading: true },
+        { key: 'disabled', role: 'neutral', label: label('禁用', 'Off'), disabled: true },
+        { key: 'loading', role: 'neutral', label: label('加载', 'Busy'), loading: true },
         { key: 'cancel', role: 'cancel', label: label('关闭', 'Close') },
       ],
-      footer: { layout: 'stack' },
     });
 
     watchHandle(label('动作状态', 'Action states'), handle);
@@ -402,7 +399,7 @@ export const ActionDialogsGuidePage = React.memo(function ActionDialogsGuidePage
         actionCount > 2
           ? [
               { key: 'cancel', role: 'cancel' as const, label: label('取消', 'Cancel'), variant: 'soft' as const },
-              { key: 'neutral', role: 'neutral' as const, label: label('了解更多', 'Learn more'), variant: 'ghost' as const },
+              { key: 'neutral', role: 'neutral' as const, label: label('更多', 'More'), variant: 'ghost' as const },
               { key: 'confirm', role: 'confirm' as const, label: label('确认', 'Confirm') },
             ]
           : [
@@ -414,10 +411,10 @@ export const ActionDialogsGuidePage = React.memo(function ActionDialogsGuidePage
         title: label(`Footer ${layout}`, `Footer ${layout}`),
         message: label(
           layout === 'auto'
-            ? 'auto 会根据动作数量解析布局；超过两个动作时自动使用 stack。'
+            ? 'auto 会让 1-2 个动作横排；3 个短动作也保持横排，长文案或更多动作自动使用 stack。'
             : `${layout} 显式锁定底部按钮布局。`,
           layout === 'auto'
-            ? 'auto resolves layout from action count; more than two actions become stack.'
+            ? 'auto keeps 1-2 actions in a row; three short actions stay in a row, while long labels or more actions become stack.'
             : `${layout} explicitly locks the footer button layout.`
         ),
         actions,
@@ -877,7 +874,7 @@ export const ActionDialogsGuidePage = React.memo(function ActionDialogsGuidePage
             <DialogCaseCard
               iconName="shuffle"
               title="auto"
-              subtitle="auto · 3 actions => stack"
+              subtitle="auto · 3 short actions => row"
               color="#7C3AED"
               buttonLabel={label('打开', 'Open')}
               onPress={() => openFooterLayout('auto')}

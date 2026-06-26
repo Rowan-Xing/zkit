@@ -45,6 +45,9 @@ export const ACTION_DIALOG_DEFAULT_COLORS: Required<ActionDialogColors> = {
   border: '',
 };
 
+const AUTO_ROW_MAX_ACTIONS = 3;
+const AUTO_ROW_MAX_LABEL_WEIGHT = 8;
+
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
@@ -85,15 +88,32 @@ export function resolveKeyboardOptions(
 
 export function resolveFooterLayout(
   layout: ActionDialogFooterLayout | undefined,
-  actionCount: number
+  actions: readonly Pick<ActionDialogResolvedAction, 'label'>[]
 ): ActionDialogResolvedFooterLayout {
   if (layout === 'bar' || layout === 'row' || layout === 'stack') return layout;
-  return actionCount > 2 ? 'stack' : 'row';
+  if (actions.length <= 2) return 'row';
+  if (actions.length > AUTO_ROW_MAX_ACTIONS) return 'stack';
+  return actions.every((action) => {
+    const weight = getPrimitiveLabelWeight(action.label);
+    return weight != null && weight <= AUTO_ROW_MAX_LABEL_WEIGHT;
+  })
+    ? 'row'
+    : 'stack';
 }
 
 function defaultToneForRole(role: ActionDialogActionRole): ActionDialogActionTone {
   if (role === 'confirm') return 'primary';
   return 'neutral';
+}
+
+function getPrimitiveLabelWeight(label: React.ReactNode) {
+  const text = typeof label === 'string' || typeof label === 'number' ? String(label).trim() : '';
+  if (!text) return null;
+
+  return Array.from(text).reduce((total, char) => {
+    const code = char.codePointAt(0) ?? 0;
+    return total + (code > 0xff ? 2 : 1);
+  }, 0);
 }
 
 function defaultVariantForTone(tone: ActionDialogActionTone): ActionDialogActionVariant {

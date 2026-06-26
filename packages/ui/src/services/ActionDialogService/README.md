@@ -13,6 +13,7 @@
 - `message` 承载简单正文，`children` 承载复杂内容；不再使用含糊的 `content`。
 - action 的 `role` 决定结果语义，`tone/variant` 决定视觉，不把业务结果和样式绑死。
 - ActionDialog 只确认用户意图，不承接业务异步；确认后直接关闭，异步进度与结果态交给 `loading.promise()`。
+- `footer.layout="auto"` 默认横排；3 个短标签也保持横排，长标签、自定义节点或更多动作才自动堆叠。需要固定样式时显式传 `row/stack/bar`。
 - 默认同一时刻只显示一个全局 dialog；新调用会替换旧调用并以 `replace` 结算。需要串行展示时传 `collisionStrategy: 'queue'`。
 - 默认不点蒙层关闭，Android back / iOS accessibility escape 可关闭；这是确认类弹窗更稳妥的默认行为。
 - `actionDialog` 全局服务默认使用顶层 `inline` 宿主，避开 Android 触发时创建原生 Modal 窗口的延迟；声明式组件默认仍用 `modal`，也可按场景切到 `hostMode="inline"`。
@@ -116,7 +117,7 @@ actionDialog.open({
 | `message` | 简单正文 |
 | `children` | 复杂内容 |
 | `actions` | 底部动作列表 |
-| `footer.layout` | `'auto' \| 'row' \| 'stack' \| 'bar'` |
+| `footer.layout` | `'auto' \| 'row' \| 'stack' \| 'bar'`，默认 `auto` |
 | `dismiss.overlayPress` | 点击蒙层关闭，默认 `false` |
 | `dismiss.backPress` | Android back / accessibility escape 关闭，默认 `true` |
 | `keyboard.avoid` | 键盘出现时避让，默认 `true` |
