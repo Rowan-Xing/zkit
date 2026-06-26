@@ -71,14 +71,6 @@ export function RootTabs() {
               onPress={() => setActiveKey(route.key)}
               style={styles.tab}
             >
-              <View
-                style={[
-                  styles.indicator,
-                  {
-                    backgroundColor: selected ? theme.colors.primary : 'transparent',
-                  },
-                ]}
-              />
               {renderIcon(route.iconName, color, wp(18))}
               <Text size="xs" weight={selected ? 'semibold' : 'medium'} style={{ color }}>
                 {route.title}
@@ -114,10 +106,5 @@ const styles = StyleSheet.create({
     gap: wp(4),
     justifyContent: 'center',
     minHeight: wp(46),
-  },
-  indicator: {
-    borderRadius: wp(999),
-    height: wp(3),
-    width: wp(26),
   },
 });
