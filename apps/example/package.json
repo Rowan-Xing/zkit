@@ -1,5 +1,5 @@
 {
-  "name": "@y2kit/example",
+  "name": "@zkit/example",
   "version": "0.0.0",
   "private": true,
   "main": "index.js",
@@ -41,8 +41,8 @@
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
     "sonner-native": "^0.22.2",
-    "y2kit-tools": "workspace:*",
-    "y2kit-ui": "workspace:*"
+    "zkit-tools": "workspace:*",
+    "zkit-ui": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "~19.1.17",

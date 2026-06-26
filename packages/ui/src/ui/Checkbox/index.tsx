@@ -27,7 +27,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import CheckSvg from '../../assets/icons/check.svg';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
@@ -282,7 +282,7 @@ const FOCUS_DURATION = 120;
 function useCheckboxIndicatorContext() {
   const context = React.useContext(CheckboxIndicatorContext);
   if (!context) {
-    throw new Error('[y2kit-ui] CheckboxIndicator must be rendered inside <Checkbox />.');
+    throw new Error('[zkit-ui] CheckboxIndicator must be rendered inside <Checkbox />.');
   }
   return context;
 }

@@ -5,7 +5,7 @@
  *   支持按权限自动填充默认文案，也支持完全自定义。
  * @example
  * ```tsx
- * import { permissionPurposeDialog } from 'y2kit-ui';
+ * import { permissionPurposeDialog } from 'zkit-ui';
  *
  * // 展示说明
  * const purpose = permissionPurposeDialog.show({ permission: 'location' });
@@ -18,7 +18,7 @@
 import * as React from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import { Text } from '../../ui/Text';
 
 /** 内置支持的权限用途类型 */

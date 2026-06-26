@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { EasingFunction, SharedValue, WithTimingConfig } from 'react-native-reanimated';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../Text';
@@ -408,7 +408,7 @@ function sanitizeNativeId(input: string) {
 function useAccordionContext<T extends AccordionValue = AccordionValue>() {
   const ctx = React.useContext(AccordionContext);
   if (!ctx) {
-    throw new Error('[y2kit-ui] Accordion components must be wrapped in <Accordion />');
+    throw new Error('[zkit-ui] Accordion components must be wrapped in <Accordion />');
   }
   return ctx as unknown as AccordionContextValue<T>;
 }
@@ -416,7 +416,7 @@ function useAccordionContext<T extends AccordionValue = AccordionValue>() {
 function useAccordionItemContext<T extends AccordionValue = AccordionValue>() {
   const ctx = React.useContext(AccordionItemContext);
   if (!ctx) {
-    throw new Error('[y2kit-ui] AccordionTrigger/Content/Indicator must be wrapped in <AccordionItem />');
+    throw new Error('[zkit-ui] AccordionTrigger/Content/Indicator must be wrapped in <AccordionItem />');
   }
   return ctx as AccordionItemContextValue<T>;
 }
@@ -628,7 +628,7 @@ export function AccordionItem<T extends AccordionValue = AccordionValue>({
 }: AccordionItemProps<T>) {
   const accordion = useAccordionContext<T>();
   const reactId = React.useId();
-  const idBase = React.useMemo(() => `y2kit-accordion-${sanitizeNativeId(reactId)}`, [reactId]);
+  const idBase = React.useMemo(() => `zkit-accordion-${sanitizeNativeId(reactId)}`, [reactId]);
   const triggerId = `${idBase}-trigger`;
   const contentId = `${idBase}-content`;
 

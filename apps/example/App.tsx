@@ -4,7 +4,7 @@ import * as React from 'react';
 import { StatusBar, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ComponentLibProvider } from 'y2kit-ui';
+import { ComponentLibProvider } from 'zkit-ui';
 
 import { RootTabs } from './src/screens/RootTabs';
 import { exampleMessages, resolveExampleLocale } from './src/i18n';

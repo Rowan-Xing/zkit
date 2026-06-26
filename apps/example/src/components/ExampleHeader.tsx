@@ -2,8 +2,8 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text, useI18n, useTheme } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { Text, useI18n, useTheme } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 import { showcaseMetrics } from '../data';
 import { styles } from '../styles';
@@ -30,7 +30,7 @@ export const ExampleHeader = React.memo(function ExampleHeader({ topInset }: { t
             <Image source={heroLogo} style={styles.brandImage} contentFit="contain" />
           </View>
           <View style={styles.headerCopy}>
-            <Text style={[styles.eyebrow, { color: 'rgba(255,255,255,0.6)' }]}>@y2kit / example</Text>
+            <Text style={[styles.eyebrow, { color: 'rgba(255,255,255,0.6)' }]}>@zkit / example</Text>
             <Text style={[styles.title, { color: theme.colors.onPrimary }]}>{t('example.header.title')}</Text>
           </View>
         </View>

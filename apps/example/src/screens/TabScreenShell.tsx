@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 
 import { styles as sharedStyles } from '../styles';
 import { exampleBackgroundColor } from '../theme';

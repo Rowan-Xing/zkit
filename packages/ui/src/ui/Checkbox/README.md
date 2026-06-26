@@ -15,7 +15,7 @@ Checkbox 是三端一致的复选框组件，适合协议勾选、多选列表�
 
 ```tsx
 import * as React from 'react';
-import { Checkbox } from 'y2kit-ui';
+import { Checkbox } from 'zkit-ui';
 
 export function Demo() {
   const [checked, setChecked] = React.useState(false);
@@ -50,8 +50,8 @@ const partiallyChecked = selected.length > 0 && !allChecked;
 ## CheckboxGroup
 
 ```tsx
-import { Checkbox, CheckboxGroup } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { Checkbox, CheckboxGroup } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 const options = [
   { id: 'motion', label: '动画 tokens' },

@@ -8,8 +8,8 @@
 
 ```tsx
 import { View } from 'react-native';
-import { LinkedScroll, Text } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { LinkedScroll, Text } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 const items = [
   { value: 'jiangxi', label: '江西省9' },

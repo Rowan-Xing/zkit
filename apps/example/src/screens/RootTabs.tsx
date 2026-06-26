@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, useI18n, useTheme } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { Text, useI18n, useTheme } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 import { FormsScreen } from './FormsScreen';
 import { HomeScreen } from './HomeScreen';

@@ -1,4 +1,4 @@
-const RUNTIME_CONFIG_PROVIDER_ID = 'y2kit-tools-runtime-config';
+const RUNTIME_CONFIG_PROVIDER_ID = 'zkit-tools-runtime-config';
 
 declare const require: undefined | ((id: string) => unknown);
 
@@ -116,7 +116,7 @@ const missingProviderError = () =>
   createRuntimeConfigError(
     'MISSING_RUNTIME_CONFIG_PROVIDER',
     'Missing runtime config provider. Call `configureRuntimeConfig(...)`, expose ' +
-      '`y2kit-tools-runtime-config`, or provide `process.env` in the current runtime.'
+      '`zkit-tools-runtime-config`, or provide `process.env` in the current runtime.'
   );
 
 const missingValueError = (key: string) =>

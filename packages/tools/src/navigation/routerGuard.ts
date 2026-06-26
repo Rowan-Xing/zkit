@@ -82,7 +82,7 @@ interface RouterStoreLike {
 
 type GuardedRouter = RouterLike & object;
 type PatchedRouterMethod = RouterMethod & {
-  __y2kitRouterGuardOriginal?: RouterMethod;
+  __zkitRouterGuardOriginal?: RouterMethod;
 };
 type PromiseLikeResult = {
   catch?: (onRejected: (error: unknown) => void) => unknown;
@@ -91,7 +91,7 @@ type PromiseLikeResult = {
 const DEFAULT_LOCK_MS = 2000;
 const DEFAULT_FORWARD_METHODS = ['push', 'replace', 'navigate', 'dismissTo'] as const;
 const DEFAULT_BACK_METHODS = ['back', 'dismiss', 'dismissAll'] as const;
-const ORIGINAL_METHOD_KEY = '__y2kitRouterGuardOriginal';
+const ORIGINAL_METHOD_KEY = '__zkitRouterGuardOriginal';
 const activeGuards = new WeakMap<GuardedRouter, RouterGuardImpl>();
 
 const isDev = typeof __DEV__ !== 'undefined' && __DEV__;

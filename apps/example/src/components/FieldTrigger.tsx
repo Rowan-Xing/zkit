@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
-import { Text, useTheme } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { Text, useTheme } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 import { renderIcon, type FeatherIconName } from '../demoUtils';
 import { styles } from '../styles';

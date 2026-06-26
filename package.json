@@ -1,21 +1,25 @@
 {
-  "name": "y2kit-monorepo",
+  "name": "zkit-monorepo",
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@9.12.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Concur-max/zkit.git"
+  },
   "scripts": {
-    "build": "pnpm --filter y2kit-tools build && pnpm --filter y2kit-ui build",
-    "typecheck": "pnpm --filter y2kit-tools typecheck && pnpm --filter y2kit-ui typecheck && pnpm --filter @y2kit/example typecheck",
+    "build": "pnpm --filter zkit-tools build && pnpm --filter zkit-ui build",
+    "typecheck": "pnpm --filter zkit-tools typecheck && pnpm --filter zkit-ui typecheck && pnpm --filter @zkit/example typecheck",
     "validate": "pnpm build && pnpm typecheck",
     "changeset": "changeset",
     "version:packages": "changeset version",
     "release:packages": "changeset publish",
-    "example:start": "pnpm --filter @y2kit/example start",
-    "example:ios": "pnpm --filter @y2kit/example ios",
-    "example:ios:device": "pnpm --filter @y2kit/example ios:device",
-    "example:ios:simulator": "pnpm --filter @y2kit/example ios:simulator",
-    "example:android": "pnpm --filter @y2kit/example android",
-    "example:android:device": "pnpm --filter @y2kit/example android:device"
+    "example:start": "pnpm --filter @zkit/example start",
+    "example:ios": "pnpm --filter @zkit/example ios",
+    "example:ios:device": "pnpm --filter @zkit/example ios:device",
+    "example:ios:simulator": "pnpm --filter @zkit/example ios:simulator",
+    "example:android": "pnpm --filter @zkit/example android",
+    "example:android:device": "pnpm --filter @zkit/example android:device"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.7",

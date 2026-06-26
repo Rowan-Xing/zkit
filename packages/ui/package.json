@@ -1,17 +1,26 @@
 {
-  "name": "y2kit-ui",
+  "name": "zkit-ui",
   "version": "1.0.0",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "source": "src/index.ts",
   "react-native": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Concur-max/zkit.git",
+    "directory": "packages/ui"
+  },
+  "homepage": "https://github.com/Concur-max/zkit/tree/main/packages/ui",
+  "bugs": {
+    "url": "https://github.com/Concur-max/zkit/issues"
+  },
   "files": [
     "dist",
     "src",
     "ios",
     "react-native.config.js",
-    "y2kit-ui.podspec",
+    "zkit-ui.podspec",
     "README.md"
   ],
   "publishConfig": {
@@ -27,7 +36,7 @@
     "@vant/area-data": "^2.1.0",
     "dayjs": "^1.11.13",
     "react-native-toast-message": "^2.3.3",
-    "y2kit-tools": "workspace:*"
+    "zkit-tools": "workspace:*"
   },
   "peerDependencies": {
     "@expo/vector-icons": "*",

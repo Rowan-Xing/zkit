@@ -20,7 +20,7 @@ import {
   type TrueSheetProps,
 } from '@lodev09/react-native-true-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../Text';
 

@@ -1,6 +1,6 @@
-#import "Y2KitWheelPickerLabel.h"
+#import "ZKitWheelPickerLabel.h"
 
-@implementation Y2KitWheelPickerLabel
+@implementation ZKitWheelPickerLabel
 
 - (instancetype)initWithFrame:(CGRect)frame
 {

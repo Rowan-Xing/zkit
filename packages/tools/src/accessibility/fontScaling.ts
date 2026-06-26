@@ -14,7 +14,7 @@ export type GlobalTextScalingLimitSnapshot = {
 
 export const DEFAULT_MAX_FONT_SIZE_MULTIPLIER = 1.3;
 
-const FONT_SIZE_MULTIPLIER_PATCH_STATE = '__y2kitFontSizeMultiplierPatchState';
+const FONT_SIZE_MULTIPLIER_PATCH_STATE = '__zkitFontSizeMultiplierPatchState';
 
 type FontSizeMultiplierPatchState = {
   originalRender?: (props: unknown, ref: unknown) => unknown;

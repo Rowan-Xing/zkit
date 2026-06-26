@@ -14,8 +14,8 @@
 ## 基础用法
 
 ```tsx
-import { WheelColumn, type WheelColumnOption } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { WheelColumn, type WheelColumnOption } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 const options: WheelColumnOption[] = [
   { value: 1, label: '选项一' },

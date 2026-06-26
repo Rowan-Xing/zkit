@@ -10,7 +10,7 @@ import {
   processColor,
   useWindowDimensions,
 } from 'react-native';
-import { getMaxFontSizeMultiplier, wp } from 'y2kit-tools';
+import { getMaxFontSizeMultiplier, wp } from 'zkit-tools';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
 

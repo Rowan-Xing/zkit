@@ -1,6 +1,6 @@
-# @y2kit/example
+# @zkit/example
 
-Expo 54 示例应用，用于本地联调 `y2kit-ui` 组件库。
+Expo 54 示例应用，用于本地联调 `zkit-ui` 组件库。
 
 ## 前置条件
 

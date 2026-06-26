@@ -16,8 +16,8 @@ Radio 是三端一致的单选组件，适合互斥选项、设置项模式选�
 
 ```tsx
 import * as React from 'react';
-import { Radio, RadioGroup, Text } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { Radio, RadioGroup, Text } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 type Density = 'compact' | 'comfortable' | 'spacious';
 

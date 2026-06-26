@@ -18,13 +18,13 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { getMaxFontSizeMultiplier, sp, wp } from 'y2kit-tools';
+import { getMaxFontSizeMultiplier, sp, wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import {
-  Y2KitWheelPicker,
-  syncY2KitWheelPickerCurrentSelection,
-  type Y2KitWheelPickerChangeEvent,
-} from './Y2KitWheelPickerNativeComponent';
+  ZKitWheelPicker,
+  syncZKitWheelPickerCurrentSelection,
+  type ZKitWheelPickerChangeEvent,
+} from './ZKitWheelPickerNativeComponent';
 export { WHEEL_SELECTION_BACKGROUND_COLOR } from './constants';
 
 export const WHEEL_VISIBLE_ITEMS = 5;
@@ -476,7 +476,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     return new Promise<number>((resolve) => {
       iosSyncResolverRef.current = resolve;
 
-      if (iosPickerRef.current != null && syncY2KitWheelPickerCurrentSelection(iosPickerRef.current)) {
+      if (iosPickerRef.current != null && syncZKitWheelPickerCurrentSelection(iosPickerRef.current)) {
         iosSyncTimerRef.current = setTimeout(() => {
           resolveIOSSyncRequest(iosSelectedIndexRef.current);
         }, IOS_CONFIRM_SYNC_TIMEOUT_MS);
@@ -531,7 +531,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   );
 
   const handleIOSChange = React.useCallback(
-    (event: { nativeEvent: Y2KitWheelPickerChangeEvent }) => {
+    (event: { nativeEvent: ZKitWheelPickerChangeEvent }) => {
       const rawIndex = syncIOSSelectedIndex(event.nativeEvent.newIndex);
       const nextIndex = resolveSelectableIndex(rawIndex, rawIndex - displayIndexRef.current);
       resolveIOSSyncRequest(nextIndex);
@@ -721,7 +721,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
         pointerEvents={canInteract ? 'auto' : 'none'}
         testID={testID}
       >
-        <Y2KitWheelPicker
+        <ZKitWheelPicker
           ref={iosPickerRef as React.Ref<any>}
           items={nativeItems}
           selectedIndex={iosSelectedIndex}

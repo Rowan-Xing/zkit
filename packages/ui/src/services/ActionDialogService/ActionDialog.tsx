@@ -23,7 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { Button } from '../../ui/Button/index';

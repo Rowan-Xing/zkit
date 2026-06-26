@@ -1,16 +1,16 @@
-#import "Y2KitWheelPicker.h"
+#import "ZKitWheelPicker.h"
 
 #import <React/RCTConvert.h>
 #import <React/RCTUtils.h>
 
-#import "Y2KitWheelPickerLabel.h"
+#import "ZKitWheelPickerLabel.h"
 
-@interface Y2KitWheelPicker() <UIPickerViewDataSource, UIPickerViewDelegate, UIPickerViewAccessibilityDelegate>
+@interface ZKitWheelPicker() <UIPickerViewDataSource, UIPickerViewDelegate, UIPickerViewAccessibilityDelegate>
 @end
 
-@implementation Y2KitWheelPicker
+@implementation ZKitWheelPicker
 
-static void Y2KitStopDeceleratingScrollViews(UIView *view)
+static void ZKitStopDeceleratingScrollViews(UIView *view)
 {
   for (UIView *subview in view.subviews) {
     if ([subview isKindOfClass:[UIScrollView class]]) {
@@ -19,7 +19,7 @@ static void Y2KitStopDeceleratingScrollViews(UIView *view)
       [scrollView.layer removeAllAnimations];
     }
 
-    Y2KitStopDeceleratingScrollViews(subview);
+    ZKitStopDeceleratingScrollViews(subview);
   }
 }
 
@@ -126,7 +126,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)coder)
     return;
   }
 
-  Y2KitStopDeceleratingScrollViews(self);
+  ZKitStopDeceleratingScrollViews(self);
   [self layoutIfNeeded];
 
   dispatch_async(dispatch_get_main_queue(), ^{
@@ -181,13 +181,13 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)coder)
 
   if (!view) {
     view = [[UIView alloc] initWithFrame:CGRectZero];
-    Y2KitWheelPickerLabel *label = [[Y2KitWheelPickerLabel alloc] initWithFrame:CGRectZero];
+    ZKitWheelPickerLabel *label = [[ZKitWheelPickerLabel alloc] initWithFrame:CGRectZero];
     [view insertSubview:label atIndex:0];
   }
 
   view.frame = CGRectMake(0, 0, rowWidth, rowHeight);
 
-  Y2KitWheelPickerLabel *label = (Y2KitWheelPickerLabel *)view.subviews.firstObject;
+  ZKitWheelPickerLabel *label = (ZKitWheelPickerLabel *)view.subviews.firstObject;
   label.frame = CGRectMake(0, 0, rowWidth, rowHeight);
   label.font = _font;
   label.textColor = [RCTConvert UIColor:_items[row][@"textColor"]] ?: _color;

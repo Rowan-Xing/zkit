@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 
 export const styles = StyleSheet.create({
   screen: {

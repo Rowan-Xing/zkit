@@ -27,7 +27,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui/Text';
 

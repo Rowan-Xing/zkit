@@ -24,7 +24,7 @@ function createTranslator(messages: I18nMessages, missingKeyPolicy: I18nMissingK
     const raw = messages[key];
     if (raw == null) {
       if (missingKeyPolicy === 'throw') {
-        throw new Error(`[y2kit-ui] Missing i18n key: ${key}`);
+        throw new Error(`[zkit-ui] Missing i18n key: ${key}`);
       }
       return key;
     }

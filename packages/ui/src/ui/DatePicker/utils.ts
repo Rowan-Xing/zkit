@@ -105,14 +105,14 @@ function parseStringInput(input: string, fieldName: string): ParsedDate | undefi
 
   if (!inputPrecision) {
     throw new Error(
-      `[y2kit-ui][DatePicker] Invalid ${fieldName}: "${input}". Expected YYYY, YYYY-MM, or YYYY-MM-DD.`
+      `[zkit-ui][DatePicker] Invalid ${fieldName}: "${input}". Expected YYYY, YYYY-MM, or YYYY-MM-DD.`
     );
   }
 
   const format = PARSE_FORMATS[inputPrecision];
   const date = dayjs(value, format, true);
   if (!date.isValid()) {
-    throw new Error(`[y2kit-ui][DatePicker] Invalid ${fieldName}: "${input}".`);
+    throw new Error(`[zkit-ui][DatePicker] Invalid ${fieldName}: "${input}".`);
   }
 
   return { date, inputPrecision };
@@ -127,7 +127,7 @@ export function parseDatePickerInput(
 
   const date = dayjs.isDayjs(input) ? input : dayjs(input);
   if (!date.isValid()) {
-    throw new Error(`[y2kit-ui][DatePicker] Invalid ${fieldName}.`);
+    throw new Error(`[zkit-ui][DatePicker] Invalid ${fieldName}.`);
   }
 
   return { date, inputPrecision: 'day' };
@@ -156,7 +156,7 @@ export function resolveDatePickerBounds(
   };
 
   if (bounds.min.isAfter(bounds.max)) {
-    throw new Error('[y2kit-ui][DatePicker] Invalid bounds: min is after max.');
+    throw new Error('[zkit-ui][DatePicker] Invalid bounds: min is after max.');
   }
 
   return bounds;

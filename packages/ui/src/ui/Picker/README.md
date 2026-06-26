@@ -11,7 +11,7 @@
 
 ```tsx
 import * as React from 'react';
-import { Picker, Text } from 'y2kit-ui';
+import { Picker, Text } from 'zkit-ui';
 
 const options = [
   { value: 'design', label: 'Design' },

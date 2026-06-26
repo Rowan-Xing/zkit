@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useI18n, type PickerValue } from 'y2kit-ui';
+import { useI18n, type PickerValue } from 'zkit-ui';
 
 import { InputsSection, PickersSection, SelectionSection } from '../sections/PlaygroundSections';
 import type { Density } from '../data';

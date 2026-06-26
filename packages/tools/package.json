@@ -1,5 +1,5 @@
 {
-  "name": "y2kit-tools",
+  "name": "zkit-tools",
   "version": "1.0.0",
   "private": false,
   "main": "dist/index.js",
@@ -14,6 +14,15 @@
     }
   },
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Concur-max/zkit.git",
+    "directory": "packages/tools"
+  },
+  "homepage": "https://github.com/Concur-max/zkit/tree/main/packages/tools",
+  "bugs": {
+    "url": "https://github.com/Concur-max/zkit/issues"
+  },
   "files": [
     "dist",
     "src",
@@ -24,7 +33,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/build.cjs",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",

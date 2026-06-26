@@ -3,7 +3,7 @@ module.exports = {
     platforms: {
       android: null,
       ios: {
-        podspecPath: 'y2kit-ui.podspec',
+        podspecPath: 'zkit-ui.podspec',
       },
     },
   },

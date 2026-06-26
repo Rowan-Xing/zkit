@@ -1,5 +1,5 @@
 import { NativeModules } from 'react-native';
-import type { I18nMessages } from 'y2kit-ui';
+import type { I18nMessages } from 'zkit-ui';
 
 export type ExampleLocale = 'zh-CN' | 'en-US';
 
@@ -109,7 +109,7 @@ export function resolveExampleLocale(): ExampleLocale {
 }
 
 const enUS: I18nMessages = {
-  'example.header.title': 'Y2Kit Lab',
+  'example.header.title': 'ZKit Lab',
   'example.header.subtitle': 'Component and tool showcase for fast native screens, polished motion, and provider-backed flows.',
   'example.header.previewLabel': 'Prototype surface',
   'example.header.previewValue': 'mobile-first',
@@ -317,7 +317,7 @@ const enUS: I18nMessages = {
 };
 
 const zhCN: I18nMessages = {
-  'example.header.title': 'Y2Kit 实验室',
+  'example.header.title': 'ZKit 实验室',
   'example.header.subtitle': '面向高性能原生界面的组件与工具展示——流畅动效、精细控件、Provider 服务流一览。',
   'example.header.previewLabel': '原型预览',
   'example.header.previewValue': '移动端优先',

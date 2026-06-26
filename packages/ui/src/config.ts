@@ -4,7 +4,7 @@ import type { Theme, ThemeOverride } from './theme/types';
 import { resolveSystemBuiltinLocale } from './i18n/locale';
 import type { I18nMessages, I18nMissingKeyPolicy } from './i18n/types';
 
-// y2kit-ui 提供两类“全局默认配置”入口：
+// zkit-ui 提供两类“全局默认配置”入口：
 // 1) Theme：用于给所有组件提供默认 tokens（颜色等）
 // 2) i18n：用于给所有组件提供默认文案字典/缺失策略
 //

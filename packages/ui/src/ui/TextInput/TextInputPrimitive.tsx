@@ -4,7 +4,7 @@ import {
   TextInput as RNTextInput,
   type TextInputProps as RNTextInputNativeProps,
 } from 'react-native';
-import { getMaxFontSizeMultiplier } from 'y2kit-tools';
+import { getMaxFontSizeMultiplier } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 
 export type TextInputPrimitiveProps = RNTextInputNativeProps;

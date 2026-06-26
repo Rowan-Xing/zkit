@@ -6,7 +6,7 @@
 
 ```tsx
 import * as React from 'react';
-import { BottomSheet, Button, Text } from 'y2kit-ui';
+import { BottomSheet, Button, Text } from 'zkit-ui';
 
 export function Demo() {
   const [open, setOpen] = React.useState(false);
@@ -64,7 +64,7 @@ export function Demo() {
 `ComponentLibProvider` 已内置 `BottomSheetProvider`。如果单独使用 `ThemeProvider`，Web 端需要手动包裹：
 
 ```tsx
-import { BottomSheetProvider } from 'y2kit-ui';
+import { BottomSheetProvider } from 'zkit-ui';
 
 <BottomSheetProvider>
   <App />

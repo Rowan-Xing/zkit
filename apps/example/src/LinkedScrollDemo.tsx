@@ -1,14 +1,14 @@
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import {
   LinkedScroll,
   Text,
   useI18n,
   useTheme,
   type LinkedScrollSectionRenderContext,
-} from 'y2kit-ui';
+} from 'zkit-ui';
 
 import {
   linkedFallbackData,

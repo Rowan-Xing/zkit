@@ -27,7 +27,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../Text';
@@ -247,7 +247,7 @@ const FOCUS_DURATION = 120;
 function useRadioIndicatorContext() {
   const context = React.useContext(RadioIndicatorContext);
   if (!context) {
-    throw new Error('[y2kit-ui] RadioIndicator must be rendered inside <Radio />.');
+    throw new Error('[zkit-ui] RadioIndicator must be rendered inside <Radio />.');
   }
   return context;
 }

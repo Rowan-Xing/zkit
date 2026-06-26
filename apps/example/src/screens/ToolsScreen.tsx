@@ -9,8 +9,8 @@ import {
   pickerService,
   toast,
   useI18n,
-} from 'y2kit-ui';
-import { createRouterGuard } from 'y2kit-tools';
+} from 'zkit-ui';
+import { createRouterGuard } from 'zkit-tools';
 
 import { captchaChallenge } from '../data';
 import { wait } from '../demoUtils';

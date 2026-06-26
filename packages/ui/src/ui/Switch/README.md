@@ -14,7 +14,7 @@ Switch 是布尔开关组件，适合“立即启用/停用某项设置”的场
 
 ```tsx
 import * as React from 'react';
-import { Switch } from 'y2kit-ui';
+import { Switch } from 'zkit-ui';
 
 export function Demo() {
   const [checked, setChecked] = React.useState(false);

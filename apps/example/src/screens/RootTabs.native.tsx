@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import TabView, { type AppleIcon } from 'react-native-bottom-tabs';
-import { useI18n, useTheme } from 'y2kit-ui';
+import { useI18n, useTheme } from 'zkit-ui';
 
 import { FormsScreen } from './FormsScreen';
 import { HomeScreen } from './HomeScreen';

@@ -15,7 +15,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';

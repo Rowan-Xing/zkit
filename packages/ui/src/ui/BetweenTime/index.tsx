@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import dayjs, { type Dayjs } from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sp, wp } from 'y2kit-tools';
+import { sp, wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { BottomSheet, type BottomSheetOpenChangeMeta } from '../BottomSheet';
@@ -159,7 +159,7 @@ function parseStandardDateStrict(input?: string): Dayjs | undefined {
   if (!input) return undefined;
   const d = dayjs(input, STANDARD_INPUT_FORMATS, true);
   if (!d.isValid()) {
-    throw new Error(`[y2kit-ui][BetweenTime] Invalid date string: "${input}"`);
+    throw new Error(`[zkit-ui][BetweenTime] Invalid date string: "${input}"`);
   }
   return d;
 }
@@ -222,7 +222,7 @@ function resolveInitialPair(modelValue: string[] | undefined, bounds: DateBounds
   }
 
   if (min && max && min.isAfter(max)) {
-    throw new Error('[y2kit-ui][BetweenTime] Invalid bounds: start is after end.');
+    throw new Error('[zkit-ui][BetweenTime] Invalid bounds: start is after end.');
   }
 
   return { start: s, end: e };
@@ -232,7 +232,7 @@ function ensureFormatSyncValueIsStandard(value: string) {
   const d = dayjs(value, STANDARD_INPUT_FORMATS, true);
   if (!d.isValid()) {
     throw new Error(
-      `[y2kit-ui][BetweenTime] formatSyncValue requires standard output, got "${value}".`
+      `[zkit-ui][BetweenTime] formatSyncValue requires standard output, got "${value}".`
     );
   }
 }
@@ -289,7 +289,7 @@ function getColumnsCount(type: ModelType) {
 
 function ensureBoundsValid(bounds: DateBounds) {
   if (bounds.min && bounds.max && bounds.min.isAfter(bounds.max)) {
-    throw new Error('[y2kit-ui][BetweenTime] Invalid bounds: start is after end.');
+    throw new Error('[zkit-ui][BetweenTime] Invalid bounds: start is after end.');
   }
 }
 

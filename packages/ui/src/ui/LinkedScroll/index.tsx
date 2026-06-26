@@ -13,7 +13,7 @@ import type {
   FlashListRef,
   ListRenderItemInfo,
 } from '@shopify/flash-list';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../Text';
 

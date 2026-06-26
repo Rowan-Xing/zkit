@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 
-@interface Y2KitWheelPickerLabel : UILabel
+@interface ZKitWheelPickerLabel : UILabel
 
 @property (nonatomic, assign) CGFloat topInset;
 @property (nonatomic, assign) CGFloat bottomInset;

@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@y2kit/example"]
+  "ignore": ["@zkit/example"]
 }

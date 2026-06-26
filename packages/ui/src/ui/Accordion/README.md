@@ -12,7 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   Text,
-} from 'y2kit-ui';
+} from 'zkit-ui';
 
 export function DemoAccordion() {
   const [value, setValue] = React.useState<string | null>('profile');

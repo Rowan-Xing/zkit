@@ -5,7 +5,7 @@
 ## 基础用法
 
 ```tsx
-import { Button } from 'y2kit-ui';
+import { Button } from 'zkit-ui';
 
 export function Demo() {
   return <Button onPress={() => {}}>确定</Button>;
@@ -15,7 +15,7 @@ export function Demo() {
 ## 外观语义
 
 ```tsx
-import { Button } from 'y2kit-ui';
+import { Button } from 'zkit-ui';
 
 export function Demo() {
   return (
@@ -37,8 +37,8 @@ export function Demo() {
 ## 尺寸与布局
 
 ```tsx
-import { Button } from 'y2kit-ui';
-import { sp, wp } from 'y2kit-tools';
+import { Button } from 'zkit-ui';
+import { sp, wp } from 'zkit-tools';
 
 export function Demo() {
   return (
@@ -67,8 +67,8 @@ export function Demo() {
 ## 图标
 
 ```tsx
-import { Button } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { Button } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 export function Demo() {
   return (
@@ -94,7 +94,7 @@ export function Demo() {
 ## 加载状态
 
 ```tsx
-import { Button } from 'y2kit-ui';
+import { Button } from 'zkit-ui';
 
 export function Demo() {
   return (
@@ -113,8 +113,8 @@ export function Demo() {
 ## 精确覆盖
 
 ```tsx
-import { Button } from 'y2kit-ui';
-import { wp } from 'y2kit-tools';
+import { Button } from 'zkit-ui';
+import { wp } from 'zkit-tools';
 
 export function Demo() {
   return (
@@ -138,7 +138,7 @@ export function Demo() {
 ## 渐变、阴影与按压反馈
 
 ```tsx
-import { Button } from 'y2kit-ui';
+import { Button } from 'zkit-ui';
 
 export function Demo() {
   return (

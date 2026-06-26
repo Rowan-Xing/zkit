@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { View } from 'react-native';
-import { Text, useTheme } from 'y2kit-ui';
+import { Text, useTheme } from 'zkit-ui';
 
 import { styles } from '../styles';
 

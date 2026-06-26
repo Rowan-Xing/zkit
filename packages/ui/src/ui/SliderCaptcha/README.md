@@ -4,7 +4,7 @@
 
 ## 设计边界
 
-- `y2kit-ui` 负责：
+- `zkit-ui` 负责：
   - 弹层展示
   - 图片缩放与坐标换算
   - 滑块拖拽与释放触发校验
@@ -19,7 +19,7 @@
 
 ```tsx
 import * as React from 'react';
-import { SliderCaptcha, type SliderCaptchaChallenge } from 'y2kit-ui';
+import { SliderCaptcha, type SliderCaptchaChallenge } from 'zkit-ui';
 
 type LoginCaptchaChallenge = SliderCaptchaChallenge & {
   nonceStr: string;

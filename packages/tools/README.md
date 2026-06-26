@@ -1,6 +1,6 @@
-# y2kit-tools
+# zkit-tools
 
-`y2kit-tools` 是 `y2kit` 的非业务基础工具库，用来支撑组件库和应用层的通用基础设施：尺寸缩放、字体缩放上限、设备品牌归一化、路由重复跳转守卫、运行时配置读取等。
+`zkit-tools` 是 `zkit` 的非业务基础工具库，用来支撑组件库和应用层的通用基础设施：尺寸缩放、字体缩放上限、设备品牌归一化、路由重复跳转守卫、运行时配置读取等。
 
 它不是业务工具箱，也不是 UI 组件层。公共 API 的目标是少、稳、直觉统一，并且在 iOS / Android / Web / Node-like 构建场景下尽量可预测。
 
@@ -13,20 +13,20 @@
 - API 统一：命名直接表达能力，不继续扩散历史近义词
 - 可维护：公开入口集中在 [src/index.ts](src/index.ts)，内部能力按模块分层
 
-## 与 y2kit-ui 的关系
+## 与 zkit-ui 的关系
 
-`y2kit-ui` 负责组件、主题、i18n、交互和视觉系统；`y2kit-tools` 只提供 UI 无关的基础工具。
+`zkit-ui` 负责组件、主题、i18n、交互和视觉系统；`zkit-tools` 只提供 UI 无关的基础工具。
 
-当前 `y2kit-ui` 会使用：
+当前 `zkit-ui` 会使用：
 
 - `wp(...)` / `sp(...)`：计算组件内部尺寸、圆角、间距、字号
 - `getMaxFontSizeMultiplier()`：统一 `Text` / `TextInput` 的字体缩放上限
 
-业务侧自定义 `y2kit-ui` 组件的像素类 props 时，也应使用 `wp(...)` 或 `sp(...)`：
+业务侧自定义 `zkit-ui` 组件的像素类 props 时，也应使用 `wp(...)` 或 `sp(...)`：
 
 ```tsx
-import { Button } from 'y2kit-ui';
-import { sp, wp } from 'y2kit-tools';
+import { Button } from 'zkit-ui';
+import { sp, wp } from 'zkit-tools';
 
 export function DemoButton() {
   return (
@@ -44,14 +44,14 @@ export function DemoButton() {
 }
 ```
 
-工具库不能反向依赖 `y2kit-ui`，也不能沉入主题 token、业务文案或组件服务。
+工具库不能反向依赖 `zkit-ui`，也不能沉入主题 token、业务文案或组件服务。
 
 ## 安装与导入
 
 在本仓库 workspace 内直接使用：
 
 ```ts
-import { wp, sp } from 'y2kit-tools';
+import { wp, sp } from 'zkit-tools';
 ```
 
 包入口只导出稳定公共 API。不要从 `src/internal/*` 或具体实现文件导入。
@@ -65,7 +65,7 @@ import {
   configureFontSizeMultiplier,
   configureViewportScale,
   installGlobalTextScalingLimit,
-} from 'y2kit-tools';
+} from 'zkit-tools';
 
 configureViewportScale({
   baseWidth: 375,
@@ -79,7 +79,7 @@ configureFontSizeMultiplier({
   maxFontSizeMultiplier: 1.3,
 });
 
-// 可选。优先让 y2kit-ui 的 Text/TextInput 显式读取上限；
+// 可选。优先让 zkit-ui 的 Text/TextInput 显式读取上限；
 // 只有希望限制所有 RN Text/TextInput 时再安装全局 patch。
 installGlobalTextScalingLimit();
 ```
@@ -89,7 +89,7 @@ installGlobalTextScalingLimit();
 ### 基础用法
 
 ```ts
-import { sp, wp } from 'y2kit-tools';
+import { sp, wp } from 'zkit-tools';
 
 const cardPadding = wp(16);
 const iconSize = wp(20);
@@ -106,7 +106,7 @@ const titleSize = sp(18);
 ### 配置
 
 ```ts
-import { configureViewportScale, getViewportScaleConfig } from 'y2kit-tools';
+import { configureViewportScale, getViewportScaleConfig } from 'zkit-tools';
 
 configureViewportScale({
   baseWidth: 390,
@@ -137,7 +137,7 @@ import {
   getViewportMetrics,
   getViewportScale,
   subscribeViewportMetrics,
-} from 'y2kit-tools';
+} from 'zkit-tools';
 
 const metrics = getViewportMetrics();
 const scale = getViewportScale();
@@ -153,7 +153,7 @@ const unsubscribe = subscribeViewportMetrics((nextMetrics) => {
 ### 单次覆盖
 
 ```ts
-import { scaleFont, scaleSize } from 'y2kit-tools';
+import { scaleFont, scaleSize } from 'zkit-tools';
 
 const compactGap = scaleSize(8, { maxScale: 1 });
 const fixedTitle = scaleFont(18, { minFontScale: 1, maxFontScale: 1 });
@@ -165,14 +165,14 @@ const fixedTitle = scaleFont(18, { minFontScale: 1, maxFontScale: 1 });
 
 ```tsx
 import { Text } from 'react-native';
-import { getMaxFontSizeMultiplier } from 'y2kit-tools';
+import { getMaxFontSizeMultiplier } from 'zkit-tools';
 
 <Text maxFontSizeMultiplier={getMaxFontSizeMultiplier()}>
   可访问性友好的文字
 </Text>;
 ```
 
-`y2kit-ui` 的 `Text`、`TextInputPrimitive` 和 `WheelColumn` 已经读取这个值，业务通常不需要手动处理组件库内部文字。
+`zkit-ui` 的 `Text`、`TextInputPrimitive` 和 `WheelColumn` 已经读取这个值，业务通常不需要手动处理组件库内部文字。
 
 ### 配置上限
 
@@ -181,7 +181,7 @@ import {
   configureFontSizeMultiplier,
   getGlobalTextScalingLimitSnapshot,
   getMaxFontSizeMultiplier,
-} from 'y2kit-tools';
+} from 'zkit-tools';
 
 configureFontSizeMultiplier({ maxFontSizeMultiplier: 1.25 });
 
@@ -195,7 +195,7 @@ const snapshot = getGlobalTextScalingLimitSnapshot();
 import {
   installGlobalTextScalingLimit,
   uninstallGlobalTextScalingLimit,
-} from 'y2kit-tools';
+} from 'zkit-tools';
 
 const uninstall = installGlobalTextScalingLimit({ maxFontSizeMultiplier: 1.3 });
 
@@ -210,7 +210,7 @@ uninstallGlobalTextScalingLimit();
 ### 当前设备
 
 ```ts
-import { getDeviceBrand } from 'y2kit-tools';
+import { getDeviceBrand } from 'zkit-tools';
 
 const brand = getDeviceBrand();
 ```
@@ -241,7 +241,7 @@ type DeviceBrand =
 ### 纯函数归一化
 
 ```ts
-import { resolveDeviceBrand } from 'y2kit-tools';
+import { resolveDeviceBrand } from 'zkit-tools';
 
 const brand = resolveDeviceBrand({
   os: 'android',
@@ -266,7 +266,7 @@ const brand = resolveDeviceBrand({
 
 ```ts
 import { router } from 'expo-router';
-import { createRouterGuard } from 'y2kit-tools';
+import { createRouterGuard } from 'zkit-tools';
 
 const guard = createRouterGuard({
   router,
@@ -295,7 +295,7 @@ guard.destroy();
 ### 自定义 router
 
 ```ts
-import { createRouterGuard } from 'y2kit-tools';
+import { createRouterGuard } from 'zkit-tools';
 
 let currentPath = '/home';
 const listeners = new Set<() => void>();
@@ -372,7 +372,7 @@ import {
   getRuntimeValue,
   requireRuntimeString,
   tryGetRuntimeString,
-} from 'y2kit-tools';
+} from 'zkit-tools';
 
 configureRuntimeConfig({
   APP_ENV: 'local',
@@ -389,7 +389,7 @@ const channel = tryGetRuntimeString('CHANNEL', 'dev');
 ### 配置来源优先级
 
 1. `configureRuntimeConfig(...)` 显式注入
-2. `y2kit-tools-runtime-config` 虚拟模块
+2. `zkit-tools-runtime-config` 虚拟模块
 3. `process.env`
 
 如果调用 `getRuntimeConfig()` / `getRuntimeString()` 时没有任何配置来源，会抛出 `MISSING_RUNTIME_CONFIG_PROVIDER`。如果希望缺失时不抛错，使用 `tryGetRuntimeConfig()` 或 `tryGetRuntimeString()`。
@@ -519,8 +519,8 @@ export const runtimeConfig = {
 ## 开发验证
 
 ```bash
-pnpm --filter y2kit-tools verify
+pnpm --filter zkit-tools verify
 pnpm validate
 ```
 
-`verify` 会构建 `y2kit-tools`，并在 Node 中直接 require `dist`，验证根入口无 RN 环境可加载、核心纯函数可运行、运行时配置和路由守卫基础行为正常。
+`verify` 会构建 `zkit-tools`，并在 Node 中直接 require `dist`，验证根入口无 RN 环境可加载、核心纯函数可运行、运行时配置和路由守卫基础行为正常。

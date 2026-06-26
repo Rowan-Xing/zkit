@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "y2kit Base",
+  "display": "ZKit Base",
   "compilerOptions": {
     "allowJs": true,
     "baseUrl": ".",

@@ -1,4 +1,4 @@
-# y2kit-ui
+# zkit-ui
 
 私有 React Native 组件库（Monorepo workspace 包），用于沉淀可复用 UI / 交互 / tokens。
 
@@ -14,7 +14,7 @@
 在 workspace 内通过 `workspace:*` 引用即可（本仓库已采用 pnpm workspace）。
 
 ```ts
-import { Button } from 'y2kit-ui';
+import { Button } from 'zkit-ui';
 ```
 
 ## 主题（Theme）
@@ -31,7 +31,7 @@ import { Button } from 'y2kit-ui';
 ### 推荐用法：统一 Provider（主题 + i18n + 全局浮层）
 
 ```tsx
-import { ComponentLibProvider } from 'y2kit-ui';
+import { ComponentLibProvider } from 'zkit-ui';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -49,7 +49,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 ### 单独使用 ThemeProvider
 
 ```tsx
-import { ThemeProvider } from 'y2kit-ui';
+import { ThemeProvider } from 'zkit-ui';
 
 <ThemeProvider theme={{ colors: { primary: '#16A34A' } }}>
   {/* ... */}
@@ -61,7 +61,7 @@ import { ThemeProvider } from 'y2kit-ui';
 如果你的项目希望“即便没包 Provider，也要有一致默认值”，可以在应用启动时配置：
 
 ```ts
-import { configureComponentLib } from 'y2kit-ui';
+import { configureComponentLib } from 'zkit-ui';
 
 configureComponentLib({
   theme: { colors: { primary: '#0F172A' } },
@@ -87,7 +87,7 @@ configureComponentLib({
 ### 使用
 
 ```tsx
-import { I18nProvider, Text, useI18n } from 'y2kit-ui';
+import { I18nProvider, Text, useI18n } from 'zkit-ui';
 
 function Demo() {
   const { t } = useI18n();
@@ -126,7 +126,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   Text,
-} from 'y2kit-ui';
+} from 'zkit-ui';
 
 export function DemoAccordion() {
   const [openItem, setOpenItem] = React.useState<string | null>('item-1');
@@ -156,7 +156,7 @@ export function DemoAccordion() {
 ### ImagePreview 用法
 
 ```tsx
-import { ImagePreview, imagePreview } from 'y2kit-ui';
+import { ImagePreview, imagePreview } from 'zkit-ui';
 
 <ImagePreview
   images={images}

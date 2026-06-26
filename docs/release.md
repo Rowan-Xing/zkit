@@ -1,14 +1,14 @@
-# y2kit 发布流程
+# zkit 发布流程
 
 ## 版本策略
 
-- `y2kit-ui`：React Native UI 组件库主包。
-- `y2kit-tools`：和 UI 无关的通用工具库。
+- `zkit-ui`：React Native UI 组件库主包。
+- `zkit-tools`：和 UI 无关的通用工具库。
 - app 默认使用精确版本，不使用 `^`：
 
 ```json
 {
-  "component-lib": "npm:y2kit-ui@1.0.0"
+  "component-lib": "npm:zkit-ui@1.0.0"
 }
 ```
 
@@ -47,7 +47,7 @@ pnpm publish --dry-run --no-git-checks
 
 ```bash
 git fetch --tags
-git switch -c release/y2kit-ui-1.x y2kit-ui@1.0.9
+git switch -c release/zkit-ui-1.x zkit-ui@1.0.9
 ```
 
 修复后发 patch，例如 `1.0.10`。旧 major 的补丁不要覆盖 `latest`：
@@ -60,6 +60,6 @@ app 只升级到目标补丁版本：
 
 ```json
 {
-  "component-lib": "npm:y2kit-ui@1.0.10"
+  "component-lib": "npm:zkit-ui@1.0.10"
 }
 ```

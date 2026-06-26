@@ -7,7 +7,7 @@
 确保应用根组件已包裹 `ComponentLibProvider`（已内置 `PermissionPurposeDialogProvider`）：
 
 ```tsx
-import { ComponentLibProvider } from 'y2kit-ui';
+import { ComponentLibProvider } from 'zkit-ui';
 
 export default function App() {
   return (
@@ -21,7 +21,7 @@ export default function App() {
 ## 使用方式
 
 ```tsx
-import { permissionPurposeDialog } from 'y2kit-ui';
+import { permissionPurposeDialog } from 'zkit-ui';
 
 // 展示说明（与系统权限框同时出现）
 const purpose = permissionPurposeDialog.show({

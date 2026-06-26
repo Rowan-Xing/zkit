@@ -7,8 +7,8 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 const config = getDefaultConfig(projectRoot);
 const defaultResolveRequest = config.resolver.resolveRequest;
 const localSourceEntries = {
-  'y2kit-tools': path.resolve(workspaceRoot, 'packages/tools/src/index.ts'),
-  'y2kit-ui': path.resolve(workspaceRoot, 'packages/ui/src/index.ts'),
+  'zkit-tools': path.resolve(workspaceRoot, 'packages/tools/src/index.ts'),
+  'zkit-ui': path.resolve(workspaceRoot, 'packages/ui/src/index.ts'),
 };
 
 config.watchFolders = [workspaceRoot];

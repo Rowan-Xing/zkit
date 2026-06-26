@@ -19,7 +19,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';

@@ -1,6 +1,6 @@
 # Text
 
-`Text` 是 y2kit 的统一文字原语。它集中处理排版 token、主题色、字体缩放、截断和跨端字重差异，让业务和公共组件都走同一套文字规则。
+`Text` 是 zkit 的统一文字原语。它集中处理排版 token、主题色、字体缩放、截断和跨端字重差异，让业务和公共组件都走同一套文字规则。
 
 ## 设计取舍
 
@@ -15,7 +15,7 @@
 ## 基础用法
 
 ```tsx
-import { Text } from 'y2kit-ui';
+import { Text } from 'zkit-ui';
 
 export function Demo() {
   return <Text>默认正文</Text>;
@@ -33,7 +33,7 @@ export function Demo() {
 ## 排版语义
 
 ```tsx
-import { Text } from 'y2kit-ui';
+import { Text } from 'zkit-ui';
 
 export function Demo() {
   return (

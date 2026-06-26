@@ -20,7 +20,7 @@
 ## 声明式使用
 
 ```tsx
-import { ActionDialog } from 'y2kit-ui';
+import { ActionDialog } from 'zkit-ui';
 
 <ActionDialog
   open={open}
@@ -37,7 +37,7 @@ import { ActionDialog } from 'y2kit-ui';
 ## 命令式确认
 
 ```tsx
-import { actionDialog } from 'y2kit-ui';
+import { actionDialog } from 'zkit-ui';
 
 const confirmed = await actionDialog.confirm({
   title: '删除确认',

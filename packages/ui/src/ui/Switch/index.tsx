@@ -26,7 +26,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
 import { LoadingSpinner } from '../LoadingSpinner';

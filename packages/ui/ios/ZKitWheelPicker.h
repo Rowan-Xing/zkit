@@ -2,7 +2,7 @@
 
 #import <React/RCTComponent.h>
 
-@interface Y2KitWheelPicker : UIPickerView <UIPickerViewDataSource, UIPickerViewDelegate, UIPickerViewAccessibilityDelegate>
+@interface ZKitWheelPicker : UIPickerView <UIPickerViewDataSource, UIPickerViewDelegate, UIPickerViewAccessibilityDelegate>
 
 @property (nonatomic, copy) NSArray<NSDictionary *> *items;
 @property (nonatomic, assign) NSInteger selectedIndex;

@@ -13,7 +13,7 @@ assert.equal(tools.getRuntimeString('APP_ENV'), 'verify');
 assert.equal(tools.getRuntimeString('ENABLED'), 'true');
 assert.equal(tools.tryGetRuntimeString('MISSING', 'fallback'), 'fallback');
 tools.resetRuntimeConfig();
-assert.equal(tools.tryGetRuntimeString('__Y2KIT_VERIFY_MISSING__', 'fallback'), 'fallback');
+assert.equal(tools.tryGetRuntimeString('__ZKIT_VERIFY_MISSING__', 'fallback'), 'fallback');
 
 const calls = [];
 let currentPath = '/home';
@@ -49,4 +49,4 @@ router.push('/settings');
 assert.deepEqual(calls, ['push:/detail', 'back', 'push:/settings']);
 guard.destroy();
 
-console.log('y2kit-tools verify passed');
+console.log('zkit-tools verify passed');

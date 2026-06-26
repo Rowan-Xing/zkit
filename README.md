@@ -1,6 +1,6 @@
-# y2kit
+# zkit
 
-`y2kit` 是一个面向 React Native 的组件库 + 工具库 Monorepo。
+`zkit` 是一个面向 React Native 的组件库 + 工具库 Monorepo。
 
 核心目标只有几个：
 
@@ -16,8 +16,8 @@
 
 ## Workspace
 
-- `packages/ui`：React Native UI 组件库，发布名 `y2kit-ui`
-- `packages/tools`：共享工具库，发布名 `y2kit-tools`
+- `packages/ui`：React Native UI 组件库，发布名 `zkit-ui`
+- `packages/tools`：共享工具库，发布名 `zkit-tools`
 - `apps/example`：本地联调与演示应用
 
 ## 开发原则

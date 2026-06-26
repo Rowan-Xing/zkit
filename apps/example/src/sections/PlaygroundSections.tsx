@@ -6,7 +6,7 @@ import {
   sp,
   tryGetRuntimeString,
   wp,
-} from 'y2kit-tools';
+} from 'zkit-tools';
 import {
   Accordion,
   AccordionContent,
@@ -32,7 +32,7 @@ import {
   useTheme,
   type BottomSheetRef,
   type PickerValue,
-} from 'y2kit-ui';
+} from 'zkit-ui';
 
 import {
   previewImages,

@@ -1,7 +1,7 @@
 import type {
   LinkedScrollItem as UILinkedScrollItem,
   SliderCaptchaChallenge,
-} from 'y2kit-ui';
+} from 'zkit-ui';
 
 export type Density = 'compact' | 'comfortable' | 'spacious';
 

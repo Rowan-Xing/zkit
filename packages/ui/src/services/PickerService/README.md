@@ -7,7 +7,7 @@
 确保应用根组件已包裹 `ComponentLibProvider`（已内置 `PickerServiceProvider`）：
 
 ```tsx
-import { ComponentLibProvider } from 'y2kit-ui';
+import { ComponentLibProvider } from 'zkit-ui';
 
 export default function App() {
   return (
@@ -21,7 +21,7 @@ export default function App() {
 ## 使用方式
 
 ```tsx
-import { pickerService } from 'y2kit-ui';
+import { pickerService } from 'zkit-ui';
 ```
 
 ### 通用选择器

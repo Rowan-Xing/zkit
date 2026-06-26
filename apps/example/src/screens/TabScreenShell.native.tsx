@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from 'react-native-bottom-tabs';
-import { wp } from 'y2kit-tools';
+import { wp } from 'zkit-tools';
 
 import { exampleBackgroundColor } from '../theme';
 import { styles as sharedStyles } from '../styles';
