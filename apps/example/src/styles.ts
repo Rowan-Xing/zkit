@@ -561,25 +561,85 @@ export const styles = StyleSheet.create({
     paddingHorizontal: wp(14),
   },
   selectionGrid: {
-    gap: wp(12),
+    gap: wp(14),
   },
-  selectionBlock: {
-    borderRadius: wp(12),
+  choiceCaseCard: {
+    borderRadius: wp(14),
     borderWidth: wp(1),
-    gap: wp(12),
+    overflow: 'hidden',
     padding: wp(14),
   },
-  selectionHeader: {
+  choiceCaseHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: wp(10),
+    gap: wp(11),
   },
-  selectionIcon: {
+  choiceCaseIcon: {
     alignItems: 'center',
-    borderRadius: wp(10),
-    height: wp(34),
+    borderRadius: wp(11),
+    height: wp(38),
     justifyContent: 'center',
-    width: wp(34),
+    width: wp(38),
+  },
+  choiceCaseCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  choiceCaseTitle: {
+    fontSize: wp(15),
+    fontWeight: '900',
+    lineHeight: wp(20),
+  },
+  choiceCaseCaption: {
+    fontSize: wp(12.5),
+    fontWeight: '500',
+    lineHeight: wp(18),
+    marginTop: wp(2),
+  },
+  choiceCaseBody: {
+    gap: wp(12),
+    marginTop: wp(14),
+  },
+  choiceControlGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(12),
+  },
+  choiceControlItem: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    minWidth: wp(132),
+  },
+  choiceCustomOption: {
+    alignItems: 'center',
+    borderRadius: wp(13),
+    borderWidth: wp(1),
+    flexDirection: 'row',
+    gap: wp(10),
+    minHeight: wp(62),
+    minWidth: wp(230),
+    paddingHorizontal: wp(12),
+    paddingVertical: wp(10),
+  },
+  choiceCustomDot: {
+    borderRadius: wp(999),
+    height: wp(10),
+    width: wp(10),
+  },
+  choiceCustomCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  choiceCustomTitle: {
+    fontSize: wp(13.5),
+    fontWeight: '900',
+    lineHeight: wp(18),
+  },
+  choiceCustomText: {
+    fontSize: wp(12),
+    fontWeight: '500',
+    lineHeight: wp(17),
+    marginTop: wp(2),
   },
   surfaceGrid: {
     gap: wp(12),

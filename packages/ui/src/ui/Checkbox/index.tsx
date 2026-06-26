@@ -351,7 +351,7 @@ function resolveTonePalette(tone: CheckboxTone, theme: Theme): CheckboxTonePalet
   if (tone === 'warning') {
     return {
       accent: SEMANTIC_COLORS.warning,
-      onAccent: '#111827',
+      onAccent: '#FFFFFF',
     };
   }
 

@@ -31,6 +31,7 @@ import {
   useI18n,
   useTheme,
   type BottomSheetRef,
+  type CheckboxCheckedState,
   type PickerValue,
 } from 'zkit-ui';
 
@@ -673,6 +674,50 @@ type SelectionSectionProps = {
   onDensityChange: (next: Density) => void;
 };
 
+const CHECKBOX_GROUP_VALUES = ['motion', 'forms', 'overlays'] as const;
+
+type ChoiceCaseCardProps = {
+  iconName: FeatherIconName;
+  iconColor: string;
+  iconBackground: string;
+  title: string;
+  caption: string;
+  children: React.ReactNode;
+};
+
+const ChoiceCaseCard = React.memo(function ChoiceCaseCard({
+  iconName,
+  iconColor,
+  iconBackground,
+  title,
+  caption,
+  children,
+}: ChoiceCaseCardProps) {
+  const theme = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.choiceCaseCard,
+        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+      ]}
+    >
+      <View style={styles.choiceCaseHeader}>
+        <View style={[styles.choiceCaseIcon, { backgroundColor: iconBackground }]}>
+          {renderIcon(iconName, iconColor, wp(18))}
+        </View>
+        <View style={styles.choiceCaseCopy}>
+          <Text style={[styles.choiceCaseTitle, { color: theme.colors.onSurface }]}>{title}</Text>
+          <Text numberOfLines={2} style={[styles.choiceCaseCaption, { color: theme.colors.muted }]}>
+            {caption}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.choiceCaseBody}>{children}</View>
+    </View>
+  );
+});
+
 export const SelectionSection = React.memo(function SelectionSection({
   checkedItems,
   density,
@@ -681,6 +726,19 @@ export const SelectionSection = React.memo(function SelectionSection({
 }: SelectionSectionProps) {
   const theme = useTheme();
   const { t } = useI18n();
+  const selectedCount = checkedItems.length;
+  const checkboxGroupState: CheckboxCheckedState =
+    selectedCount === 0
+      ? false
+      : selectedCount === CHECKBOX_GROUP_VALUES.length
+        ? true
+        : 'indeterminate';
+  const handleSelectAllChange = React.useCallback(
+    (next: CheckboxCheckedState) => {
+      onCheckedItemsChange(next === false ? [] : [...CHECKBOX_GROUP_VALUES]);
+    },
+    [onCheckedItemsChange]
+  );
 
   return (
     <Section
@@ -690,23 +748,22 @@ export const SelectionSection = React.memo(function SelectionSection({
       accentColor="#7C3AED"
     >
       <View style={styles.selectionGrid}>
-        <View
-          style={[
-            styles.selectionBlock,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
+        <ChoiceCaseCard
+          iconName="check-circle"
+          iconColor="#7C3AED"
+          iconBackground="#F3E8FF"
+          title={t('example.choice.checkboxStates')}
+          caption={t('example.choice.checkboxStatesCaption')}
         >
-          <View style={styles.selectionHeader}>
-            <View style={[styles.selectionIcon, { backgroundColor: '#EEF2FF' }]}>
-              {renderIcon('check-circle', '#4F46E5', wp(18))}
-            </View>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>{t('example.choice.checkboxStates')}</Text>
-          </View>
-          <View style={styles.dualColumnGrid}>
-            <Checkbox defaultChecked label={t('example.choice.checked')} description={t('example.choice.defaultChecked')} tone="success" />
-            <Checkbox defaultChecked="indeterminate" label={t('example.choice.indeterminate')} tone="warning" />
-            <Checkbox label={t('example.choice.softLg')} size="lg" variant="soft" tone="info" shape="rounded" />
+          <View style={styles.choiceControlGrid}>
+            <Checkbox style={styles.choiceControlItem} defaultChecked label={t('example.choice.checked')} description={t('example.choice.defaultChecked')} tone="success" />
+            <Checkbox style={styles.choiceControlItem} defaultChecked="indeterminate" label={t('example.choice.indeterminate')} description={t('example.choice.warningSolid')} tone="warning" />
+            <Checkbox style={styles.choiceControlItem} label={t('example.choice.unchecked')} description={t('example.choice.outline')} variant="outline" />
+            <Checkbox style={styles.choiceControlItem} defaultChecked label={t('example.choice.outlineCircle')} description={t('example.choice.shapeCircle')} variant="outline" tone="danger" shape="circle" />
+            <Checkbox style={styles.choiceControlItem} defaultChecked label={t('example.choice.solidCircle')} description={t('example.choice.solidCircleDescription')} tone="primary" shape="circle" />
+            <Checkbox style={styles.choiceControlItem} label={t('example.choice.softLg')} description={t('example.choice.infoSoft')} size="lg" variant="soft" tone="info" shape="rounded" />
             <Checkbox
+              style={styles.choiceControlItem}
               defaultChecked
               disabled
               label={t('example.choice.disabled')}
@@ -714,44 +771,67 @@ export const SelectionSection = React.memo(function SelectionSection({
               labelPlacement="start"
             />
           </View>
-        </View>
+          <Checkbox defaultChecked showIndicator={false}>
+            {({ checked }) => (
+              <View
+                style={[
+                  styles.choiceCustomOption,
+                  {
+                    backgroundColor: checked ? '#F3E8FF' : '#F8FAFC',
+                    borderColor: checked ? '#7C3AED' : theme.colors.border,
+                  },
+                ]}
+              >
+                <View style={[styles.choiceCustomDot, { backgroundColor: checked ? '#7C3AED' : '#CBD5E1' }]} />
+                <View style={styles.choiceCustomCopy}>
+                  <Text style={[styles.choiceCustomTitle, { color: theme.colors.onSurface }]}>
+                    {t('example.choice.customCheckboxCard')}
+                  </Text>
+                  <Text style={[styles.choiceCustomText, { color: theme.colors.muted }]}>
+                    {t('example.choice.customCheckboxCardDescription')}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </Checkbox>
+        </ChoiceCaseCard>
 
-        <View
-          style={[
-            styles.selectionBlock,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
+        <ChoiceCaseCard
+          iconName="check-square"
+          iconColor="#4F46E5"
+          iconBackground="#EEF2FF"
+          title="CheckboxGroup"
+          caption={t('example.choice.checkboxGroupCaption')}
         >
-          <View style={styles.selectionHeader}>
-            <View style={[styles.selectionIcon, { backgroundColor: '#EEF2FF' }]}>
-              {renderIcon('check-square', '#4F46E5', wp(18))}
-            </View>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>CheckboxGroup</Text>
-          </View>
+          <Checkbox
+            checked={checkboxGroupState}
+            onChange={handleSelectAllChange}
+            label={t('example.choice.selectAll')}
+            description={t('example.choice.selectAllDescription')}
+            tone="primary"
+          />
           <CheckboxGroup
             value={checkedItems}
             onChange={onCheckedItemsChange}
             orientation="vertical"
             gap={wp(10)}
+            variant="soft"
+            tone="primary"
+            shape="rounded"
           >
-            <Checkbox value="motion" label={t('example.choice.motionTokens')} />
-            <Checkbox value="forms" label={t('example.choice.formControls')} />
-            <Checkbox value="overlays" label={t('example.choice.overlayServices')} />
+            <Checkbox value="motion" label={t('example.choice.motionTokens')} description={t('example.choice.groupItemPrimary')} />
+            <Checkbox value="forms" label={t('example.choice.formControls')} description={t('example.choice.groupItemOverride')} tone="success" />
+            <Checkbox value="overlays" label={t('example.choice.overlayServices')} description={t('example.choice.groupItemDisabled')} disabled />
           </CheckboxGroup>
-        </View>
+        </ChoiceCaseCard>
 
-        <View
-          style={[
-            styles.selectionBlock,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
+        <ChoiceCaseCard
+          iconName="disc"
+          iconColor="#0F9F6E"
+          iconBackground="#E8F7F1"
+          title="RadioGroup"
+          caption={t('example.choice.radioGroupCaption')}
         >
-          <View style={styles.selectionHeader}>
-            <View style={[styles.selectionIcon, { backgroundColor: '#E8F7F1' }]}>
-              {renderIcon('disc', '#0F9F6E', wp(18))}
-            </View>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>RadioGroup</Text>
-          </View>
           <RadioGroup<Density>
             value={density}
             onChange={(next) => {
@@ -759,32 +839,52 @@ export const SelectionSection = React.memo(function SelectionSection({
             }}
             orientation="vertical"
             gap={wp(10)}
+            variant="soft"
+            tone="success"
           >
-            <Radio value="compact" label={t('example.choice.compact')} />
-            <Radio value="comfortable" label={t('example.choice.comfortable')} />
-            <Radio value="spacious" label={t('example.choice.spacious')} />
+            <Radio value="compact" label={t('example.choice.compact')} description={t('example.choice.compactDescription')} />
+            <Radio value="comfortable" label={t('example.choice.comfortable')} description={t('example.choice.comfortableDescription')} />
+            <Radio value="spacious" label={t('example.choice.spacious')} description={t('example.choice.spaciousDescription')} tone="info" />
           </RadioGroup>
-        </View>
+        </ChoiceCaseCard>
 
-        <View
-          style={[
-            styles.selectionBlock,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
+        <ChoiceCaseCard
+          iconName="circle"
+          iconColor="#0891B2"
+          iconBackground="#E0F2FE"
+          title={t('example.choice.radioStates')}
+          caption={t('example.choice.radioStatesCaption')}
         >
-          <View style={styles.selectionHeader}>
-            <View style={[styles.selectionIcon, { backgroundColor: '#E8F7F1' }]}>
-              {renderIcon('circle', '#0F9F6E', wp(18))}
-            </View>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>{t('example.choice.radioStates')}</Text>
+          <View style={styles.choiceControlGrid}>
+            <Radio style={styles.choiceControlItem} defaultChecked label={t('example.choice.checked')} description={t('example.choice.standalone')} tone="success" />
+            <Radio style={styles.choiceControlItem} label={t('example.choice.allowDeselect')} description={t('example.choice.tapAgainToClear')} allowDeselect defaultChecked tone="info" />
+            <Radio style={styles.choiceControlItem} label={t('example.choice.softLg')} description={t('example.choice.warningSoft')} size="lg" variant="soft" tone="warning" />
+            <Radio style={styles.choiceControlItem} defaultChecked disabled label={t('example.choice.disabled')} labelPlacement="start" />
           </View>
-          <View style={styles.dualColumnGrid}>
-            <Radio defaultChecked label={t('example.choice.checked')} description={t('example.choice.standalone')} tone="success" />
-            <Radio label={t('example.choice.allowDeselect')} allowDeselect defaultChecked tone="info" />
-            <Radio label={t('example.choice.softLg')} size="lg" variant="soft" tone="warning" />
-            <Radio defaultChecked disabled label={t('example.choice.disabled')} labelPlacement="start" />
-          </View>
-        </View>
+          <Radio defaultChecked showIndicator={false}>
+            {({ checked }) => (
+              <View
+                style={[
+                  styles.choiceCustomOption,
+                  {
+                    backgroundColor: checked ? '#E0F2FE' : '#F8FAFC',
+                    borderColor: checked ? '#0891B2' : theme.colors.border,
+                  },
+                ]}
+              >
+                <View style={[styles.choiceCustomDot, { backgroundColor: checked ? '#0891B2' : '#CBD5E1' }]} />
+                <View style={styles.choiceCustomCopy}>
+                  <Text style={[styles.choiceCustomTitle, { color: theme.colors.onSurface }]}>
+                    {t('example.choice.customRadioCard')}
+                  </Text>
+                  <Text style={[styles.choiceCustomText, { color: theme.colors.muted }]}>
+                    {t('example.choice.customRadioCardDescription')}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </Radio>
+        </ChoiceCaseCard>
       </View>
     </Section>
   );
