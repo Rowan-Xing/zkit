@@ -110,9 +110,9 @@ export function resolveExampleLocale(): ExampleLocale {
 
 const enUS = {
   'example.header.title': 'ZKit',
-  'example.header.subtitle': 'Component and tool showcase for fast native screens, polished motion, and provider-backed flows.',
-  'example.header.previewLabel': 'Prototype surface',
-  'example.header.previewValue': 'mobile-first',
+  'example.header.subtitle': 'An in-house mobile component and tools library distilled from production work across FieeLink, 墨册, Seyka, FieeChannel, and other internal apps, with a unified Android, iOS, and Web surface.',
+  'example.header.previewLabel': 'Proven in apps',
+  'example.header.previewValue': 'Android · iOS · Web',
   'example.tabs.home': 'Basics',
   'example.tabs.forms': 'Forms',
   'example.tabs.showcase': 'Showcase',
@@ -312,9 +312,9 @@ const enUS = {
 
 const zhCN = {
   'example.header.title': 'ZKit',
-  'example.header.subtitle': '面向高性能原生界面的组件与工具展示——流畅动效、精细控件、Provider 服务流一览。',
-  'example.header.previewLabel': '原型预览',
-  'example.header.previewValue': '移动端优先',
+  'example.header.subtitle': 'ZKit 源自 FieeLink、墨册、Seyka、FieeChannel 等内部产品的真实开发实践，是持续演化并系统沉淀形成的自研移动端组件库与工具库，统一覆盖 Android、iOS 与 Web 三端体验。',
+  'example.header.previewLabel': '真实项目沉淀',
+  'example.header.previewValue': 'Android · iOS · Web',
   'example.tabs.home': '基础',
   'example.tabs.forms': '表单',
   'example.tabs.showcase': '展示',
