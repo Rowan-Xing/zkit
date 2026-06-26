@@ -109,6 +109,7 @@ export function Demo() {
 - `loading` 会禁用交互并设置 `accessibilityState.busy`
 - `inline`：spinner 从内容起点进入，文字保持可见
 - `overlay`：spinner 居中，原内容保留布局并淡出，避免按钮宽度跳动
+- 默认 spinner 尺寸会按图标槽位做视觉补偿并受内容高度约束；需要精确控制时使用 `layout.loadingSize`
 
 ## 精确覆盖
 

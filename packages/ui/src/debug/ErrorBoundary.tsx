@@ -3,7 +3,6 @@ import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-
 import { useI18n } from '../i18n/useI18n';
 import { useTheme } from '../theme/useTheme';
 import { Text } from '../ui/Text';
-import { debugLogManager } from './LogManager';
 
 type ErrorBoundaryFallbackRender = (
   error: Error | null,
@@ -90,12 +89,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    debugLogManager.addError('react', [
-      `React Error: ${error.message}`,
-      `Component Stack: ${errorInfo.componentStack}`,
-      `Error Stack: ${error.stack || ''}`,
-    ]);
-
     this.setState({
       error,
       errorInfo,

@@ -381,18 +381,3 @@ export type {
 } from './services/ImagePreviewService/index';
 export { ErrorBoundary } from './debug/ErrorBoundary';
 export type { ErrorBoundaryProps } from './debug/ErrorBoundary';
-export { FloatingDebugger, FloatingDebuggerController } from './debug/FloatingDebugger';
-export type {
-  FloatingDebuggerControllerHandle,
-  FloatingDebuggerProps,
-} from './debug/FloatingDebugger';
-export { debugLogManager } from './debug/LogManager';
-export type {
-  DebugErrorEntry,
-  DebugErrorSource,
-  DebugListener,
-  DebugLogEntry,
-  DebugLogType,
-  DebugNotificationPayload,
-  DebugNotificationType,
-} from './debug/LogManager';

@@ -567,6 +567,10 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
     metrics.minHeight,
     inputMinHeight + fieldPaddingVertical * 2 + fieldBorderWidth * 2
   );
+  const singleLineInputHeight = Math.max(
+    metrics.textLineHeight,
+    fieldMinHeight - fieldPaddingVertical * 2 - fieldBorderWidth * 2
+  );
   const fieldMaxHeight =
     layout?.maxHeight ??
     (inputMaxHeight == null
@@ -626,16 +630,16 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
       borderWidth: 0,
       color: visualColors.textColor,
       fontSize: metrics.textSize,
-      includeFontPadding: multiline ? false : undefined,
-      lineHeight: multiline ? metrics.textLineHeight : undefined,
+      includeFontPadding: false,
+      lineHeight: metrics.textLineHeight,
       maxHeight: multiline ? inputMaxHeight : undefined,
-      minHeight: multiline ? inputMinHeight : undefined,
-      padding: multiline ? 0 : undefined,
-      paddingBottom: multiline ? 0 : undefined,
+      minHeight: multiline ? inputMinHeight : singleLineInputHeight,
+      padding: 0,
+      paddingBottom: 0,
       paddingHorizontal: 0,
-      paddingTop: multiline ? 0 : undefined,
-      paddingVertical: multiline ? 0 : undefined,
-      textAlignVertical: multiline ? 'top' : undefined,
+      paddingTop: 0,
+      paddingVertical: 0,
+      textAlignVertical: multiline ? 'top' : 'center',
     }),
     [
       inputMaxHeight,
@@ -643,6 +647,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
       metrics.textLineHeight,
       metrics.textSize,
       multiline,
+      singleLineInputHeight,
       visualColors.textColor,
     ]
   );

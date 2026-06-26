@@ -191,5 +191,6 @@ export function Demo() {
 ## 平台默认值
 
 - Android 默认设置 `underlineColorAndroid="transparent"`，避免系统下划线破坏组件视觉
+- 高级 `TextInput` 会清零原生输入层 padding，由外层 Field 统一管理间距，避免 Android 默认输入内边距被圆角容器裁切
 - 光标、选区和选择手柄默认使用主题强调色；Android 会按光标色设置稳定 key，规避部分 OEM/Fabric 下光标颜色首次提交不稳定的问题
 - Web 会移除输入框默认 outline，焦点状态由组件边框呈现

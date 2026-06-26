@@ -109,14 +109,10 @@ export function resolveExampleLocale(): ExampleLocale {
 }
 
 const enUS: I18nMessages = {
-  'example.header.title': 'ZKit Lab',
+  'example.header.title': 'ZKit',
   'example.header.subtitle': 'Component and tool showcase for fast native screens, polished motion, and provider-backed flows.',
   'example.header.previewLabel': 'Prototype surface',
   'example.header.previewValue': 'mobile-first',
-  'example.metric.uiModules': 'UI modules',
-  'example.metric.toolExports': 'Tool exports',
-  'example.metric.motionTarget': 'Motion target',
-
   'example.tabs.home': 'Basics',
   'example.tabs.forms': 'Forms',
   'example.tabs.showcase': 'Showcase',
@@ -286,8 +282,6 @@ const enUS: I18nMessages = {
   'example.services.previewSubtitle': 'pinch, pan, swipe',
   'example.services.captchaTitle': 'Slider captcha',
   'example.services.captchaSubtitle': 'challenge verification',
-  'example.services.debuggerTitle': 'Floating debugger',
-  'example.services.debuggerSubtitle': 'logs and network panel',
 
   'example.tools.eyebrow': 'Tools',
   'example.tools.title': 'Runtime utilities',
@@ -317,14 +311,10 @@ const enUS: I18nMessages = {
 };
 
 const zhCN: I18nMessages = {
-  'example.header.title': 'ZKit 实验室',
+  'example.header.title': 'ZKit',
   'example.header.subtitle': '面向高性能原生界面的组件与工具展示——流畅动效、精细控件、Provider 服务流一览。',
   'example.header.previewLabel': '原型预览',
   'example.header.previewValue': '移动端优先',
-  'example.metric.uiModules': 'UI 模块',
-  'example.metric.toolExports': '工具导出',
-  'example.metric.motionTarget': '动效帧率',
-
   'example.tabs.home': '基础',
   'example.tabs.forms': '表单',
   'example.tabs.showcase': '展示',
@@ -492,8 +482,6 @@ const zhCN: I18nMessages = {
   'example.services.previewSubtitle': '缩放 · 拖拽 · 滑动',
   'example.services.captchaTitle': '滑块验证',
   'example.services.captchaSubtitle': '人机校验',
-  'example.services.debuggerTitle': '悬浮调试器',
-  'example.services.debuggerSubtitle': '日志 · 网络面板',
 
   'example.tools.eyebrow': '工具',
   'example.tools.title': '运行时工具',

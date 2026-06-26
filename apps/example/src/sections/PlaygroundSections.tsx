@@ -59,7 +59,12 @@ const FoundationStatusCell = React.memo(function FoundationStatusCell({
   const theme = useTheme();
 
   return (
-    <View style={styles.statusItem}>
+    <View
+      style={[
+        styles.statusItem,
+        { backgroundColor: '#F8FAFC', borderColor: theme.colors.border },
+      ]}
+    >
       <View style={[styles.statusIcon, { backgroundColor: `${color}1A` }]}>
         {renderIcon(iconName, color, wp(17))}
       </View>
@@ -91,20 +96,21 @@ export const FoundationSection = React.memo(function FoundationSection() {
         ]}
       >
         <View style={styles.typeSpecimen}>
-          <View style={styles.typeRow}>
+          <View style={styles.typeHeaderRow}>
             <Text style={[styles.typeLabel, { color: theme.colors.primary }]}>
               {t('example.foundation.displayLabel')}
             </Text>
-            <Text style={[styles.typeDisplay, { color: theme.colors.onSurface }]}>
-              {t('example.foundation.displayText')}
-            </Text>
+            <View style={styles.typeHeaderLine} />
           </View>
+          <Text style={[styles.typeDisplay, { color: theme.colors.onSurface }]}>
+            {t('example.foundation.displayText')}
+          </Text>
           <Text style={[styles.typeSubtitle, { color: theme.colors.muted }]}>
             {t('example.foundation.displaySubtitle')}
           </Text>
         </View>
 
-        <View style={[styles.statusStrip, { borderTopColor: theme.colors.border }]}>
+        <View style={styles.statusStrip}>
           <FoundationStatusCell
             iconName="type"
             label={t('example.foundation.textLabel')}
@@ -679,7 +685,6 @@ export const PickersSection = React.memo(function PickersSection({
 type ServicesSectionProps = {
   serviceChoice: string;
   onCaptchaOpen: () => void;
-  onDebuggerOpen: () => void;
   onDialog: () => void;
   onGlobalPicker: () => void;
   onLoading: () => void;
@@ -689,13 +694,11 @@ type ServicesSectionProps = {
 export const ServicesSection = React.memo(function ServicesSection({
   serviceChoice,
   onCaptchaOpen,
-  onDebuggerOpen,
   onDialog,
   onGlobalPicker,
   onLoading,
   onPermissionPurpose,
 }: ServicesSectionProps) {
-  const theme = useTheme();
   const { t } = useI18n();
 
   return (
@@ -761,14 +764,6 @@ export const ServicesSection = React.memo(function ServicesSection({
           color="#DB2777"
           buttonLabel={t('example.common.open')}
           onPress={onCaptchaOpen}
-        />
-        <ServiceActionCard
-          iconName="terminal"
-          title={t('example.services.debuggerTitle')}
-          subtitle={t('example.services.debuggerSubtitle')}
-          color={theme.colors.onSurface}
-          buttonLabel={t('example.common.open')}
-          onPress={onDebuggerOpen}
         />
       </View>
     </Section>

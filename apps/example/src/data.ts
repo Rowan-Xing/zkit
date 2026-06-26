@@ -5,11 +5,6 @@ import type {
 
 export type Density = 'compact' | 'comfortable' | 'spacious';
 
-export type ShowcaseMetric = {
-  value: string;
-  labelKey: string;
-};
-
 export type ShowcaseNavKey =
   | 'foundation'
   | 'actions'
@@ -35,12 +30,6 @@ export type LinkedDemoData = {
 };
 
 export type LinkedScrollItem = UILinkedScrollItem<string, LinkedDemoData>;
-
-export const showcaseMetrics: ShowcaseMetric[] = [
-  { value: '16+', labelKey: 'example.metric.uiModules' },
-  { value: '8', labelKey: 'example.metric.toolExports' },
-  { value: '120Hz', labelKey: 'example.metric.motionTarget' },
-];
 
 export const showcaseNavItems: ShowcaseNavItem[] = [
   { key: 'foundation', titleKey: 'example.nav.foundation.title', captionKey: 'example.nav.foundation.caption' },

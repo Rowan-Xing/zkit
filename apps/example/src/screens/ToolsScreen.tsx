@@ -1,7 +1,5 @@
 import * as React from 'react';
 import {
-  FloatingDebugger,
-  FloatingDebuggerController,
   SliderCaptcha,
   actionDialog,
   loading,
@@ -98,10 +96,6 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
     toast.success(t('example.captcha.verifiedToast'), { duration: 1200 });
   }, [t]);
 
-  const handleDebuggerOpen = React.useCallback(() => {
-    FloatingDebuggerController.show?.();
-  }, []);
-
   const handleRouterGuardDemo = React.useCallback(() => {
     const events: string[] = [];
     const router = {
@@ -135,7 +129,6 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
         <ServicesSection
           serviceChoice={t(`example.area.${serviceChoice}`)}
           onCaptchaOpen={openCaptcha}
-          onDebuggerOpen={handleDebuggerOpen}
           onDialog={handleDialog}
           onGlobalPicker={handleGlobalPicker}
           onLoading={handleLoading}
@@ -159,7 +152,6 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
           verifySuccess: t('example.captcha.success'),
         }}
       />
-      <FloatingDebugger initialVisible={false} enableNetworkTab />
     </>
   );
 });

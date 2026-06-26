@@ -205,6 +205,7 @@ const LOADING_TIMING = {
 const DISABLED_OPACITY = 0.52;
 const PRESSED_OPACITY = 0.82;
 const PRESSED_SCALE = 0.985;
+const LOADING_SIZE_VISUAL_SCALE = 1.2;
 
 const SEMANTIC_COLORS: Record<string, string> = {
   danger: '#DC2626',
@@ -224,7 +225,6 @@ const SIZE_TOKENS = {
     radius: 10,
     iconOnlySide: 32,
     iconSize: 15,
-    loadingSize: 15,
     textSize: 13,
     textLineHeight: 18,
   },
@@ -236,7 +236,6 @@ const SIZE_TOKENS = {
     radius: 12,
     iconOnlySide: 36,
     iconSize: 16,
-    loadingSize: 16,
     textSize: 14,
     textLineHeight: 19,
   },
@@ -248,7 +247,6 @@ const SIZE_TOKENS = {
     radius: 14,
     iconOnlySide: 44,
     iconSize: 18,
-    loadingSize: 18,
     textSize: 15,
     textLineHeight: 21,
   },
@@ -260,7 +258,6 @@ const SIZE_TOKENS = {
     radius: 16,
     iconOnlySide: 48,
     iconSize: 20,
-    loadingSize: 20,
     textSize: 16,
     textLineHeight: 22,
   },
@@ -272,13 +269,12 @@ const SIZE_TOKENS = {
     radius: 18,
     iconOnlySide: 56,
     iconSize: 22,
-    loadingSize: 22,
     textSize: 17,
     textLineHeight: 24,
   },
 } as const satisfies Record<
   ButtonSize,
-  Omit<ButtonMetrics, 'borderWidth' | 'linkPaddingVertical' | 'minTouchTarget'>
+  Omit<ButtonMetrics, 'borderWidth' | 'linkPaddingVertical' | 'loadingSize' | 'minTouchTarget'>
 >;
 
 const GRADIENT_DIRECTIONS: Record<string, Pick<LinearGradientConfig, 'start' | 'end'>> = {
@@ -294,8 +290,18 @@ const GRADIENT_DIRECTIONS: Record<string, Pick<LinearGradientConfig, 'start' | '
 
 let cachedLinearGradientComponent: React.ComponentType<LinearGradientProps> | null | undefined;
 
+function resolveDefaultLoadingSize(iconSize: number, availableHeight: number | undefined) {
+  const scaled = iconSize * LOADING_SIZE_VISUAL_SCALE;
+  if (availableHeight == null || !Number.isFinite(availableHeight) || availableHeight <= 0) {
+    return scaled;
+  }
+
+  return Math.min(scaled, Math.max(0, availableHeight));
+}
+
 function resolveMetrics(size: ButtonSize): ButtonMetrics {
   const token = SIZE_TOKENS[size] ?? SIZE_TOKENS.md;
+  const loadingContentHeight = token.minHeight - token.paddingVertical * 2;
   return {
     minHeight: wp(token.minHeight),
     paddingHorizontal: wp(token.paddingHorizontal),
@@ -304,7 +310,7 @@ function resolveMetrics(size: ButtonSize): ButtonMetrics {
     radius: wp(token.radius),
     iconOnlySide: wp(token.iconOnlySide),
     iconSize: wp(token.iconSize),
-    loadingSize: wp(token.loadingSize),
+    loadingSize: wp(resolveDefaultLoadingSize(token.iconSize, loadingContentHeight)),
     textSize: wp(token.textSize),
     textLineHeight: wp(token.textLineHeight),
     borderWidth: wp(1),
@@ -781,6 +787,40 @@ function resolveDefaultHitSlop({
   };
 }
 
+function resolveLoadingSize({
+  iconOnly,
+  layout,
+  metrics,
+  variant,
+}: {
+  iconOnly: boolean;
+  layout?: ButtonLayout;
+  metrics: ButtonMetrics;
+  variant: ButtonVariant;
+}) {
+  if (layout?.loadingSize !== undefined) return layout.loadingSize;
+
+  const iconSize = layout?.iconSize ?? metrics.iconSize;
+
+  if (iconOnly) {
+    const availableHeight =
+      normalizeNumber(layout?.height) ?? normalizeNumber(layout?.width) ?? metrics.iconOnlySide;
+    return resolveDefaultLoadingSize(iconSize, availableHeight);
+  }
+
+  if (variant === 'link') {
+    const availableHeight =
+      (layout?.textLineHeight ?? metrics.textLineHeight) +
+      (layout?.paddingVertical ?? metrics.linkPaddingVertical) * 2;
+    return resolveDefaultLoadingSize(iconSize, availableHeight);
+  }
+
+  const availableHeight =
+    (normalizeNumber(layout?.height) ?? layout?.minHeight ?? metrics.minHeight) -
+    (layout?.paddingVertical ?? metrics.paddingVertical) * 2;
+  return resolveDefaultLoadingSize(iconSize, availableHeight);
+}
+
 function resolveIconBoxStyle(visible: boolean, iconSize: number): ViewStyle {
   if (!visible) return {};
 
@@ -969,7 +1009,16 @@ function ButtonImpl(
   const hasText = resolvedText != null;
   const hasIcon = icon != null;
   const iconSize = layout?.iconSize ?? metrics.iconSize;
-  const loadingSize = layout?.loadingSize ?? metrics.loadingSize;
+  const loadingSize = React.useMemo(
+    () =>
+      resolveLoadingSize({
+        iconOnly,
+        layout,
+        metrics,
+        variant,
+      }),
+    [iconOnly, layout, metrics, variant]
+  );
   const contentGap = layout?.gap ?? metrics.gap;
   const iconBaseBoxStyle = React.useMemo(() => resolveIconBoxStyle(hasIcon, iconSize), [hasIcon, iconSize]);
   const iconPlacedBoxStyle = React.useMemo((): ViewStyle => {

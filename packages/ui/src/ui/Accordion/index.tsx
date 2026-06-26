@@ -759,7 +759,7 @@ export function AccordionTrigger<T extends AccordionValue = AccordionValue>({
   trailing,
   indicator,
   disabled: disabledProp = false,
-  pressEffect = 'scale-opacity',
+  pressEffect = 'opacity',
   titleNumberOfLines = 1,
   descriptionNumberOfLines = 2,
   style,
@@ -1084,9 +1084,10 @@ export function AccordionContent({
       pointerEvents={item.open ? 'auto' : 'none'}
       style={[styles.contentContainer, animatedContainerStyle, containerStyle]}
     >
-      <Animated.View style={animatedInnerStyle}>
+      <Animated.View style={[styles.contentInner, animatedInnerStyle]}>
         <View
           {...viewProps}
+          collapsable={false}
           nativeID={nativeID ?? item.contentId}
           accessibilityElementsHidden={accessibilityElementsHidden ?? hidden}
           importantForAccessibility={importantForAccessibility ?? (hidden ? 'no-hide-descendants' : 'auto')}
@@ -1202,6 +1203,12 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     overflow: 'hidden',
+  },
+  contentInner: {
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   content: {},
   indicator: {
