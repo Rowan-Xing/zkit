@@ -108,7 +108,7 @@ export function resolveExampleLocale(): ExampleLocale {
   return DEFAULT_EXAMPLE_LOCALE;
 }
 
-const enUS: I18nMessages = {
+const enUS = {
   'example.header.title': 'ZKit',
   'example.header.subtitle': 'Component and tool showcase for fast native screens, polished motion, and provider-backed flows.',
   'example.header.previewLabel': 'Prototype surface',
@@ -308,9 +308,9 @@ const enUS: I18nMessages = {
   'example.linked.renderType': 'Render type',
   'example.linked.sectionHeight': 'Section height',
   'example.linked.source': 'Source',
-};
+} satisfies I18nMessages;
 
-const zhCN: I18nMessages = {
+const zhCN = {
   'example.header.title': 'ZKit',
   'example.header.subtitle': '面向高性能原生界面的组件与工具展示——流畅动效、精细控件、Provider 服务流一览。',
   'example.header.previewLabel': '原型预览',
@@ -422,6 +422,8 @@ const zhCN: I18nMessages = {
   'example.forms.eyebrow': '表单',
   'example.forms.title': '输入控件',
   'example.forms.subtitle': '文本输入、开关、禁用态与行内反馈',
+  'example.forms.noteLabel': '备注',
+  'example.forms.noteDescription': '受控输入，支持清空操作和字数统计。',
   'example.forms.placeholder': '输入备注',
   'example.forms.notifications': '通知',
   'example.forms.enabled': '已启用',
@@ -508,7 +510,7 @@ const zhCN: I18nMessages = {
   'example.linked.renderType': '渲染类型',
   'example.linked.sectionHeight': '分区高度',
   'example.linked.source': '来源',
-};
+} satisfies Record<keyof typeof enUS, string>;
 
 export const exampleMessages: Record<ExampleLocale, I18nMessages> = {
   'en-US': enUS,

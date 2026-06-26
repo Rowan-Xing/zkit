@@ -188,6 +188,7 @@ const SIZE_TOKENS = {
 const DISABLED_OPACITY = 0.48;
 const PRESSED_OPACITY = 0.92;
 const STATE_TEXT_WIDTH_FACTOR = 0.58;
+const STATE_TEXT_WIDTH_GUARD_FACTOR = 0.25;
 const VALUE_TIMING_DURATION = 180;
 const PRESS_IN_DURATION = 90;
 const PRESS_OUT_DURATION = 140;
@@ -358,6 +359,45 @@ function getTextLength(text: string | undefined) {
   return text == null ? 0 : Array.from(text).length;
 }
 
+function isWideGlyph(codePoint: number) {
+  return (
+    (codePoint >= 0x1100 && codePoint <= 0x115f) ||
+    (codePoint >= 0x2329 && codePoint <= 0x232a) ||
+    (codePoint >= 0x2e80 && codePoint <= 0xa4cf) ||
+    (codePoint >= 0xac00 && codePoint <= 0xd7a3) ||
+    (codePoint >= 0xf900 && codePoint <= 0xfaff) ||
+    (codePoint >= 0xfe10 && codePoint <= 0xfe6f) ||
+    (codePoint >= 0xff00 && codePoint <= 0xff60) ||
+    (codePoint >= 0xffe0 && codePoint <= 0xffe6) ||
+    (codePoint >= 0x1f000 && codePoint <= 0x1faff)
+  );
+}
+
+function estimateStateTextWidth(text: string | undefined, fontSize: number) {
+  const glyphs = Array.from(text ?? '');
+  if (glyphs.length === 0) return 0;
+
+  let widthUnits = 0;
+  for (const glyph of glyphs) {
+    const codePoint = glyph.codePointAt(0) ?? 0;
+    if (isWideGlyph(codePoint)) {
+      widthUnits += 1;
+    } else if (/\s/.test(glyph)) {
+      widthUnits += 0.32;
+    } else if (/[ilI.,'`|!]/.test(glyph)) {
+      widthUnits += 0.34;
+    } else if (/[mwMW@#%&]/.test(glyph)) {
+      widthUnits += 0.82;
+    } else if (/[A-Z0-9]/.test(glyph)) {
+      widthUnits += 0.62;
+    } else {
+      widthUnits += 0.56;
+    }
+  }
+
+  return Math.max(getTextLength(text) * fontSize * STATE_TEXT_WIDTH_FACTOR, widthUnits * fontSize);
+}
+
 function SwitchImpl(
   {
     checked: checkedProp,
@@ -473,11 +513,14 @@ function SwitchImpl(
   const stateTextInset = resolveNonNegativeNumber(layout?.textInset, metrics.textInset);
   const labelGap = resolveNonNegativeNumber(layout?.labelGap, metrics.labelGap);
   const hasStateText = stateText?.checked != null || stateText?.unchecked != null;
-  const maxStateTextLength = Math.max(getTextLength(stateText?.checked), getTextLength(stateText?.unchecked));
+  const maxStateTextWidth = Math.max(
+    estimateStateTextWidth(stateText?.checked, stateTextSize),
+    estimateStateTextWidth(stateText?.unchecked, stateTextSize)
+  );
   const stateTextSlotWidth = hasStateText
     ? Math.max(
         metrics.textSlotMinWidth,
-        maxStateTextLength * stateTextSize * STATE_TEXT_WIDTH_FACTOR + stateTextInset * 2
+        maxStateTextWidth + stateTextSize * STATE_TEXT_WIDTH_GUARD_FACTOR + stateTextInset * 2
       )
     : 0;
   const trackWidth = hasStateText
