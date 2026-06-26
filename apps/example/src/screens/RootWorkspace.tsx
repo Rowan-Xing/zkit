@@ -37,6 +37,7 @@ import {
   SurfacesGuidePage,
   ToolsGuidePage,
 } from './GuidePages';
+import { ActionDialogsGuidePage } from './ActionDialogsGuidePage';
 
 type WorkspaceRouteKey =
   | 'overview'
@@ -47,6 +48,7 @@ type WorkspaceRouteKey =
   | 'surfaces'
   | 'pickers'
   | 'services'
+  | 'dialogs'
   | 'tools';
 
 type WorkspaceRoute = {
@@ -66,6 +68,7 @@ const WORKSPACE_ROUTE_KEYS: readonly WorkspaceRouteKey[] = [
   'surfaces',
   'pickers',
   'services',
+  'dialogs',
   'tools',
 ];
 
@@ -78,6 +81,7 @@ const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
   surfaces: '/surfaces',
   pickers: '/pickers',
   services: '/services',
+  dialogs: '/dialogs',
   tools: '/tools',
 };
 
@@ -203,6 +207,13 @@ export function RootWorkspace({
         caption: t('example.page.services.caption'),
         iconName: 'command',
         Screen: ServicesGuidePage,
+      },
+      {
+        key: 'dialogs',
+        title: t('example.page.dialogs.title'),
+        caption: t('example.page.dialogs.caption'),
+        iconName: 'message-circle',
+        Screen: ActionDialogsGuidePage,
       },
       {
         key: 'tools',

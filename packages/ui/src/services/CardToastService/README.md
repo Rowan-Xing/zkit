@@ -19,6 +19,7 @@ export function App() {
 - 默认 `strategy: 'replace'`，新提示替换当前提示，避免连续操作时堆积。
 - 默认 `duration: 2400`，传 `duration: 0` 时不会自动关闭，并会自动显示关闭按钮。
 - 动画只使用 opacity / transform，避免布局动画和 JS 高频驱动。
+- Toast 是全局轻反馈层，默认显示在 Dialog、Picker 等交互遮罩之上；阻塞式 Loading、图片预览等最高优先级浮层仍应高于 Toast。
 
 ## 使用方式
 

@@ -99,6 +99,9 @@ importers:
       '@types/react':
         specifier: ~19.1.17
         version: 19.1.17
+      babel-preset-expo:
+        specifier: 54.0.10
+        version: 54.0.10(@babel/core@7.29.0)(@babel/runtime@7.29.2)(expo@54.0.33(@babel/core@7.29.0)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3))(react-refresh@0.14.2)
       react-native-svg-transformer:
         specifier: ^1.5.1
         version: 1.5.3(react-native-svg@15.12.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(typescript@5.9.3)

@@ -33,6 +33,8 @@ export type ActionDialogActionContext = {
   dismiss: (reason?: Extract<ActionDialogDismissReason, 'api'>) => void;
 };
 
+export type ActionDialogActionPressResult = void | false;
+
 export type ActionDialogAction = {
   key?: string;
   role?: ActionDialogActionRole;
@@ -44,7 +46,7 @@ export type ActionDialogAction = {
   loading?: boolean;
   accessibilityLabel?: string;
   testID?: ViewProps['testID'];
-  onPress?: (context: ActionDialogActionContext) => void | boolean | Promise<void | boolean>;
+  onPress?: (context: ActionDialogActionContext) => ActionDialogActionPressResult;
 };
 
 export type ActionDialogResolvedAction = Required<
@@ -56,7 +58,7 @@ export type ActionDialogFooterRenderContext = {
   actions: ActionDialogResolvedAction[];
   layout: ActionDialogResolvedFooterLayout;
   close: () => void;
-  pressAction: (key: string) => void | Promise<void>;
+  pressAction: (key: string) => void;
 };
 
 export type ActionDialogFooterOptions = {
@@ -107,7 +109,7 @@ export type ActionDialogOpenChangeMeta = {
 
 export type ActionDialogRef = {
   close: (reason?: Extract<ActionDialogDismissReason, 'api'>) => void;
-  pressAction: (key: string) => void | Promise<void>;
+  pressAction: (key: string) => void;
   getOpen: () => boolean;
 };
 

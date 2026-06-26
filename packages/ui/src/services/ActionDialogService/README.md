@@ -12,6 +12,7 @@
 - 声明式组件拥有状态模型；service 只调度宿主实例，避免半受控状态竞争。
 - `message` 承载简单正文，`children` 承载复杂内容；不再使用含糊的 `content`。
 - action 的 `role` 决定结果语义，`tone/variant` 决定视觉，不把业务结果和样式绑死。
+- ActionDialog 只确认用户意图，不承接业务异步；确认后直接关闭，异步进度与结果态交给 `loading.promise()`。
 - 默认同一时刻只显示一个全局 dialog；新调用会替换旧调用并以 `replace` 结算。需要串行展示时传 `collisionStrategy: 'queue'`。
 - 默认不点蒙层关闭，Android back / iOS accessibility escape 可关闭；这是确认类弹窗更稳妥的默认行为。
 - `actionDialog` 全局服务默认使用顶层 `inline` 宿主，避开 Android 触发时创建原生 Modal 窗口的延迟；声明式组件默认仍用 `modal`，也可按场景切到 `hostMode="inline"`。
@@ -37,7 +38,7 @@ import { ActionDialog } from 'zkit-ui';
 ## 命令式确认
 
 ```tsx
-import { actionDialog } from 'zkit-ui';
+import { actionDialog, loading } from 'zkit-ui';
 
 const confirmed = await actionDialog.confirm({
   title: '删除确认',
@@ -45,23 +46,38 @@ const confirmed = await actionDialog.confirm({
   tone: 'danger',
   confirmLabel: '删除',
 });
+
+if (confirmed) {
+  await loading.promise(remove(), {
+    loading: '删除中',
+    success: '已删除',
+    error: '删除失败',
+  });
+}
 ```
 
 ## 自定义动作
 
 ```tsx
 const handle = actionDialog.open({
-  title: '发布确认',
-  message: '确认立即发布当前内容？',
+  title: '离开页面',
+  message: '还有未保存内容，确认离开？',
   actions: [
     { key: 'cancel', role: 'cancel' },
     {
-      key: 'publish',
-      role: 'confirm',
-      label: '发布',
-      onPress: async () => {
-        await publish();
+      key: 'stay',
+      role: 'neutral',
+      label: '继续编辑',
+      closeOnPress: false,
+      onPress: ({ dismiss }) => {
+        dismiss();
+        return false;
       },
+    },
+    {
+      key: 'leave',
+      role: 'confirm',
+      label: '离开',
     },
   ],
 });
@@ -69,7 +85,7 @@ const handle = actionDialog.open({
 const result = await handle.result;
 ```
 
-`onPress` 返回 `false` 会阻止默认关闭；返回 Promise 时按钮会进入防重入 loading 态。
+`onPress` 是同步拦截钩子；同步返回 `false` 会阻止默认关闭。业务异步不要放进 `onPress`，应在弹窗关闭并得到确认结果后用 `loading.promise()` 展示 loading / success / error。
 
 ## 自定义 Footer
 

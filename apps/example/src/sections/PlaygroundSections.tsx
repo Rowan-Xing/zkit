@@ -1211,7 +1211,6 @@ export const PickersSection = React.memo(function PickersSection({
 type ServicesSectionProps = {
   serviceChoice: string;
   onCaptchaOpen: () => void;
-  onDialog: () => void;
   onGlobalPicker: () => void;
   onLoading: () => void;
   onPermissionPurpose: () => void;
@@ -1220,7 +1219,6 @@ type ServicesSectionProps = {
 export const ServicesSection = React.memo(function ServicesSection({
   serviceChoice,
   onCaptchaOpen,
-  onDialog,
   onGlobalPicker,
   onLoading,
   onPermissionPurpose,
@@ -1241,14 +1239,6 @@ export const ServicesSection = React.memo(function ServicesSection({
           color="#0F9F6E"
           buttonLabel={t('example.common.show')}
           onPress={() => toast.success(t('example.services.toastSaved'), { duration: 1400 })}
-        />
-        <ServiceActionCard
-          iconName="layers"
-          title={t('example.services.dialogTitle')}
-          subtitle={t('example.services.dialogSubtitle')}
-          color="#2563EB"
-          buttonLabel={t('example.common.open')}
-          onPress={onDialog}
         />
         <ServiceActionCard
           iconName="loader"

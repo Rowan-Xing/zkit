@@ -13,6 +13,7 @@ export type ShowcaseNavKey =
   | 'surfaces'
   | 'pickers'
   | 'services'
+  | 'dialogs'
   | 'tools';
 
 export type ShowcaseNavItem = {
@@ -39,6 +40,7 @@ export const showcaseNavItems: ShowcaseNavItem[] = [
   { key: 'surfaces', titleKey: 'example.nav.surfaces.title', captionKey: 'example.nav.surfaces.caption' },
   { key: 'pickers', titleKey: 'example.nav.pickers.title', captionKey: 'example.nav.pickers.caption' },
   { key: 'services', titleKey: 'example.nav.services.title', captionKey: 'example.nav.services.caption' },
+  { key: 'dialogs', titleKey: 'example.nav.dialogs.title', captionKey: 'example.nav.dialogs.caption' },
   { key: 'tools', titleKey: 'example.nav.tools.title', captionKey: 'example.nav.tools.caption' },
 ];
 

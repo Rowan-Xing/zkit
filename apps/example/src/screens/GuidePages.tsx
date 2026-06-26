@@ -9,7 +9,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   SliderCaptcha,
-  actionDialog,
   loading,
   permissionPurposeDialog,
   pickerService,
@@ -199,13 +198,12 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
   services: {
     title: 'Provider Services',
     description:
-      '服务层把 Toast、Dialog、Loading、Picker、权限说明、图片预览和滑块验证挂到 ComponentLibProvider，业务用命令式 API 发起一次性流程。',
+      '服务层把 Toast、Loading、Picker、权限说明、图片预览和滑块验证挂到 ComponentLibProvider，业务用命令式 API 发起一次性流程。',
     blocks: [
       {
         title: '全局服务',
         items: [
           'toast.success / warning / error / info 覆盖轻反馈。',
-          'actionDialog.confirm 返回 Promise<boolean>，适合确认类流程。',
           'loading.promise 绑定异步任务状态，成功、失败、加载文案集中配置。',
           'pickerService.pick 复用 Picker 弹层能力，适合无需声明式挂载的选择流程。',
         ],
@@ -219,8 +217,8 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
         ],
       },
     ],
-    api: ['toast', 'actionDialog', 'loading.promise', 'pickerService', 'permissionPurposeDialog', 'imagePreview', 'SliderCaptcha'],
-    snippet: `await actionDialog.confirm({ title: 'Run action' });\n\nawait loading.promise(save(), {\n  loading: 'Saving',\n  success: 'Saved',\n  error: 'Failed',\n});\n\ntoast.success('Done');`,
+    api: ['toast', 'loading.promise', 'pickerService', 'permissionPurposeDialog', 'imagePreview', 'SliderCaptcha'],
+    snippet: `await loading.promise(save(), {\n  loading: 'Saving',\n  success: 'Saved',\n  error: 'Failed',\n});\n\ntoast.success('Done');`,
   },
   tools: {
     title: 'zkit-tools',
@@ -396,13 +394,12 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
   services: {
     title: 'Provider Services',
     description:
-      'Provider services mount toast, dialog, loading, picker, permission purpose, image preview, and captcha flows under ComponentLibProvider for command-style app usage.',
+      'Provider services mount toast, loading, picker, permission purpose, image preview, and captcha flows under ComponentLibProvider for command-style app usage.',
     blocks: [
       {
         title: 'Global services',
         items: [
           'toast.success / warning / error / info cover lightweight feedback.',
-          'actionDialog.confirm returns Promise<boolean> for confirmation flows.',
           'loading.promise binds async task status to loading, success, and error copy.',
           'pickerService.pick reuses Picker sheet behavior without declarative mounting.',
         ],
@@ -416,8 +413,8 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
         ],
       },
     ],
-    api: ['toast', 'actionDialog', 'loading.promise', 'pickerService', 'permissionPurposeDialog', 'imagePreview', 'SliderCaptcha'],
-    snippet: `await actionDialog.confirm({ title: 'Run action' });\n\nawait loading.promise(save(), {\n  loading: 'Saving',\n  success: 'Saved',\n  error: 'Failed',\n});\n\ntoast.success('Done');`,
+    api: ['toast', 'loading.promise', 'pickerService', 'permissionPurposeDialog', 'imagePreview', 'SliderCaptcha'],
+    snippet: `await loading.promise(save(), {\n  loading: 'Saving',\n  success: 'Saved',\n  error: 'Failed',\n});\n\ntoast.success('Done');`,
   },
   tools: {
     title: 'zkit-tools',
@@ -677,20 +674,6 @@ export const ServicesGuidePage = React.memo(function ServicesGuidePage() {
     toast.info(t('example.toast.selected', { label: result.label }), { duration: 1200 });
   }, [serviceChoice, t]);
 
-  const handleDialog = React.useCallback(async () => {
-    const confirmed = await actionDialog.confirm({
-      title: t('example.dialog.title'),
-      message: t('example.dialog.content'),
-      confirmLabel: t('example.dialog.confirm'),
-      cancelLabel: t('example.common.cancel'),
-      footer: { layout: 'row' },
-    });
-
-    if (confirmed) {
-      toast.success(t('example.dialog.confirmed'), { duration: 1200 });
-    }
-  }, [t]);
-
   const handleLoading = React.useCallback(async () => {
     await loading.promise(wait(900), {
       loading: t('example.loading.loading'),
@@ -741,7 +724,6 @@ export const ServicesGuidePage = React.memo(function ServicesGuidePage() {
         <ServicesSection
           serviceChoice={t(`example.area.${serviceChoice}`)}
           onCaptchaOpen={openCaptcha}
-          onDialog={handleDialog}
           onGlobalPicker={handleGlobalPicker}
           onLoading={handleLoading}
           onPermissionPurpose={handlePermissionPurpose}

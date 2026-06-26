@@ -94,10 +94,12 @@ const KEYBOARD_SPRING = {
 const KEYBOARD_CLEARANCE = wp(12);
 const CARD_ENTER_SCALE = 0.92;
 const CARD_EXIT_SCALE = 0.985;
-
-function isPromiseLike(value: unknown): value is Promise<unknown> {
-  return !!value && typeof (value as { then?: unknown }).then === 'function';
-}
+const BAR_FOOTER_HEIGHT = wp(52);
+const BAR_ACTION_BUTTON_LAYOUT: React.ComponentProps<typeof Button>['layout'] = {
+  height: BAR_FOOTER_HEIGHT,
+  minHeight: BAR_FOOTER_HEIGHT,
+  paddingVertical: 0,
+};
 
 function getKeyboardTopInWindow(event: KeyboardEvent) {
   const windowHeight = Dimensions.get('window').height;
@@ -166,7 +168,6 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
   const [innerOpen, setInnerOpen] = React.useState(defaultOpen);
   const actualOpen = isOpenControlled ? !!open : innerOpen;
   const [mounted, setMounted] = React.useState(actualOpen);
-  const [pendingActionKey, setPendingActionKey] = React.useState<string | null>(null);
   const dialogHeightRef = React.useRef(0);
   const keyboardMetricsRef = React.useRef<{ top: number } | null>(null);
   const closingRequestedRef = React.useRef(false);
@@ -267,7 +268,6 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
       return;
     }
 
-    setPendingActionKey(null);
     if (!mountedRef.current) return;
     dismissCompletePendingRef.current = true;
     if (motion === 'none') {
@@ -390,8 +390,8 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
   }, [actualOpen, dismissWithReason, hostMode, mounted, resolvedDismiss.backPress]);
 
   const pressAction = React.useCallback(
-    async (key: string) => {
-      if (disabled || pendingActionKey) return;
+    (key: string) => {
+      if (disabled) return;
       const action = resolvedActions.find((item) => item.key === key);
       if (!action || action.disabled || action.loading) return;
 
@@ -412,11 +412,7 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
       };
 
       try {
-        const maybeResult = action.onPress?.(context);
-        if (isPromiseLike(maybeResult)) {
-          setPendingActionKey(action.key);
-        }
-        const handlerResult = await maybeResult;
+        const handlerResult = action.onPress?.(context);
         if (handled) return;
         if (handlerResult !== false && action.closeOnPress) {
           requestClose(actionResult);
@@ -426,11 +422,9 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
         if (!onActionError && typeof __DEV__ !== 'undefined' && __DEV__) {
           console.warn('[actionDialog] action onPress failed', error);
         }
-      } finally {
-        setPendingActionKey((current) => (current === action.key ? null : current));
       }
     },
-    [disabled, onActionError, pendingActionKey, requestClose, resolvedActions]
+    [disabled, onActionError, requestClose, resolvedActions]
   );
 
   React.useImperativeHandle(
@@ -466,8 +460,8 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
 
   const renderAction = React.useCallback(
     (action: ActionDialogResolvedAction, index: number) => {
-      const actionLoading = pendingActionKey === action.key || action.loading;
-      const actionDisabled = disabled || Boolean(pendingActionKey) || action.disabled;
+      const actionLoading = action.loading;
+      const actionDisabled = disabled || action.disabled;
 
       if (resolvedFooterLayout === 'bar') {
         return (
@@ -487,6 +481,7 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
               pressEffect="highlight"
               shape="square"
               size="md"
+              layout={BAR_ACTION_BUTTON_LAYOUT}
               testID={action.testID}
               tone={action.tone === 'danger' ? 'danger' : action.tone}
               variant="ghost"
@@ -519,7 +514,6 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
     },
     [
       disabled,
-      pendingActionKey,
       pressAction,
       resolvedColors.border,
       resolvedFooterLayout,
@@ -743,7 +737,7 @@ const styles = StyleSheet.create({
   barFooter: {
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    minHeight: wp(52),
+    height: BAR_FOOTER_HEIGHT,
   },
   barActionCell: {
     flex: 1,

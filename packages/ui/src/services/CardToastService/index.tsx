@@ -207,7 +207,7 @@ const DEFAULT_CLOSE_BUTTON = false;
 const DEFAULT_LIVE_REGION: Required<ToastDefaults>['accessibilityLiveRegion'] = 'polite';
 const MAX_VISIBLE_TOASTS = 5;
 const MAX_PENDING_TOASTS = 20;
-const TOAST_HOST_Z_INDEX = 1500;
+const TOAST_HOST_Z_INDEX = 9200;
 const DEFAULT_TOAST_ID_PREFIX = 'toast';
 
 const EMPTY_SNAPSHOT: ToastSnapshot = { items: [] };

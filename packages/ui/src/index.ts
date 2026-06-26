@@ -284,6 +284,7 @@ export { ActionDialog, actionDialog, ActionDialogProvider } from './services/Act
 export type {
   ActionDialogAction,
   ActionDialogActionContext,
+  ActionDialogActionPressResult,
   ActionDialogActionResult,
   ActionDialogActionRole,
   ActionDialogActionTone,

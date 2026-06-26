@@ -3,6 +3,7 @@ export { ActionDialogProvider, actionDialog } from './service';
 export type {
   ActionDialogAction,
   ActionDialogActionContext,
+  ActionDialogActionPressResult,
   ActionDialogActionResult,
   ActionDialogActionRole,
   ActionDialogActionTone,
