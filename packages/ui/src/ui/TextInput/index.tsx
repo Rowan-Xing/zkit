@@ -54,7 +54,6 @@ export type TextInputLayout = {
 export type TextInputColors = {
   background?: string;
   border?: string;
-  focusBorder?: string;
   text?: string;
   placeholder?: ColorValue;
   label?: string;
@@ -313,18 +312,14 @@ function normalizeRows(value: number | undefined, fallback: number) {
 }
 
 function resolveVisualColors({
-  accentColor,
   colors,
   disabled,
-  focused,
   status,
   theme,
   variant,
 }: {
-  accentColor: string;
   colors?: TextInputColors;
   disabled: boolean;
-  focused: boolean;
   status: TextInputStatus;
   theme: Theme;
   variant: TextInputVariant;
@@ -337,7 +332,7 @@ function resolveVisualColors({
         ? colors?.warning ?? SEMANTIC_COLORS.warning
         : status === 'success'
           ? colors?.success ?? SEMANTIC_COLORS.success
-          : accentColor;
+          : undefined;
 
   const baseBackground =
     variant === 'plain'
@@ -346,10 +341,8 @@ function resolveVisualColors({
         ? subtleSurface
         : theme.colors.surface;
   const baseBorder = variant === 'plain' ? 'transparent' : theme.colors.border;
-  const focusedBorder = colors?.focusBorder ?? statusColor;
-  const emphasizedBorder = status === 'default' ? focusedBorder : statusColor;
 
-  const borderColor = focused || status !== 'default' ? emphasizedBorder : colors?.border ?? baseBorder;
+  const borderColor = statusColor ?? colors?.border ?? baseBorder;
 
   if (disabled) {
     return {
@@ -370,14 +363,7 @@ function resolveVisualColors({
     textColor: colors?.text ?? theme.colors.onSurface,
     placeholderColor: colors?.placeholder ?? theme.colors.muted,
     labelColor: colors?.label ?? theme.colors.onSurface,
-    messageColor:
-      status === 'error'
-        ? colors?.error ?? SEMANTIC_COLORS.danger
-        : status === 'warning'
-          ? colors?.warning ?? SEMANTIC_COLORS.warning
-          : status === 'success'
-            ? colors?.success ?? SEMANTIC_COLORS.success
-            : colors?.description ?? theme.colors.muted,
+    messageColor: statusColor ?? colors?.description ?? theme.colors.muted,
     countColor: colors?.description ?? theme.colors.muted,
     iconColor: colors?.icon ?? theme.colors.muted,
   };
@@ -506,7 +492,6 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   const currentValueRef = React.useRef(isControlled ? value ?? '' : initialValueRef.current);
   const shouldTrackValue = clearable || showCount || renderCount != null;
   const [trackedValue, setTrackedValue] = React.useState(() => currentValueRef.current);
-  const [focused, setFocused] = React.useState(false);
 
   if (isControlled) {
     currentValueRef.current = value ?? '';
@@ -536,15 +521,13 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   const visualColors = React.useMemo(
     () =>
       resolveVisualColors({
-        accentColor,
         colors,
         disabled,
-        focused,
         status: resolvedStatus,
         theme,
         variant,
       }),
-    [accentColor, colors, disabled, focused, resolvedStatus, theme, variant]
+    [colors, disabled, resolvedStatus, theme, variant]
   );
 
   const displayValue = isControlled ? value ?? '' : trackedValue;
@@ -688,7 +671,6 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
 
   const handleFocus = React.useCallback(
     (event: Parameters<NonNullable<TextInputPrimitiveProps['onFocus']>>[0]) => {
-      setFocused(true);
       onFocus?.(event);
     },
     [onFocus]
@@ -696,7 +678,6 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
 
   const handleBlur = React.useCallback(
     (event: Parameters<NonNullable<TextInputPrimitiveProps['onBlur']>>[0]) => {
-      setFocused(false);
       onBlur?.(event);
     },
     [onBlur]

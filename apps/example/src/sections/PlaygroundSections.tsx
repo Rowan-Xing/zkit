@@ -401,6 +401,34 @@ type InputsSectionProps = {
   onNoteChange: (next: string) => void;
 };
 
+type FormDemoBlockProps = {
+  title: string;
+  caption: string;
+  children: React.ReactNode;
+};
+
+const FormDemoBlock = React.memo(function FormDemoBlock({
+  title,
+  caption,
+  children,
+}: FormDemoBlockProps) {
+  const theme = useTheme();
+
+  return (
+    <View style={styles.formBlock}>
+      <View style={styles.formBlockHeader}>
+        <Text style={[styles.formBlockTitle, { color: theme.colors.onSurface }]}>
+          {title}
+        </Text>
+        <Text style={[styles.formBlockCaption, { color: theme.colors.muted }]}>
+          {caption}
+        </Text>
+      </View>
+      <View style={styles.formBlockBody}>{children}</View>
+    </View>
+  );
+});
+
 export const InputsSection = React.memo(function InputsSection({
   enabled,
   note,
@@ -418,163 +446,221 @@ export const InputsSection = React.memo(function InputsSection({
       accentColor="#0F9F6E"
     >
       <View style={styles.fieldStack}>
-        <TextInput
-          value={note}
-          onChange={onNoteChange}
-          label={t('example.forms.noteLabel')}
-          description={t('example.forms.noteDescription')}
-          placeholder={t('example.forms.placeholder')}
-          clearable
-          maxLength={120}
-          returnKeyType="done"
-          showCount
-        />
-
-        <TextInput
-          defaultValue="128.00"
-          label={t('example.forms.amountLabel')}
-          description={t('example.forms.amountDescription')}
-          prefix="$"
-          suffix="USD"
-          variant="filled"
-          tone="success"
-          keyboardType="decimal-pad"
-          inputMode="decimal"
-          clearable
-        />
-
-        <TextInput
-          defaultValue={t('example.forms.validationValue')}
-          label={t('example.forms.validationLabel')}
-          error={t('example.forms.validationError')}
-          status="error"
-          clearable
-        />
-
-        <TextInput
-          defaultValue={t('example.forms.multilineValue')}
-          label={t('example.forms.multilineLabel')}
-          description={t('example.forms.multilineDescription')}
-          variant="plain"
-          status="warning"
-          multiline
-          minRows={3}
-          maxRows={5}
-          showCount
-          maxLength={160}
-        />
-
-        <View style={styles.dualColumnGrid}>
-          <TextInput
-            defaultValue={t('example.forms.readOnlyValue')}
-            label={t('example.forms.readOnlyLabel')}
-            readOnly
-            variant="outline"
-            size="sm"
-            style={styles.dualColumnItem}
-          />
-          <TextInput
-            defaultValue={t('example.forms.disabledValue')}
-            label={t('example.forms.disabledLabel')}
-            disabled
-            variant="outline"
-            size="sm"
-            style={styles.dualColumnItem}
-          />
-        </View>
-
-        <View
-          style={[
-            styles.switchRow,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
+        <FormDemoBlock
+          title={t('example.forms.inputGroupTitle')}
+          caption={t('example.forms.inputGroupCaption')}
         >
-          <View style={styles.switchCopy}>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
-              {t('example.forms.notifications')}
-            </Text>
-            <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
-              {enabled ? t('example.forms.enabled') : t('example.forms.disabled')}
-            </Text>
-          </View>
-          <Switch
-            checked={enabled}
-            stateText={{
-              checked: t('example.forms.on'),
-              unchecked: t('example.forms.off'),
-            }}
-            onCheckedChange={onEnabledChange}
+          <TextInput
+            defaultValue={t('example.forms.searchValue')}
+            label={t('example.forms.searchLabel')}
+            description={t('example.forms.searchDescription')}
+            placeholder={t('example.forms.searchPlaceholder')}
+            prefix={renderIcon('search', theme.colors.muted, wp(18))}
+            clearable
+            returnKeyType="search"
+            inputMode="search"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
-        </View>
 
-        <View style={styles.dualColumnGrid}>
-          <Switch
-            label={t('example.forms.switchSmallInfo')}
-            description={t('example.forms.switchLabelPlacementEnd')}
-            defaultChecked
-            size="sm"
-            tone="info"
-            stateText={{ checked: t('example.forms.switchOnShort'), unchecked: t('example.forms.switchOffShort') }}
-            style={styles.dualColumnItem}
+          <TextInput
+            value={note}
+            onChange={onNoteChange}
+            label={t('example.forms.noteLabel')}
+            description={t('example.forms.noteDescription')}
+            placeholder={t('example.forms.placeholder')}
+            clearable
+            maxLength={120}
+            returnKeyType="done"
+            showCount
           />
-          <Switch
-            label={t('example.forms.switchLoading')}
-            description={t('example.forms.switchBusyState')}
-            checked
-            loading
-            tone="warning"
-            style={styles.dualColumnItem}
-          />
-          <Switch
-            label={t('example.forms.switchDisabled')}
-            description={t('example.forms.switchNotInteractive')}
-            defaultChecked
-            disabled
-            style={styles.dualColumnItem}
-          />
-          <Switch
-            label={t('example.forms.switchCustom')}
-            defaultChecked
-            colors={{ checkedTrack: '#111827', thumb: '#FFFFFF', uncheckedTrack: '#CBD5E1' }}
-            layout={{ width: wp(58), height: wp(32), thumbInset: wp(4), textSize: wp(10) }}
-            style={styles.dualColumnItem}
-          />
-        </View>
 
-        <View
-          style={[
-            styles.switchRow,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
-        >
-          <View style={styles.switchCopy}>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
-              {t('example.forms.deliveryLane')}
-            </Text>
-            <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
-              {t('example.forms.deliveryTone')}
-            </Text>
-          </View>
-          <Switch
-            defaultChecked
-            size="lg"
+          <TextInput
+            defaultValue="128.00"
+            label={t('example.forms.amountLabel')}
+            description={t('example.forms.amountDescription')}
+            prefix="$"
+            suffix="USD"
+            variant="filled"
             tone="success"
-            stateText={{
-              checked: t('example.forms.live'),
-              unchecked: t('example.forms.hold'),
-            }}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+            clearable
           />
-        </View>
+        </FormDemoBlock>
 
-        <View
-          style={[
-            styles.spinnerRow,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-          ]}
+        <FormDemoBlock
+          title={t('example.forms.feedbackGroupTitle')}
+          caption={t('example.forms.feedbackGroupCaption')}
         >
-          <LoadingSpinner size={wp(24)} color={theme.colors.primary} />
-          <Text style={[styles.controlValue, { color: theme.colors.muted }]}>{t('example.forms.spinner')}</Text>
-        </View>
+          <TextInput
+            defaultValue={t('example.forms.validationValue')}
+            label={t('example.forms.validationLabel')}
+            error={t('example.forms.validationError')}
+            status="error"
+            clearable
+          />
+
+          <TextInput
+            defaultValue={t('example.forms.multilineValue')}
+            label={t('example.forms.multilineLabel')}
+            description={t('example.forms.multilineDescription')}
+            variant="outline"
+            status="warning"
+            multiline
+            minRows={3}
+            maxRows={5}
+            showCount
+            maxLength={160}
+          />
+        </FormDemoBlock>
+
+        <FormDemoBlock
+          title={t('example.forms.stateGroupTitle')}
+          caption={t('example.forms.stateGroupCaption')}
+        >
+          <View style={styles.dualColumnGrid}>
+            <TextInput
+              defaultValue={t('example.forms.readOnlyValue')}
+              label={t('example.forms.readOnlyLabel')}
+              readOnly
+              variant="outline"
+              size="sm"
+              style={styles.dualColumnItem}
+            />
+            <TextInput
+              defaultValue={t('example.forms.disabledValue')}
+              label={t('example.forms.disabledLabel')}
+              disabled
+              variant="outline"
+              size="sm"
+              style={styles.dualColumnItem}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.switchRow,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            <View style={styles.switchCopy}>
+              <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+                {t('example.forms.notifications')}
+              </Text>
+              <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
+                {enabled ? t('example.forms.enabled') : t('example.forms.disabled')}
+              </Text>
+            </View>
+            <Switch
+              checked={enabled}
+              stateText={{
+                checked: t('example.forms.on'),
+                unchecked: t('example.forms.off'),
+              }}
+              onCheckedChange={onEnabledChange}
+            />
+          </View>
+
+          <View style={styles.switchOptionStack}>
+            <Switch
+              label={t('example.forms.switchSmallInfo')}
+              description={t('example.forms.switchLabelPlacementEnd')}
+              defaultChecked
+              size="sm"
+              tone="info"
+              stateText={{
+                checked: t('example.forms.switchOnShort'),
+                unchecked: t('example.forms.switchOffShort'),
+              }}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.forms.switchLoading')}
+              description={t('example.forms.switchBusyState')}
+              checked
+              loading
+              tone="warning"
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.forms.switchDisabled')}
+              description={t('example.forms.switchNotInteractive')}
+              defaultChecked
+              disabled
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.forms.switchCustom')}
+              defaultChecked
+              colors={{
+                checkedTrack: '#111827',
+                thumb: '#FFFFFF',
+                uncheckedTrack: '#CBD5E1',
+              }}
+              layout={{
+                width: wp(58),
+                height: wp(32),
+                thumbInset: wp(4),
+                textSize: wp(10),
+              }}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.switchRow,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            <View style={styles.switchCopy}>
+              <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+                {t('example.forms.deliveryLane')}
+              </Text>
+              <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
+                {t('example.forms.deliveryTone')}
+              </Text>
+            </View>
+            <Switch
+              defaultChecked
+              size="lg"
+              tone="success"
+              stateText={{
+                checked: t('example.forms.live'),
+                unchecked: t('example.forms.hold'),
+              }}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.spinnerRow,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            <LoadingSpinner size={wp(24)} color={theme.colors.primary} />
+            <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
+              {t('example.forms.spinner')}
+            </Text>
+          </View>
+        </FormDemoBlock>
       </View>
     </Section>
   );

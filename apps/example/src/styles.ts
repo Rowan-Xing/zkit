@@ -471,6 +471,26 @@ export const styles = StyleSheet.create({
     minWidth: 0,
   },
   fieldStack: {
+    gap: wp(20),
+  },
+  formBlock: {
+    gap: wp(10),
+  },
+  formBlockHeader: {
+    gap: wp(2),
+    paddingHorizontal: wp(2),
+  },
+  formBlockTitle: {
+    fontSize: wp(14),
+    fontWeight: '900',
+    lineHeight: wp(19),
+  },
+  formBlockCaption: {
+    fontSize: wp(12),
+    fontWeight: '500',
+    lineHeight: wp(17),
+  },
+  formBlockBody: {
     gap: wp(12),
   },
   dualColumnGrid: {
@@ -505,6 +525,21 @@ export const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     paddingRight: wp(14),
+  },
+  switchOptionStack: {
+    gap: wp(10),
+  },
+  switchOption: {
+    alignSelf: 'stretch',
+    borderRadius: wp(12),
+    borderWidth: wp(1),
+    minHeight: wp(58),
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(10),
+  },
+  switchOptionContent: {
+    justifyContent: 'space-between',
+    width: '100%',
   },
   controlLabel: {
     fontSize: wp(15),
