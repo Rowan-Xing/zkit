@@ -846,13 +846,13 @@ function ToastViewport({ insets, items, placement, onExited }: ToastViewportProp
 type ToastCardBodyProps = {
   item: ToastItem;
   actionContext: ToastActionContext;
+  toneConfig: ToneConfig;
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
 };
 
-function ToastCardBody({ item, actionContext, style, children }: ToastCardBodyProps) {
+function ToastCardBody({ item, actionContext, toneConfig, style, children }: ToastCardBodyProps) {
   const theme = useTheme();
-  const toneConfig = pickToneConfig(item.tone);
   const message = getDisplayContent(item);
 
   return (
@@ -886,6 +886,7 @@ function ToastCardBody({ item, actionContext, style, children }: ToastCardBodyPr
 
 function IOSToastCard({ item, placement, onExited }: ToastCardProps) {
   const actionContext = useToastActionContext(item.id);
+  const toneConfig = pickToneConfig(item.tone);
   const direction = placement === 'top' ? -1 : 1;
   const enterOffset = direction * IOS_TOAST_ENTER_OFFSET;
   const exitOffset = direction * IOS_TOAST_EXIT_OFFSET;
@@ -1005,11 +1006,23 @@ function IOSToastCard({ item, placement, onExited }: ToastCardProps) {
       accessibilityLabel={item.accessibilityLabel}
       accessibilityLiveRegion={item.accessibilityLiveRegion}
       shouldRasterizeIOS
-      style={[styles.toast, styles.toastIOS, animatedStyle, item.style]}
+      style={[
+        styles.toast,
+        styles.toastIOS,
+        styles.toastSurface,
+        { backgroundColor: toneConfig.bgColor },
+        animatedStyle,
+        item.style,
+      ]}
       testID={item.testID}
     >
       <Animated.View style={contentAnimatedStyle}>
-        <ToastCardBody item={item} actionContext={actionContext} style={styles.toastContentIOS}>
+        <ToastCardBody
+          item={item}
+          actionContext={actionContext}
+          toneConfig={toneConfig}
+          style={styles.toastContentIOS}
+        >
           <Animated.View pointerEvents="none" style={[styles.toastSheen, sheenAnimatedStyle]} />
         </ToastCardBody>
       </Animated.View>
@@ -1019,6 +1032,7 @@ function IOSToastCard({ item, placement, onExited }: ToastCardProps) {
 
 function DefaultToastCard({ item, placement, onExited }: ToastCardProps) {
   const actionContext = useToastActionContext(item.id);
+  const toneConfig = pickToneConfig(item.tone);
   const direction = placement === 'top' ? -1 : 1;
   const anim = React.useRef(new RNAnimated.Value(0)).current;
   const lastVisibleRef = React.useRef<boolean>(false);
@@ -1100,10 +1114,16 @@ function DefaultToastCard({ item, placement, onExited }: ToastCardProps) {
       accessibilityRole="alert"
       accessibilityLabel={item.accessibilityLabel}
       accessibilityLiveRegion={item.accessibilityLiveRegion}
-      style={[styles.toast, animatedStyle, item.style]}
+      style={[
+        styles.toast,
+        styles.toastSurface,
+        { backgroundColor: toneConfig.bgColor },
+        animatedStyle,
+        item.style,
+      ]}
       testID={item.testID}
     >
-      <ToastCardBody item={item} actionContext={actionContext} />
+      <ToastCardBody item={item} actionContext={actionContext} toneConfig={toneConfig} />
     </RNAnimated.View>
   );
 }
@@ -1193,6 +1213,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: wp(8),
     elevation: wp(3),
+  },
+  toastSurface: {
+    borderRadius: wp(10),
   },
   toastIOS: {
     borderRadius: wp(10),
