@@ -328,6 +328,33 @@ export const styles = StyleSheet.create({
     lineHeight: wp(20),
     marginTop: wp(10),
   },
+  examplePanelStack: {
+    gap: wp(12),
+    paddingHorizontal: wp(12),
+    paddingBottom: wp(12),
+  },
+  examplePanel: {
+    borderRadius: wp(12),
+    borderWidth: wp(1),
+    gap: wp(8),
+    padding: wp(12),
+  },
+  spinnerMatrix: {
+    alignItems: 'center',
+    borderRadius: wp(12),
+    borderWidth: wp(1),
+    flexDirection: 'row',
+    gap: wp(10),
+    justifyContent: 'space-between',
+    minHeight: wp(58),
+    paddingHorizontal: wp(12),
+  },
+  spinnerExample: {
+    alignItems: 'center',
+    flex: 1,
+    gap: wp(6),
+    justifyContent: 'center',
+  },
   statusStrip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -370,12 +397,6 @@ export const styles = StyleSheet.create({
     lineHeight: wp(18),
     marginTop: wp(2),
   },
-  buttonGrid: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: wp(10),
-  },
   actionPanel: {
     borderRadius: wp(12),
     borderWidth: wp(1),
@@ -408,8 +429,59 @@ export const styles = StyleSheet.create({
     lineHeight: wp(19),
     marginTop: wp(3),
   },
+  actionDemoStack: {
+    gap: wp(14),
+  },
+  actionDemoGroup: {
+    gap: wp(8),
+  },
+  actionDemoGroupHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: wp(8),
+  },
+  actionDemoGroupTitle: {
+    fontSize: wp(11),
+    fontWeight: '900',
+    lineHeight: wp(15),
+  },
+  actionDemoGroupRule: {
+    borderRadius: wp(999),
+    flex: 1,
+    height: wp(1),
+  },
+  actionDemoRow: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+    gap: wp(8),
+  },
+  actionDemoCell: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  actionDemoIconCell: {
+    justifyContent: 'center',
+    minWidth: wp(44),
+    width: wp(44),
+  },
+  actionDemoFill: {
+    flex: 1.3,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
   fieldStack: {
     gap: wp(12),
+  },
+  dualColumnGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(10),
+  },
+  dualColumnItem: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: wp(142),
   },
   textInput: {
     borderRadius: wp(10),

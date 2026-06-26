@@ -460,8 +460,8 @@ export const OverviewGuidePage = HomeScreen;
 export const FoundationGuidePage = React.memo(function FoundationGuidePage() {
   return (
     <TabScreenShell withTopInset={false}>
-      <GuideIntro guideKey="foundation" />
       <FoundationSection />
+      <GuideIntro guideKey="foundation" />
     </TabScreenShell>
   );
 });
@@ -492,13 +492,13 @@ export const ButtonGuidePage = React.memo(function ButtonGuidePage() {
 
   return (
     <TabScreenShell withTopInset={false}>
-      <GuideIntro guideKey="button" />
       <ButtonsSection
         busy={busy}
         centerBusy={centerBusy}
         onBusyDemo={handleBusyDemo}
         onCenterBusyDemo={handleCenterBusyDemo}
       />
+      <GuideIntro guideKey="button" />
     </TabScreenShell>
   );
 });
@@ -510,13 +510,13 @@ export const FormsGuidePage = React.memo(function FormsGuidePage() {
 
   return (
     <TabScreenShell withTopInset={false}>
-      <GuideIntro guideKey="forms" />
       <InputsSection
         enabled={enabled}
         note={note}
         onEnabledChange={setEnabled}
         onNoteChange={setNote}
       />
+      <GuideIntro guideKey="forms" />
     </TabScreenShell>
   );
 });
@@ -527,13 +527,13 @@ export const ChoiceGuidePage = React.memo(function ChoiceGuidePage() {
 
   return (
     <TabScreenShell withTopInset={false}>
-      <GuideIntro guideKey="choice" />
       <SelectionSection
         checkedItems={checkedItems}
         density={density}
         onCheckedItemsChange={setCheckedItems}
         onDensityChange={setDensity}
       />
+      <GuideIntro guideKey="choice" />
     </TabScreenShell>
   );
 });
@@ -557,7 +557,6 @@ export const PickersGuidePage = React.memo(function PickersGuidePage() {
 
   return (
     <TabScreenShell withTopInset={false}>
-      <GuideIntro guideKey="pickers" />
       <PickersSection
         address={address}
         addressLabel={addressLabel}
@@ -579,6 +578,7 @@ export const PickersGuidePage = React.memo(function PickersGuidePage() {
         onWorkflowChange={setWorkflow}
         onWorkflowLabelChange={setWorkflowLabel}
       />
+      <GuideIntro guideKey="pickers" />
     </TabScreenShell>
   );
 });
@@ -638,8 +638,8 @@ export const SurfacesGuidePage = React.memo(function SurfacesGuidePage() {
   return (
     <View style={{ flex: 1 }}>
       <TabScreenShell withTopInset={false}>
-        <GuideIntro guideKey="surfaces" />
         <SurfacesSection onOpenLinkedScroll={openLinkedScrollDemo} />
+        <GuideIntro guideKey="surfaces" />
       </TabScreenShell>
       {linkedScrollMounted ? (
         <Animated.View style={[sharedStyles.linkedRouteLayer, linkedRouteAnimatedStyle]}>
@@ -733,7 +733,6 @@ export const ServicesGuidePage = React.memo(function ServicesGuidePage() {
   return (
     <>
       <TabScreenShell withTopInset={false}>
-        <GuideIntro guideKey="services" />
         <ServicesSection
           serviceChoice={t(`example.area.${serviceChoice}`)}
           onCaptchaOpen={openCaptcha}
@@ -742,6 +741,7 @@ export const ServicesGuidePage = React.memo(function ServicesGuidePage() {
           onLoading={handleLoading}
           onPermissionPurpose={handlePermissionPurpose}
         />
+        <GuideIntro guideKey="services" />
       </TabScreenShell>
 
       <SliderCaptcha
@@ -793,11 +793,11 @@ export const ToolsGuidePage = React.memo(function ToolsGuidePage() {
 
   return (
     <TabScreenShell withTopInset={false}>
-      <GuideIntro guideKey="tools" />
       <ToolsSection
         routerGuardStatus={routerGuardStatus}
         onRouterGuardDemo={handleRouterGuardDemo}
       />
+      <GuideIntro guideKey="tools" />
     </TabScreenShell>
   );
 });

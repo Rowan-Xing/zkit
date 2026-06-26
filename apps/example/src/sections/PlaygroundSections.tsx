@@ -110,6 +110,34 @@ export const FoundationSection = React.memo(function FoundationSection() {
           </Text>
         </View>
 
+        <View style={styles.examplePanelStack}>
+          <View style={[styles.examplePanel, { backgroundColor: '#F8FAFC', borderColor: theme.colors.border }]}>
+            <Text variant="heading" size="xl" weight="bold" style={{ color: theme.colors.onSurface }}>
+              {t('example.foundation.sampleHeading')}
+            </Text>
+            <Text variant="body" size="md" tone="muted" truncate={2}>
+              {t('example.foundation.sampleBody')}
+            </Text>
+            <Text variant="code" size="sm" color={theme.colors.primary}>
+              {t('example.foundation.sampleCode')}
+            </Text>
+            <Text variant="caption" size="xs" tone="success" transform="uppercase">
+              {t('example.foundation.sampleCaption')}
+            </Text>
+          </View>
+
+          <View style={[styles.spinnerMatrix, { backgroundColor: '#FFFFFF', borderColor: theme.colors.border }]}>
+            {[wp(16), wp(22), wp(30)].map((size) => (
+              <View key={size} style={styles.spinnerExample}>
+                <LoadingSpinner size={size} color={theme.colors.primary} />
+                <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
+                  {Math.round(size)}px
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
         <View style={styles.statusStrip}>
           <FoundationStatusCell
             iconName="type"
@@ -184,52 +212,182 @@ export const ButtonsSection = React.memo(function ButtonsSection({
           </View>
         </View>
 
-        <View style={styles.buttonGrid}>
-          <Button
-            gradient={{ colors: ['#2563EB', '#0F9F6E'], direction: 'to right' }}
-            icon={renderIcon('zap', '#FFFFFF')}
-            shadow="sm"
-            onPress={() => toast.success(t('example.actions.toastPrimary'))}
-          >
-            {t('example.actions.primary')}
-          </Button>
-          <Button
-            variant="soft"
-            tone="warning"
-            icon={renderIcon('alert-triangle', '#92400E')}
-            onPress={() => toast.warning(t('example.actions.toastWarning'))}
-          >
-            {t('example.actions.warning')}
-          </Button>
-          <Button
-            variant="outline"
-            tone="danger"
-            icon={renderIcon('trash-2', '#DC2626')}
-            onPress={() => toast.error(t('example.actions.toastDanger'))}
-          >
-            {t('example.actions.danger')}
-          </Button>
-          <Button
-            variant="ghost"
-            tone="neutral"
-            icon={renderIcon('send', theme.colors.onSurface)}
-            onPress={() => toast.info(t('example.actions.toastGhost'))}
-          >
-            {t('example.actions.ghost')}
-          </Button>
-          <Button
-            iconOnly
-            shape="pill"
-            accessibilityLabel={t('example.actions.refreshA11y')}
-            icon={renderIcon('refresh-cw', '#FFFFFF')}
-            onPress={() => toast.info(t('example.actions.refreshed'))}
-          />
-          <Button loading={busy} onPress={onBusyDemo}>
-            {t('example.actions.sync')}
-          </Button>
-          <Button loading={centerBusy} loadingMode="overlay" onPress={onCenterBusyDemo}>
-            {t('example.actions.centerLoad')}
-          </Button>
+        <View style={styles.actionDemoStack}>
+          <View style={styles.actionDemoGroup}>
+            <View style={styles.actionDemoGroupHeader}>
+              <Text style={[styles.actionDemoGroupTitle, { color: theme.colors.muted }]}>
+                {t('example.actions.groupCore')}
+              </Text>
+              <View style={[styles.actionDemoGroupRule, { backgroundColor: theme.colors.border }]} />
+            </View>
+            <View style={styles.actionDemoRow}>
+              <View style={styles.actionDemoCell}>
+                <Button
+                  block
+                  size="sm"
+                  gradient={{ colors: ['#2563EB', '#0F9F6E'], direction: 'to right' }}
+                  icon={renderIcon('zap', '#FFFFFF', wp(15))}
+                  shadow="sm"
+                  onPress={() => toast.success(t('example.actions.toastPrimary'))}
+                >
+                  {t('example.actions.primary')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button
+                  block
+                  size="sm"
+                  variant="soft"
+                  tone="warning"
+                  icon={renderIcon('alert-triangle', '#92400E', wp(15))}
+                  onPress={() => toast.warning(t('example.actions.toastWarning'))}
+                >
+                  {t('example.actions.warning')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button
+                  block
+                  size="sm"
+                  variant="outline"
+                  tone="danger"
+                  icon={renderIcon('trash-2', '#DC2626', wp(15))}
+                  onPress={() => toast.error(t('example.actions.toastDanger'))}
+                >
+                  {t('example.actions.danger')}
+                </Button>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.actionDemoGroup}>
+            <View style={styles.actionDemoGroupHeader}>
+              <Text style={[styles.actionDemoGroupTitle, { color: theme.colors.muted }]}>
+                {t('example.actions.groupState')}
+              </Text>
+              <View style={[styles.actionDemoGroupRule, { backgroundColor: theme.colors.border }]} />
+            </View>
+            <View style={styles.actionDemoRow}>
+              <View style={styles.actionDemoCell}>
+                <Button
+                  block
+                  variant="ghost"
+                  tone="neutral"
+                  icon={renderIcon('send', theme.colors.onSurface, wp(16))}
+                  onPress={() => toast.info(t('example.actions.toastGhost'))}
+                >
+                  {t('example.actions.ghost')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoIconCell}>
+                <Button
+                  iconOnly
+                  shape="pill"
+                  accessibilityLabel={t('example.actions.refreshA11y')}
+                  icon={renderIcon('refresh-cw', '#FFFFFF', wp(18))}
+                  onPress={() => toast.info(t('example.actions.refreshed'))}
+                />
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button block loading={busy} onPress={onBusyDemo}>
+                  {t('example.actions.sync')}
+                </Button>
+              </View>
+            </View>
+            <View style={styles.actionDemoRow}>
+              <View style={styles.actionDemoFill}>
+                <Button block loading={centerBusy} loadingMode="overlay" onPress={onCenterBusyDemo}>
+                  {t('example.actions.centerLoad')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button block disabled variant="solid" tone="neutral">
+                  {t('example.actions.disabled')}
+                </Button>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.actionDemoGroup}>
+            <View style={styles.actionDemoGroupHeader}>
+              <Text style={[styles.actionDemoGroupTitle, { color: theme.colors.muted }]}>
+                {t('example.actions.groupSizes')}
+              </Text>
+              <View style={[styles.actionDemoGroupRule, { backgroundColor: theme.colors.border }]} />
+            </View>
+            <View style={styles.actionDemoRow}>
+              <View style={styles.actionDemoCell}>
+                <Button block size="xs" variant="solid" tone="primary">
+                  {t('example.actions.sizeXs')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button block size="sm" variant="soft" tone="success">
+                  {t('example.actions.sizeSmSoft')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button block size="md" variant="outline" tone="info">
+                  {t('example.actions.sizeMdOutline')}
+                </Button>
+              </View>
+            </View>
+            <View style={styles.actionDemoRow}>
+              <View style={styles.actionDemoCell}>
+                <Button block size="lg" shape="pill" tone="neutral">
+                  {t('example.actions.sizeLgPill')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button
+                  block
+                  variant="link"
+                  tone="info"
+                  icon={renderIcon('external-link', theme.colors.primary, wp(16))}
+                  iconPlacement="end"
+                >
+                  {t('example.actions.linkEndIcon')}
+                </Button>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.actionDemoGroup}>
+            <View style={styles.actionDemoGroupHeader}>
+              <Text style={[styles.actionDemoGroupTitle, { color: theme.colors.muted }]}>
+                {t('example.actions.groupCustom')}
+              </Text>
+              <View style={[styles.actionDemoGroupRule, { backgroundColor: theme.colors.border }]} />
+            </View>
+            <View style={styles.actionDemoRow}>
+              <View style={styles.actionDemoCell}>
+                <Button
+                  block
+                  variant="solid"
+                  colors={{ background: '#111827', text: '#FFFFFF', loading: '#FFFFFF' }}
+                  border={{ width: wp(1), color: '#111827' }}
+                  layout={{
+                    minHeight: wp(44),
+                    paddingHorizontal: wp(14),
+                    radius: wp(12),
+                    textSize: sp(14),
+                  }}
+                >
+                  {t('example.actions.customLayoutColors')}
+                </Button>
+              </View>
+              <View style={styles.actionDemoCell}>
+                <Button
+                  block
+                  shadow="md"
+                  pressEffect="scale-highlight"
+                  gradient={{ colors: ['#111827', theme.colors.primary], direction: 'to right' }}
+                >
+                  {t('example.actions.blockGradientShadow')}
+                </Button>
+              </View>
+            </View>
+          </View>
         </View>
       </View>
     </Section>
@@ -272,6 +430,59 @@ export const InputsSection = React.memo(function InputsSection({
           showCount
         />
 
+        <TextInput
+          defaultValue="128.00"
+          label={t('example.forms.amountLabel')}
+          description={t('example.forms.amountDescription')}
+          prefix="$"
+          suffix="USD"
+          variant="filled"
+          tone="success"
+          keyboardType="decimal-pad"
+          inputMode="decimal"
+          clearable
+        />
+
+        <TextInput
+          defaultValue={t('example.forms.validationValue')}
+          label={t('example.forms.validationLabel')}
+          error={t('example.forms.validationError')}
+          status="error"
+          clearable
+        />
+
+        <TextInput
+          defaultValue={t('example.forms.multilineValue')}
+          label={t('example.forms.multilineLabel')}
+          description={t('example.forms.multilineDescription')}
+          variant="plain"
+          status="warning"
+          multiline
+          minRows={3}
+          maxRows={5}
+          showCount
+          maxLength={160}
+        />
+
+        <View style={styles.dualColumnGrid}>
+          <TextInput
+            defaultValue={t('example.forms.readOnlyValue')}
+            label={t('example.forms.readOnlyLabel')}
+            readOnly
+            variant="outline"
+            size="sm"
+            style={styles.dualColumnItem}
+          />
+          <TextInput
+            defaultValue={t('example.forms.disabledValue')}
+            label={t('example.forms.disabledLabel')}
+            disabled
+            variant="outline"
+            size="sm"
+            style={styles.dualColumnItem}
+          />
+        </View>
+
         <View
           style={[
             styles.switchRow,
@@ -293,6 +504,40 @@ export const InputsSection = React.memo(function InputsSection({
               unchecked: t('example.forms.off'),
             }}
             onCheckedChange={onEnabledChange}
+          />
+        </View>
+
+        <View style={styles.dualColumnGrid}>
+          <Switch
+            label={t('example.forms.switchSmallInfo')}
+            description={t('example.forms.switchLabelPlacementEnd')}
+            defaultChecked
+            size="sm"
+            tone="info"
+            stateText={{ checked: t('example.forms.switchOnShort'), unchecked: t('example.forms.switchOffShort') }}
+            style={styles.dualColumnItem}
+          />
+          <Switch
+            label={t('example.forms.switchLoading')}
+            description={t('example.forms.switchBusyState')}
+            checked
+            loading
+            tone="warning"
+            style={styles.dualColumnItem}
+          />
+          <Switch
+            label={t('example.forms.switchDisabled')}
+            description={t('example.forms.switchNotInteractive')}
+            defaultChecked
+            disabled
+            style={styles.dualColumnItem}
+          />
+          <Switch
+            label={t('example.forms.switchCustom')}
+            defaultChecked
+            colors={{ checkedTrack: '#111827', thumb: '#FFFFFF', uncheckedTrack: '#CBD5E1' }}
+            layout={{ width: wp(58), height: wp(32), thumbInset: wp(4), textSize: wp(10) }}
+            style={styles.dualColumnItem}
           />
         </View>
 
@@ -367,6 +612,32 @@ export const SelectionSection = React.memo(function SelectionSection({
         >
           <View style={styles.selectionHeader}>
             <View style={[styles.selectionIcon, { backgroundColor: '#EEF2FF' }]}>
+              {renderIcon('check-circle', '#4F46E5', wp(18))}
+            </View>
+            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>{t('example.choice.checkboxStates')}</Text>
+          </View>
+          <View style={styles.dualColumnGrid}>
+            <Checkbox defaultChecked label={t('example.choice.checked')} description={t('example.choice.defaultChecked')} tone="success" />
+            <Checkbox defaultChecked="indeterminate" label={t('example.choice.indeterminate')} tone="warning" />
+            <Checkbox label={t('example.choice.softLg')} size="lg" variant="soft" tone="info" shape="rounded" />
+            <Checkbox
+              defaultChecked
+              disabled
+              label={t('example.choice.disabled')}
+              description={t('example.choice.lockedState')}
+              labelPlacement="start"
+            />
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.selectionBlock,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+          ]}
+        >
+          <View style={styles.selectionHeader}>
+            <View style={[styles.selectionIcon, { backgroundColor: '#EEF2FF' }]}>
               {renderIcon('check-square', '#4F46E5', wp(18))}
             </View>
             <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>CheckboxGroup</Text>
@@ -408,6 +679,26 @@ export const SelectionSection = React.memo(function SelectionSection({
             <Radio value="spacious" label={t('example.choice.spacious')} />
           </RadioGroup>
         </View>
+
+        <View
+          style={[
+            styles.selectionBlock,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+          ]}
+        >
+          <View style={styles.selectionHeader}>
+            <View style={[styles.selectionIcon, { backgroundColor: '#E8F7F1' }]}>
+              {renderIcon('circle', '#0F9F6E', wp(18))}
+            </View>
+            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>{t('example.choice.radioStates')}</Text>
+          </View>
+          <View style={styles.dualColumnGrid}>
+            <Radio defaultChecked label={t('example.choice.checked')} description={t('example.choice.standalone')} tone="success" />
+            <Radio label={t('example.choice.allowDeselect')} allowDeselect defaultChecked tone="info" />
+            <Radio label={t('example.choice.softLg')} size="lg" variant="soft" tone="warning" />
+            <Radio defaultChecked disabled label={t('example.choice.disabled')} labelPlacement="start" />
+          </View>
+        </View>
       </View>
     </Section>
   );
@@ -448,6 +739,33 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
             <AccordionContent>
               <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
                 {t('example.surfaces.accordionServicesBody')}
+              </Text>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        <Accordion
+          type="multiple"
+          defaultValue={['motion', 'mount']}
+          itemGap={wp(8)}
+          size="sm"
+          tone="info"
+          variant="filled"
+          mountStrategy="lazy"
+        >
+          <AccordionItem value="motion">
+            <AccordionTrigger title={t('example.surfaces.multipleLazyTitle')} description={t('example.surfaces.multipleLazyDescription')} />
+            <AccordionContent>
+              <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
+                {t('example.surfaces.multipleLazyBody')}
+              </Text>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="mount">
+            <AccordionTrigger title={t('example.surfaces.compactAccordionTitle')} description={t('example.surfaces.compactAccordionDescription')} />
+            <AccordionContent>
+              <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
+                {t('example.surfaces.compactAccordionBody')}
               </Text>
             </AccordionContent>
           </AccordionItem>
@@ -571,6 +889,8 @@ export const PickersSection = React.memo(function PickersSection({
   onWorkflowLabelChange,
 }: PickersSectionProps) {
   const { t } = useI18n();
+  const [month, setMonth] = React.useState('2026-04');
+  const [monthLabel, setMonthLabel] = React.useState('2026-04');
   const languageOptions = React.useMemo(
     () => [
       { value: 'en', label: t('example.language.en') },
@@ -653,6 +973,25 @@ export const PickersSection = React.memo(function PickersSection({
         >
           {({ label, placeholder }) => (
             <FieldTrigger iconName="calendar" label="DatePicker" value={label || dateLabel || placeholder} />
+          )}
+        </DatePicker>
+
+        <DatePicker
+          value={month}
+          onChange={(next, selection) => {
+            setMonth(String(next ?? ''));
+            setMonthLabel(selection.label);
+          }}
+          precision="month"
+          min="2024-01"
+          max="2030-12"
+          title={t('example.pickers.monthPrecision')}
+          labelFormat={(selection) =>
+            `${selection.parts.year}-${String(selection.parts.month ?? 1).padStart(2, '0')}`
+          }
+        >
+          {({ label, placeholder }) => (
+            <FieldTrigger iconName="calendar" label={t('example.pickers.monthLabel')} value={label || monthLabel || placeholder} />
           )}
         </DatePicker>
 
