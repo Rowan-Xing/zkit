@@ -8,7 +8,6 @@ export const Section = React.memo(function Section({
   eyebrow,
   title,
   subtitle,
-  accentColor,
   action,
   onLayout,
   children,
@@ -16,20 +15,20 @@ export const Section = React.memo(function Section({
   eyebrow?: string;
   title: string;
   subtitle?: string;
-  accentColor?: string;
   action?: React.ReactNode;
   onLayout?: (event: LayoutChangeEvent) => void;
   children: React.ReactNode;
 }) {
   const theme = useTheme();
+  const markerColor = theme.colors.primary;
 
   return (
     <View onLayout={onLayout} style={styles.section}>
       <View style={styles.sectionHeader}>
-        <View style={[styles.sectionAccent, { backgroundColor: accentColor ?? theme.colors.primary }]} />
+        <View style={[styles.sectionAccent, { backgroundColor: markerColor }]} />
         <View style={styles.sectionCopy}>
           {eyebrow ? (
-            <Text style={[styles.sectionEyebrow, { color: theme.colors.primary }]}>{eyebrow}</Text>
+            <Text style={[styles.sectionEyebrow, { color: markerColor }]}>{eyebrow}</Text>
           ) : null}
           <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>{title}</Text>
           {subtitle ? (

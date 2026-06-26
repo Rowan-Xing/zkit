@@ -88,7 +88,6 @@ export const FoundationSection = React.memo(function FoundationSection() {
       eyebrow={t('example.foundation.eyebrow')}
       title={t('example.foundation.title')}
       subtitle={t('example.foundation.subtitle')}
-      accentColor="#2563EB"
     >
       <View
         style={[
@@ -191,7 +190,6 @@ export const ButtonsSection = React.memo(function ButtonsSection({
       eyebrow={t('example.actions.eyebrow')}
       title={t('example.actions.title')}
       subtitle={t('example.actions.subtitle')}
-      accentColor="#EB5A17"
     >
       <View
         style={[
@@ -444,7 +442,6 @@ export const InputsSection = React.memo(function InputsSection({
       eyebrow={t('example.forms.eyebrow')}
       title={t('example.forms.title')}
       subtitle={t('example.forms.subtitle')}
-      accentColor="#0F9F6E"
     >
       <View style={styles.fieldStack}>
         <FormDemoBlock
@@ -745,7 +742,6 @@ export const SelectionSection = React.memo(function SelectionSection({
       eyebrow={t('example.choice.eyebrow')}
       title={t('example.choice.title')}
       subtitle={t('example.choice.subtitle')}
-      accentColor="#7C3AED"
     >
       <View style={styles.selectionGrid}>
         <ChoiceCaseCard
@@ -908,7 +904,6 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
       eyebrow={t('example.surfaces.eyebrow')}
       title={t('example.surfaces.title')}
       subtitle={t('example.surfaces.subtitle')}
-      accentColor="#334155"
     >
       <View style={styles.surfaceGrid}>
         <Accordion defaultValue="state" itemGap={wp(10)} size="md" variant="card">
@@ -1119,7 +1114,6 @@ export const PickersSection = React.memo(function PickersSection({
       eyebrow={t('example.pickers.eyebrow')}
       title={t('example.pickers.title')}
       subtitle={t('example.pickers.subtitle')}
-      accentColor="#0891B2"
     >
       <View style={styles.fieldStack}>
         <Picker
@@ -1238,7 +1232,6 @@ export const ServicesSection = React.memo(function ServicesSection({
       eyebrow={t('example.services.eyebrow')}
       title={t('example.services.title')}
       subtitle={t('example.services.subtitle')}
-      accentColor="#DB2777"
     >
       <View style={styles.serviceGrid}>
         <ServiceActionCard
@@ -1381,7 +1374,6 @@ export const ToolsSection = React.memo(function ToolsSection({
       eyebrow={t('example.tools.eyebrow')}
       title={t('example.tools.title')}
       subtitle={t('example.tools.subtitle')}
-      accentColor="#0F766E"
     >
       <View style={styles.toolGrid}>
         {toolCards.map((item) => (
