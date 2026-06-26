@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from 'react-native-bottom-tabs';
 import { wp } from 'zkit-tools';
 
 import { exampleBackgroundColor } from '../theme';
@@ -17,7 +16,7 @@ export const TabScreenShell = React.memo(function TabScreenShell({
   withTopInset = true,
 }: TabScreenShellProps) {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const topChromeHeight = insets.top + wp(66);
 
   return (
     <View style={[styles.screen, { backgroundColor: exampleBackgroundColor }]}>
@@ -30,8 +29,8 @@ export const TabScreenShell = React.memo(function TabScreenShell({
         contentContainerStyle={[
           sharedStyles.content,
           {
-            paddingTop: withTopInset ? 0 : insets.top + wp(12),
-            paddingBottom: tabBarHeight + wp(24),
+            paddingTop: withTopInset ? 0 : topChromeHeight,
+            paddingBottom: insets.bottom + wp(28),
           },
         ]}
       >

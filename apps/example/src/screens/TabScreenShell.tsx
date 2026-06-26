@@ -17,7 +17,7 @@ export const TabScreenShell = React.memo(function TabScreenShell({
 }: TabScreenShellProps) {
   const insets = useSafeAreaInsets();
   useWindowDimensions();
-  const tabBarHeight = Math.max(wp(74), insets.bottom + wp(62));
+  const topChromeHeight = insets.top + wp(66);
 
   return (
     <View style={[styles.screen, { backgroundColor: exampleBackgroundColor }]}>
@@ -29,8 +29,8 @@ export const TabScreenShell = React.memo(function TabScreenShell({
         contentContainerStyle={[
           sharedStyles.content,
           {
-            paddingTop: withTopInset ? 0 : insets.top + wp(12),
-            paddingBottom: tabBarHeight + wp(24),
+            paddingTop: withTopInset ? 0 : topChromeHeight,
+            paddingBottom: insets.bottom + wp(28),
           },
         ]}
       >

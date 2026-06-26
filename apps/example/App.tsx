@@ -6,19 +6,30 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ComponentLibProvider } from 'zkit-ui';
 
-import { RootTabs } from './src/screens/RootTabs';
+import { RootWorkspace } from './src/screens/RootWorkspace';
 import { exampleMessages, resolveExampleLocale } from './src/i18n';
-import { exampleTheme } from './src/theme';
+import {
+  defaultExampleThemePreset,
+  exampleThemePresets,
+  type ExampleThemePresetKey,
+} from './src/theme';
 
 export default function App() {
-  const locale = React.useMemo(resolveExampleLocale, []);
+  const [locale, setLocale] = React.useState(resolveExampleLocale);
+  const [themePreset, setThemePreset] = React.useState<ExampleThemePresetKey>(defaultExampleThemePreset);
+  const theme = exampleThemePresets[themePreset].theme;
 
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <ComponentLibProvider locale={locale} messages={exampleMessages[locale]} theme={exampleTheme}>
+        <ComponentLibProvider locale={locale} messages={exampleMessages[locale]} theme={theme}>
           <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-          <RootTabs />
+          <RootWorkspace
+            locale={locale}
+            themePreset={themePreset}
+            onLocaleChange={setLocale}
+            onThemePresetChange={setThemePreset}
+          />
         </ComponentLibProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
