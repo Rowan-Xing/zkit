@@ -25,6 +25,7 @@ import {
   syncY2KitWheelPickerCurrentSelection,
   type Y2KitWheelPickerChangeEvent,
 } from './Y2KitWheelPickerNativeComponent';
+export { WHEEL_SELECTION_BACKGROUND_COLOR } from './constants';
 
 export const WHEEL_VISIBLE_ITEMS = 5;
 

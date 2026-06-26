@@ -20,6 +20,7 @@ import {
   WHEEL_AREA_HEIGHT,
   WHEEL_AREA_VERTICAL_INSET,
   WHEEL_ITEM_HEIGHT,
+  WHEEL_SELECTION_BACKGROUND_COLOR,
   WHEEL_VISIBLE_ITEMS,
   type WheelColumnHandle,
   type WheelOption,
@@ -558,10 +559,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
 
             <View style={styles.pickerWrapper}>
               {Platform.OS !== 'ios' && (
-                <View
-                  style={[styles.highlightBar, { backgroundColor: theme.colors.secondary }]}
-                  pointerEvents="none"
-                />
+                <View style={styles.highlightBar} pointerEvents="none" />
               )}
 
               <View style={styles.columnsRow}>
@@ -684,6 +682,7 @@ const styles = StyleSheet.create({
     left: -wp(16),
     right: -wp(16),
     height: ITEM_HEIGHT,
+    backgroundColor: WHEEL_SELECTION_BACKGROUND_COLOR,
     zIndex: 0,
   },
   topMask: {

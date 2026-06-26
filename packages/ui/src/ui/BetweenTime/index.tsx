@@ -22,6 +22,7 @@ import {
   WHEEL_AREA_HEIGHT,
   WHEEL_AREA_VERTICAL_INSET,
   WHEEL_ITEM_HEIGHT,
+  WHEEL_SELECTION_BACKGROUND_COLOR,
   WHEEL_VISIBLE_ITEMS,
   type WheelColumnHandle,
   type WheelOption,
@@ -819,7 +820,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
 
             <View style={styles.pickerWrapper} onLayout={onColumnsLayout}>
               {Platform.OS !== 'ios' && (
-                <View style={[styles.highlightBar, { backgroundColor: '#F2F2F2' }]} pointerEvents="none" />
+                <View style={styles.highlightBar} pointerEvents="none" />
               )}
               <View style={styles.columnsRow}>
                 {columns.map((col, colIdx) => (
@@ -984,7 +985,7 @@ const styles = StyleSheet.create({
     left: -wp(16),
     right: -wp(16),
     height: ITEM_HEIGHT,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: WHEEL_SELECTION_BACKGROUND_COLOR,
     zIndex: 0,
   },
   topMask: {
