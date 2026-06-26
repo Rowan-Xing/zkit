@@ -7,7 +7,7 @@
 - `Text` 是无状态组件，没有受控/非受控语义。
 - `variant` 表达排版语义，`tone` 表达颜色意图，`style` 只作为最终 escape hatch。
 - 内置字号和行高按设计像素声明，组件内部统一通过 `wp(...)` 计算。
-- 默认使用 `getMaxFontScale()` 限制字体缩放上限，单次可用 `maxFontSizeMultiplier` 覆盖。
+- 默认使用 `getMaxFontSizeMultiplier()` 限制字体缩放上限，单次可用 `maxFontSizeMultiplier` 覆盖。
 - Android 默认关闭 `includeFontPadding`，用明确 lineHeight 保证 iOS / Android / Web 视觉高度更一致。
 - `color` 支持主题 token、语义色 token 和原生可解析颜色；无效颜色会回落到 `tone`。
 - 屏幕宽度变化时会重新计算排版尺寸，横竖屏和分屏场景不会卡在初始化尺寸。
@@ -28,7 +28,7 @@ export function Demo() {
 - `tone="default"`
 - `size="md"`
 - `weight="regular"`
-- `maxFontSizeMultiplier={getMaxFontScale()}`
+- `maxFontSizeMultiplier={getMaxFontSizeMultiplier()}`
 
 ## 排版语义
 

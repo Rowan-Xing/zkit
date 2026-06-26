@@ -4,7 +4,7 @@ import {
   TextInput as RNTextInput,
   type TextInputProps as RNTextInputNativeProps,
 } from 'react-native';
-import { getMaxFontScale } from 'y2kit-tools';
+import { getMaxFontSizeMultiplier } from 'y2kit-tools';
 import { useTheme } from '../../theme/useTheme';
 
 export type TextInputPrimitiveProps = RNTextInputNativeProps;
@@ -27,7 +27,7 @@ const TextInputPrimitiveBase = React.forwardRef<TextInputPrimitiveRef, TextInput
       <RNTextInput
         key={androidRemountKey}
         ref={ref}
-        maxFontSizeMultiplier={maxFontSizeMultiplier ?? getMaxFontScale()}
+        maxFontSizeMultiplier={maxFontSizeMultiplier ?? getMaxFontSizeMultiplier()}
         selectionColor={finalSelectionColor}
         cursorColor={finalCursorColor}
         selectionHandleColor={finalHandleColor}

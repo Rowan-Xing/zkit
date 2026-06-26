@@ -10,7 +10,7 @@ import {
   processColor,
   useWindowDimensions,
 } from 'react-native';
-import { getMaxFontScale, wp } from 'y2kit-tools';
+import { getMaxFontSizeMultiplier, wp } from 'y2kit-tools';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
 
@@ -434,7 +434,7 @@ const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
       disabled={disabled}
       ellipsizeMode={resolvedEllipsizeMode}
       maxFontSizeMultiplier={
-        allowFontScaling === false ? maxFontSizeMultiplier : (maxFontSizeMultiplier ?? getMaxFontScale())
+        allowFontScaling === false ? maxFontSizeMultiplier : (maxFontSizeMultiplier ?? getMaxFontSizeMultiplier())
       }
       numberOfLines={resolvedNumberOfLines}
       style={finalStyle}

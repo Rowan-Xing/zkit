@@ -1,16 +1,8 @@
-/**
- * Router Guard — 路由防重复跳转守卫
- *
- * 拦截 router.push / replace / navigate 等前进跳转方法，防止用户快速连点导致重复跳转。
- * 前进导航触发后上锁；导航状态变化、后退导航、异常或兜底超时会解锁。
- */
-
 declare const __DEV__: boolean | undefined;
-declare const require: (id: string) => unknown;
+declare const require: undefined | ((id: string) => unknown);
 
-export type RouterMethod = (...args: any[]) => any;
+export type RouterMethod = (...args: any[]) => unknown;
 
-/** router 对象最小接口（兼容 expo-router，也允许只实现部分方法） */
 export interface RouterLike {
   push?: RouterMethod;
   replace?: RouterMethod;
@@ -28,7 +20,10 @@ export type RouterGuardUnlockReason =
   | 'timeout'
   | 'back'
   | 'error'
+  | 'manual'
   | 'destroy';
+
+export type RouterGuardBlockReason = 'locked' | 'same-target';
 
 export type RouterGuardEvent =
   | {
@@ -40,7 +35,7 @@ export type RouterGuardEvent =
       type: 'block';
       method: string;
       target: string | null;
-      reason: 'locked' | 'same-path';
+      reason: RouterGuardBlockReason;
     }
   | {
       type: 'unlock';
@@ -50,16 +45,27 @@ export type RouterGuardEvent =
       type: 'ready' | 'destroy';
     };
 
+export type RouterGuardSnapshot = {
+  locked: boolean;
+  target: string | null;
+  startPath: string | null;
+};
+
+export type RouterGuardController = {
+  destroy: () => void;
+  unlock: () => void;
+  isLocked: () => boolean;
+  getSnapshot: () => RouterGuardSnapshot;
+};
+
 export interface RouterGuardOptions {
-  /** expo-router 的 router 对象 */
   router: RouterLike;
-  /** 兜底锁定时长（毫秒），默认 2000 */
-  fallbackLockMs?: number;
-  /** 前进导航方法名（受锁控制），默认 ['push', 'replace', 'navigate', 'dismissTo'] */
+  lockMs?: number;
   forwardMethods?: readonly string[];
-  /** 后退导航方法名（不受锁控制，但会解锁），默认 ['back', 'dismiss', 'dismissAll'] */
   backMethods?: readonly string[];
-  /** 调试或埋点用事件回调。不要在这里触发同步重渲染热路径。 */
+  blockSamePath?: boolean;
+  getCurrentPath?: () => string | null | undefined;
+  subscribeToStateChange?: (listener: () => void) => (() => void) | void;
   onEvent?: (event: RouterGuardEvent) => void;
 }
 
@@ -75,12 +81,18 @@ interface RouterStoreLike {
 }
 
 type GuardedRouter = RouterLike & object;
+type PatchedRouterMethod = RouterMethod & {
+  __y2kitRouterGuardOriginal?: RouterMethod;
+};
+type PromiseLikeResult = {
+  catch?: (onRejected: (error: unknown) => void) => unknown;
+};
 
-const DEFAULT_FALLBACK_LOCK_MS = 2000;
+const DEFAULT_LOCK_MS = 2000;
 const DEFAULT_FORWARD_METHODS = ['push', 'replace', 'navigate', 'dismissTo'] as const;
 const DEFAULT_BACK_METHODS = ['back', 'dismiss', 'dismissAll'] as const;
 const ORIGINAL_METHOD_KEY = '__y2kitRouterGuardOriginal';
-const activeGuards = new WeakMap<GuardedRouter, RouterGuardController>();
+const activeGuards = new WeakMap<GuardedRouter, RouterGuardImpl>();
 
 const isDev = typeof __DEV__ !== 'undefined' && __DEV__;
 
@@ -101,7 +113,7 @@ const normalizePath = (raw: unknown): string | null => {
 
   path = end === path.length ? path : path.substring(0, end);
   if (!path) return null;
-  if (path.charCodeAt(0) !== 47 /* / */) path = `/${path}`;
+  if (path.charCodeAt(0) !== 47) path = `/${path}`;
 
   while (path.length > 1 && path.charCodeAt(path.length - 1) === 47) {
     path = path.substring(0, path.length - 1);
@@ -110,21 +122,22 @@ const normalizePath = (raw: unknown): string | null => {
   return path;
 };
 
-const getActivePathFromState = (state: any): string => {
-  let current = state;
+const getActivePathFromState = (state: unknown): string => {
+  let current = state as { index?: unknown; routes?: unknown[] } | undefined;
   let activePath = '';
 
-  for (let depth = 0; depth < 20 && current?.routes?.length; depth += 1) {
+  for (
+    let depth = 0;
+    depth < 20 && Array.isArray(current?.routes) && current.routes.length;
+    depth += 1
+  ) {
     const index = typeof current.index === 'number' ? current.index : current.routes.length - 1;
-    const route = current.routes[index];
+    const route = current.routes[index] as { name?: unknown; state?: unknown } | undefined;
     if (!route) break;
 
-    if (typeof route.name === 'string' && route.name) {
-      activePath = route.name;
-    }
-
+    if (typeof route.name === 'string' && route.name) activePath = route.name;
     if (!route.state) break;
-    current = route.state;
+    current = route.state as { index?: unknown; routes?: unknown[] } | undefined;
   }
 
   return activePath;
@@ -147,10 +160,10 @@ const getMethodList = (methods: readonly string[] | undefined, fallback: readonl
 };
 
 const getOriginalMethod = (method: RouterMethod): RouterMethod =>
-  ((method as any)[ORIGINAL_METHOD_KEY] as RouterMethod | undefined) ?? method;
+  ((method as PatchedRouterMethod)[ORIGINAL_METHOD_KEY] as RouterMethod | undefined) ?? method;
 
 const markPatchedMethod = (patched: RouterMethod, original: RouterMethod) => {
-  (patched as any)[ORIGINAL_METHOD_KEY] = original;
+  (patched as PatchedRouterMethod)[ORIGINAL_METHOD_KEY] = original;
 };
 
 const getTargetPath = (firstArg: unknown): string | null => {
@@ -160,22 +173,35 @@ const getTargetPath = (firstArg: unknown): string | null => {
   return normalizePath(firstArg.pathname ?? firstArg.path ?? firstArg.href);
 };
 
-const getBypassCallArgs = (args: IArguments): { bypass: boolean; callArgs: unknown[] } => {
-  const callArgs = Array.prototype.slice.call(args) as unknown[];
-  const last = callArgs[callArgs.length - 1];
+const stripBypassFlag = (value: Record<string, unknown>): Record<string, unknown> => {
+  const {
+    skipRouterGuard: _skipRouterGuard,
+    unstable_skipRouterGuard: _unstable,
+    ...rest
+  } = value;
+  return rest;
+};
 
-  if (!isRecord(last) || last.skipRouterThrottle !== true) {
-    return { bypass: false, callArgs };
+const getBypassCallArgs = (args: unknown[]): { bypass: boolean; callArgs: unknown[] } => {
+  if (args.length === 0) return { bypass: false, callArgs: args };
+
+  const first = args[0];
+  if (
+    isRecord(first) &&
+    (first.skipRouterGuard === true || first.unstable_skipRouterGuard === true)
+  ) {
+    return { bypass: true, callArgs: [stripBypassFlag(first), ...args.slice(1)] };
   }
 
-  const first = callArgs[0];
-  const singleRouteObject =
-    callArgs.length === 1 &&
-    isRecord(first) &&
-    ('pathname' in first || 'path' in first || 'href' in first);
+  const last = args[args.length - 1];
+  if (
+    !isRecord(last) ||
+    (last.skipRouterGuard !== true && last.unstable_skipRouterGuard !== true)
+  ) {
+    return { bypass: false, callArgs: args };
+  }
 
-  if (!singleRouteObject) callArgs.pop();
-  return { bypass: true, callArgs };
+  return { bypass: true, callArgs: args.slice(0, -1) };
 };
 
 const resolveThisArg = (value: unknown, router: GuardedRouter) =>
@@ -189,6 +215,8 @@ const getNavigationRef = (store: RouterStoreLike | null): NavigationRefLike | nu
 };
 
 const loadRouterStore = (): RouterStoreLike | null => {
+  if (typeof require !== 'function') return null;
+
   try {
     const loaded = require('expo-router/build/global-state/router-store');
     if (isRecord(loaded) && isRecord(loaded.store)) return loaded.store as RouterStoreLike;
@@ -201,19 +229,30 @@ const loadRouterStore = (): RouterStoreLike | null => {
   return null;
 };
 
-const resolveFallbackLockMs = (value: unknown) =>
-  typeof value === 'number' && Number.isFinite(value) && value > 0
-    ? value
-    : DEFAULT_FALLBACK_LOCK_MS;
+const resolveLockMs = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : DEFAULT_LOCK_MS;
 
-class RouterGuardController {
+const isPromiseLikeResult = (value: unknown): value is PromiseLikeResult =>
+  !!value && (typeof value === 'object' || typeof value === 'function');
+
+const releaseTimer = (timer: ReturnType<typeof setTimeout>) => {
+  const maybeNodeTimer = timer as ReturnType<typeof setTimeout> & { unref?: () => void };
+  maybeNodeTimer.unref?.();
+};
+
+class RouterGuardImpl implements RouterGuardController {
   private readonly router: GuardedRouter;
-  private readonly fallbackLockMs: number;
+  private readonly lockMs: number;
   private readonly forwardMethods: string[];
   private readonly backMethods: string[];
+  private readonly blockSamePath: boolean;
   private readonly onEvent: ((event: RouterGuardEvent) => void) | undefined;
   private readonly originals = new Map<string, RouterMethod>();
   private readonly store: RouterStoreLike | null;
+  private readonly getCurrentPathOverride: (() => string | null | undefined) | undefined;
+  private readonly subscribeToStateChange:
+    | ((listener: () => void) => (() => void) | void)
+    | undefined;
 
   private destroyed = false;
   private locked = false;
@@ -224,11 +263,15 @@ class RouterGuardController {
 
   constructor(options: RouterGuardOptions) {
     this.router = options.router as GuardedRouter;
-    this.fallbackLockMs = resolveFallbackLockMs(options.fallbackLockMs);
+    this.lockMs = resolveLockMs(options.lockMs);
     this.forwardMethods = getMethodList(options.forwardMethods, DEFAULT_FORWARD_METHODS);
     this.backMethods = getMethodList(options.backMethods, DEFAULT_BACK_METHODS);
+    this.blockSamePath = options.blockSamePath ?? true;
     this.onEvent = options.onEvent;
-    this.store = loadRouterStore();
+    this.getCurrentPathOverride = options.getCurrentPath;
+    this.subscribeToStateChange = options.subscribeToStateChange;
+    this.store =
+      options.getCurrentPath || options.subscribeToStateChange ? null : loadRouterStore();
   }
 
   install() {
@@ -241,39 +284,44 @@ class RouterGuardController {
       this.patchBackMethod(method);
     }
 
-    (globalThis as any).ROUTER_PATCH_APPLIED = true;
-
-    if (isDev) {
-      (globalThis as any).__verifyRouterGuard = () => {
-        const patched = this.forwardMethods.some((method) => {
-          const value = this.router[method];
-          return typeof value === 'function' && !!(value as any)[ORIGINAL_METHOD_KEY];
-        });
-        console.log(`[RouterGuard] patched: ${patched}, locked: ${this.locked}`);
-        return patched;
-      };
-    }
-
     this.emit({ type: 'ready' });
   }
 
   destroy() {
     if (this.destroyed) return;
 
-    this.unlock('destroy');
+    this.unlockWithReason('destroy');
 
     for (const [method, original] of this.originals) {
-      this.router[method] = original;
+      const current = this.router[method];
+      if (
+        typeof current === 'function' &&
+        getOriginalMethod(current as RouterMethod) === original
+      ) {
+        this.router[method] = original;
+      }
     }
 
     this.originals.clear();
     this.destroyed = true;
     activeGuards.delete(this.router);
-
-    (globalThis as any).ROUTER_PATCH_APPLIED = false;
-    if (isDev) delete (globalThis as any).__verifyRouterGuard;
-
     this.emit({ type: 'destroy' });
+  }
+
+  unlock() {
+    this.unlockWithReason('manual');
+  }
+
+  isLocked() {
+    return this.locked;
+  }
+
+  getSnapshot(): RouterGuardSnapshot {
+    return {
+      locked: this.locked,
+      target: this.lockTarget,
+      startPath: this.startPath,
+    };
   }
 
   private emit(event: RouterGuardEvent) {
@@ -282,6 +330,9 @@ class RouterGuardController {
 
   private getCurrentPath(): string | null {
     try {
+      const overridePath = this.getCurrentPathOverride?.();
+      if (overridePath) return normalizePath(overridePath);
+
       const pathname = this.store?.getRouteInfo?.()?.pathname;
       if (pathname) return normalizePath(pathname);
 
@@ -313,7 +364,7 @@ class RouterGuardController {
     this.lockTimer = null;
   }
 
-  private unlock(reason: RouterGuardUnlockReason) {
+  private unlockWithReason(reason: RouterGuardUnlockReason) {
     const wasLocked = this.locked;
 
     this.locked = false;
@@ -323,11 +374,37 @@ class RouterGuardController {
     this.clearUnlockListener();
 
     if (!wasLocked) return;
-
     this.emit({ type: 'unlock', reason });
+  }
 
-    if (isDev && reason !== 'destroy') {
-      console.log(`[RouterGuard] unlock: ${reason}`);
+  private attachStateListener() {
+    const onStateChange = () => {
+      const currentPath = this.getCurrentPath();
+      if (this.lockTarget && currentPath === this.lockTarget) {
+        this.unlockWithReason('path-match');
+        return;
+      }
+
+      if (!this.lockTarget || (currentPath && currentPath !== this.startPath)) {
+        this.unlockWithReason('state-change');
+      }
+    };
+
+    try {
+      const overrideRemove = this.subscribeToStateChange?.(onStateChange);
+      if (typeof overrideRemove === 'function') {
+        this.unlockListener = overrideRemove;
+        return;
+      }
+
+      const nav = getNavigationRef(this.store);
+      if (typeof nav?.addListener !== 'function') return;
+      const removeListener = nav.addListener.call(nav, 'state', onStateChange);
+      if (typeof removeListener === 'function') this.unlockListener = removeListener;
+    } catch {
+      if (isDev) {
+        console.warn('[RouterGuard] failed to attach navigation listener');
+      }
     }
   }
 
@@ -339,33 +416,10 @@ class RouterGuardController {
     this.lockTarget = target;
     this.startPath = this.getCurrentPath();
     this.lockTimer = setTimeout(() => {
-      if (this.locked) this.unlock('timeout');
-    }, this.fallbackLockMs);
-
-    const nav = getNavigationRef(this.store);
-    if (typeof nav?.addListener === 'function') {
-      try {
-        const removeListener = nav.addListener.call(nav, 'state', () => {
-          const currentPath = this.getCurrentPath();
-          if (this.lockTarget && currentPath === this.lockTarget) {
-            this.unlock('path-match');
-            return;
-          }
-
-          if (!this.lockTarget || (currentPath && currentPath !== this.startPath)) {
-            this.unlock('state-change');
-          }
-        });
-
-        if (typeof removeListener === 'function') {
-          this.unlockListener = removeListener;
-        }
-      } catch {
-        if (isDev) {
-          console.warn('[RouterGuard] failed to attach navigation listener');
-        }
-      }
-    }
+      if (this.locked) this.unlockWithReason('timeout');
+    }, this.lockMs);
+    releaseTimer(this.lockTimer);
+    this.attachStateListener();
   }
 
   private patchForwardMethod(method: string) {
@@ -376,8 +430,11 @@ class RouterGuardController {
     this.originals.set(method, original);
 
     const controller = this;
-    const patched: RouterMethod = function patchedRouterGuardForwardMethod(this: unknown) {
-      const { bypass, callArgs } = getBypassCallArgs(arguments);
+    const patched: RouterMethod = function patchedRouterGuardForwardMethod(
+      this: unknown,
+      ...args: unknown[]
+    ) {
+      const { bypass, callArgs } = getBypassCallArgs(args);
       const target = getTargetPath(callArgs[0]);
 
       if (bypass) {
@@ -385,18 +442,16 @@ class RouterGuardController {
         return original.apply(resolveThisArg(this, controller.router), callArgs);
       }
 
-      if (target) {
+      if (controller.blockSamePath && target) {
         const currentPath = controller.getCurrentPath();
         if (currentPath === target) {
-          controller.emit({ type: 'block', method, target, reason: 'same-path' });
-          if (isDev) console.log(`[RouterGuard] block same path: ${method}(${target})`);
+          controller.emit({ type: 'block', method, target, reason: 'same-target' });
           return undefined;
         }
       }
 
       if (controller.locked) {
         controller.emit({ type: 'block', method, target, reason: 'locked' });
-        if (isDev) console.log(`[RouterGuard] block duplicate: ${method}(${target ?? ''})`);
         return undefined;
       }
 
@@ -404,9 +459,13 @@ class RouterGuardController {
       controller.emit({ type: 'allow', method, target });
 
       try {
-        return original.apply(resolveThisArg(this, controller.router), callArgs);
+        const result = original.apply(resolveThisArg(this, controller.router), callArgs);
+        if (isPromiseLikeResult(result) && typeof result.catch === 'function') {
+          result.catch(() => controller.unlockWithReason('error'));
+        }
+        return result;
       } catch (error) {
-        controller.unlock('error');
+        controller.unlockWithReason('error');
         throw error;
       }
     };
@@ -423,9 +482,12 @@ class RouterGuardController {
     this.originals.set(method, original);
 
     const controller = this;
-    const patched: RouterMethod = function patchedRouterGuardBackMethod(this: unknown) {
-      controller.unlock('back');
-      return original.apply(resolveThisArg(this, controller.router), arguments as any);
+    const patched: RouterMethod = function patchedRouterGuardBackMethod(
+      this: unknown,
+      ...args: unknown[]
+    ) {
+      controller.unlockWithReason('back');
+      return original.apply(resolveThisArg(this, controller.router), args);
     };
 
     markPatchedMethod(patched, original);
@@ -433,26 +495,18 @@ class RouterGuardController {
   }
 }
 
-/**
- * 初始化路由防重复跳转守卫。
- *
- * @returns 销毁函数，调用后移除 patch 并恢复原始方法。
- */
-export function initRouterGuard(options: RouterGuardOptions): () => void {
+export function createRouterGuard(options: RouterGuardOptions): RouterGuardController {
   const router = options?.router as GuardedRouter | undefined;
   if (!router || typeof router !== 'object') {
     throw new TypeError('[RouterGuard] options.router must be an object');
   }
 
   const existing = activeGuards.get(router);
-  if (existing) {
-    if (isDev) console.warn('[RouterGuard] router is already guarded');
-    return () => {};
-  }
+  if (existing) return existing;
 
-  const controller = new RouterGuardController(options);
+  const controller = new RouterGuardImpl(options);
   activeGuards.set(router, controller);
   controller.install();
 
-  return () => controller.destroy();
+  return controller;
 }

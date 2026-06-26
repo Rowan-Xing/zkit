@@ -6,9 +6,18 @@
   "types": "dist/index.d.ts",
   "source": "src/index.ts",
   "react-native": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "react-native": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
   "files": [
     "dist",
     "src",
+    "scripts",
     "README.md"
   ],
   "publishConfig": {
@@ -18,20 +27,18 @@
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm run build",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify": "pnpm run build && node scripts/verify.cjs"
   },
   "peerDependencies": {
-    "expo-constants": "*",
-    "expo-updates": "*",
-    "react": "*",
     "react-native": "*"
   },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "expo-constants": "*",
-    "expo-updates": "*",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "@types/react": "~19.1.17",
     "typescript": "~5.9.3"
   }
 }

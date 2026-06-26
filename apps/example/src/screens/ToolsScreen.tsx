@@ -10,7 +10,7 @@ import {
   toast,
   useI18n,
 } from 'y2kit-ui';
-import { initRouterGuard } from 'y2kit-tools';
+import { createRouterGuard } from 'y2kit-tools';
 
 import { captchaChallenge } from '../data';
 import { wait } from '../demoUtils';
@@ -119,11 +119,11 @@ export const ToolsScreen = React.memo(function ToolsScreen() {
       },
     };
 
-    const destroy = initRouterGuard({ router, fallbackLockMs: 700 });
+    const guard = createRouterGuard({ router, lockMs: 700 });
     router.push('/components');
     router.push('/components');
     router.back();
-    destroy();
+    guard.destroy();
 
     setRouterGuardStatus(events.length === 2 ? t('example.router.blocked') : events.join(' -> '));
     toast.info(t('example.router.tested'), { duration: 1200 });

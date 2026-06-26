@@ -1,6 +1,12 @@
 import * as React from 'react';
 import { View } from 'react-native';
-import { getEnv, getMaxFontScale, getPhoneBrand, sp, wp } from 'y2kit-tools';
+import {
+  getDeviceBrand,
+  getMaxFontSizeMultiplier,
+  sp,
+  tryGetRuntimeString,
+  wp,
+} from 'y2kit-tools';
 import {
   Accordion,
   AccordionContent,
@@ -882,10 +888,10 @@ export const ToolsSection = React.memo(function ToolsSection({
 }: ToolsSectionProps) {
   const theme = useTheme();
   const { t } = useI18n();
-  const phoneBrand = React.useMemo(() => getPhoneBrand(), []);
+  const phoneBrand = React.useMemo(() => getDeviceBrand(), []);
   const runtimeEnv = React.useMemo(() => {
     try {
-      return getEnv('APP_ENV', 'local') || 'local';
+      return tryGetRuntimeString('APP_ENV', 'local') || 'local';
     } catch {
       return t('example.tools.providerMissing');
     }
@@ -896,7 +902,7 @@ export const ToolsSection = React.memo(function ToolsSection({
       { iconName: 'maximize' as const, label: 'wp(24)', value: `${Math.round(wp(24))} px`, color: '#2563EB' },
       { iconName: 'type' as const, label: 'sp(16)', value: `${Math.round(sp(16))} px`, color: '#7C3AED' },
       { iconName: 'smartphone' as const, label: t('example.tools.phoneBrand'), value: phoneBrand, color: '#0F9F6E' },
-      { iconName: 'settings' as const, label: t('example.tools.fontCap'), value: `${getMaxFontScale()}x`, color: '#EB5A17' },
+      { iconName: 'settings' as const, label: t('example.tools.fontCap'), value: `${getMaxFontSizeMultiplier()}x`, color: '#EB5A17' },
       { iconName: 'server' as const, label: t('example.tools.runtimeEnv'), value: runtimeEnv, color: '#0891B2' },
       { iconName: 'package' as const, label: t('example.tools.config'), value: t('example.tools.typedAccess'), color: '#334155' },
     ],

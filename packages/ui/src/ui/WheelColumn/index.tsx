@@ -18,7 +18,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { getMaxFontScale, sp, wp } from 'y2kit-tools';
+import { getMaxFontSizeMultiplier, sp, wp } from 'y2kit-tools';
 import { useTheme } from '../../theme/useTheme';
 import {
   Y2KitWheelPicker,
@@ -655,7 +655,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
         <View key={`${String(optionKey(item, index))}-${index}`} style={styles.itemContainer}>
           <Animated.Text
             accessibilityLabel={item.accessibilityLabel ?? item.label}
-            maxFontSizeMultiplier={getMaxFontScale()}
+            maxFontSizeMultiplier={getMaxFontSizeMultiplier()}
             numberOfLines={numberOfLines}
             style={[
               styles.itemText,
