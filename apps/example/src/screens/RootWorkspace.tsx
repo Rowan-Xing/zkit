@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -56,9 +57,66 @@ type WorkspaceRoute = {
   Screen: React.ComponentType;
 };
 
+const WORKSPACE_ROUTE_KEYS: readonly WorkspaceRouteKey[] = [
+  'overview',
+  'foundation',
+  'button',
+  'forms',
+  'choice',
+  'surfaces',
+  'pickers',
+  'services',
+  'tools',
+];
+
+const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
+  overview: '/',
+  foundation: '/foundation',
+  button: '/button',
+  forms: '/forms',
+  choice: '/choice',
+  surfaces: '/surfaces',
+  pickers: '/pickers',
+  services: '/services',
+  tools: '/tools',
+};
+
 const DRAWER_DURATION = 240;
 const LANGUAGE_OPTIONS: ExampleLocale[] = ['zh-CN', 'en-US'];
 const THEME_PRESET_KEYS: ExampleThemePresetKey[] = ['blue', 'emerald', 'rose', 'violet'];
+
+function canUseBrowserRoutes() {
+  return (
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    typeof window.history?.pushState === 'function'
+  );
+}
+
+function getRouteKeyFromPath(pathname: string): WorkspaceRouteKey {
+  const segments = pathname.split('/').map((segment) => segment.trim()).filter(Boolean);
+  const lastSegment = segments[segments.length - 1]?.toLowerCase();
+
+  if (!lastSegment) return 'overview';
+  if (lastSegment === 'overview') return 'overview';
+  return WORKSPACE_ROUTE_KEYS.find((key) => key === lastSegment) ?? 'overview';
+}
+
+function readWorkspaceRouteFromBrowser(): WorkspaceRouteKey {
+  if (!canUseBrowserRoutes()) return 'overview';
+
+  return getRouteKeyFromPath(window.location.pathname);
+}
+
+function pushWorkspaceRoute(routeKey: WorkspaceRouteKey) {
+  if (!canUseBrowserRoutes()) return;
+
+  const nextPath = WORKSPACE_ROUTE_PATHS[routeKey];
+  const currentPath = window.location.pathname || '/';
+  if (currentPath === nextPath) return;
+
+  window.history.pushState({ zkitRoute: routeKey }, '', nextPath);
+}
 
 export type RootWorkspaceProps = {
   locale: ExampleLocale;
@@ -79,7 +137,9 @@ export function RootWorkspace({
   const theme = useTheme();
   const drawerProgress = useSharedValue(0);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const [activeKey, setActiveKey] = React.useState<WorkspaceRouteKey>('overview');
+  const [activeKey, setActiveKey] = React.useState<WorkspaceRouteKey>(() =>
+    readWorkspaceRouteFromBrowser()
+  );
 
   const drawerWidth = React.useMemo(
     () => Math.min(wp(324), Math.max(wp(264), screenWidth - wp(56))),
@@ -169,6 +229,19 @@ export function RootWorkspace({
   const selectRoute = React.useCallback((routeKey: WorkspaceRouteKey) => {
     setActiveKey(routeKey);
     setDrawerOpen(false);
+    pushWorkspaceRoute(routeKey);
+  }, []);
+
+  React.useEffect(() => {
+    if (!canUseBrowserRoutes()) return undefined;
+
+    const handlePopState = () => {
+      setActiveKey(readWorkspaceRouteFromBrowser());
+      setDrawerOpen(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   React.useEffect(() => {

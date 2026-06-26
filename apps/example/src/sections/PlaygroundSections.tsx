@@ -933,24 +933,31 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
         <Accordion
           type="multiple"
           defaultValue={['motion', 'mount']}
-          itemGap={wp(8)}
-          size="sm"
-          tone="info"
-          variant="filled"
+          itemGap={wp(10)}
+          size="md"
+          color="#2563EB"
+          variant="card"
           mountStrategy="lazy"
+          itemStyle={[styles.surfaceAccordionItem, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}
         >
           <AccordionItem value="motion">
-            <AccordionTrigger title={t('example.surfaces.multipleLazyTitle')} description={t('example.surfaces.multipleLazyDescription')} />
+            <AccordionTrigger
+              title={t('example.surfaces.multipleLazyTitle')}
+              description={t('example.surfaces.multipleLazyDescription')}
+            />
             <AccordionContent>
-              <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
+              <Text style={[styles.surfaceAccordionText, { color: '#475569' }]}>
                 {t('example.surfaces.multipleLazyBody')}
               </Text>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="mount">
-            <AccordionTrigger title={t('example.surfaces.compactAccordionTitle')} description={t('example.surfaces.compactAccordionDescription')} />
+            <AccordionTrigger
+              title={t('example.surfaces.compactAccordionTitle')}
+              description={t('example.surfaces.compactAccordionDescription')}
+            />
             <AccordionContent>
-              <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
+              <Text style={[styles.surfaceAccordionText, { color: '#475569' }]}>
                 {t('example.surfaces.compactAccordionBody')}
               </Text>
             </AccordionContent>

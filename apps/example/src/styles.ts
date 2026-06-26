@@ -7,8 +7,15 @@ export const styles = StyleSheet.create({
   },
   linkedRouteLayer: {
     ...StyleSheet.absoluteFillObject,
-    elevation: 8,
-    zIndex: 8,
+    elevation: 40,
+    zIndex: 40,
+  },
+  linkedRouteHost: {
+    flex: 1,
+  },
+  linkedRouteHostActive: {
+    elevation: 40,
+    zIndex: 40,
   },
   content: {
     paddingHorizontal: wp(16),
@@ -643,6 +650,14 @@ export const styles = StyleSheet.create({
   },
   surfaceGrid: {
     gap: wp(12),
+  },
+  surfaceAccordionItem: {
+    overflow: 'hidden',
+  },
+  surfaceAccordionText: {
+    fontSize: wp(13.5),
+    fontWeight: '500',
+    lineHeight: wp(21),
   },
   linkedIntro: {
     alignItems: 'center',

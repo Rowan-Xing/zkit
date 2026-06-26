@@ -636,7 +636,12 @@ export const SurfacesGuidePage = React.memo(function SurfacesGuidePage() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={[
+        sharedStyles.linkedRouteHost,
+        linkedScrollMounted ? sharedStyles.linkedRouteHostActive : null,
+      ]}
+    >
       <TabScreenShell withTopInset={false}>
         <SurfacesSection onOpenLinkedScroll={openLinkedScrollDemo} />
         <GuideIntro guideKey="surfaces" />
