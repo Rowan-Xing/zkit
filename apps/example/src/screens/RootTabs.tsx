@@ -1,105 +1,123 @@
 import * as React from 'react';
-import { Platform, StyleSheet } from 'react-native';
-import TabView, { type AppleIcon } from 'react-native-bottom-tabs';
-import { useI18n, useTheme } from 'y2kit-ui';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, useI18n, useTheme } from 'y2kit-ui';
+import { wp } from 'y2kit-tools';
 
 import { FormsScreen } from './FormsScreen';
 import { HomeScreen } from './HomeScreen';
 import { ShowcaseScreen } from './ShowcaseScreen';
 import { ToolsScreen } from './ToolsScreen';
+import { renderIcon, type FeatherIconName } from '../demoUtils';
+import { exampleBackgroundColor } from '../theme';
 
 type TabKey = 'home' | 'forms' | 'showcase' | 'tools';
 
 type TabRoute = {
   key: TabKey;
   title: string;
-  focusedIcon: AppleIcon | number;
-  unfocusedIcon?: AppleIcon | number;
-  freezeOnBlur?: boolean;
-  lazy?: boolean;
+  iconName: FeatherIconName;
+  Screen: React.ComponentType;
 };
-
-const SCREENS: Record<TabKey, React.ComponentType> = {
-  home: HomeScreen,
-  forms: FormsScreen,
-  showcase: ShowcaseScreen,
-  tools: ToolsScreen,
-};
-
-function appleIcon(sfSymbol: string): AppleIcon {
-  return { sfSymbol } as AppleIcon;
-}
 
 export function RootTabs() {
   const { t } = useI18n();
   const theme = useTheme();
-  const [index, setIndex] = React.useState(0);
+  const insets = useSafeAreaInsets();
+  useWindowDimensions();
+
+  const [activeKey, setActiveKey] = React.useState<TabKey>('home');
 
   const routes = React.useMemo<TabRoute[]>(
     () => [
-      {
-        key: 'home',
-        title: t('example.tabs.home'),
-        focusedIcon: appleIcon('house.fill'),
-        unfocusedIcon: appleIcon('house'),
-        lazy: false,
-      },
-      {
-        key: 'forms',
-        title: t('example.tabs.forms'),
-        focusedIcon: appleIcon('square.and.pencil'),
-        unfocusedIcon: appleIcon('square.and.pencil'),
-        lazy: true,
-      },
-      {
-        key: 'showcase',
-        title: t('example.tabs.showcase'),
-        focusedIcon: appleIcon('square.stack.3d.up.fill'),
-        unfocusedIcon: appleIcon('square.stack.3d.up'),
-        lazy: true,
-        freezeOnBlur: true,
-      },
-      {
-        key: 'tools',
-        title: t('example.tabs.tools'),
-        focusedIcon: appleIcon('wrench.and.screwdriver.fill'),
-        unfocusedIcon: appleIcon('wrench.and.screwdriver'),
-        lazy: true,
-        freezeOnBlur: true,
-      },
+      { key: 'home', title: t('example.tabs.home'), iconName: 'home', Screen: HomeScreen },
+      { key: 'forms', title: t('example.tabs.forms'), iconName: 'edit-3', Screen: FormsScreen },
+      { key: 'showcase', title: t('example.tabs.showcase'), iconName: 'layers', Screen: ShowcaseScreen },
+      { key: 'tools', title: t('example.tabs.tools'), iconName: 'tool', Screen: ToolsScreen },
     ],
     [t]
   );
 
-  const renderScene = React.useCallback(({ route }: { route: TabRoute }) => {
-    const Screen = SCREENS[route.key];
-    return <Screen />;
-  }, []);
+  const activeRoute = routes.find((route) => route.key === activeKey) ?? routes[0];
+  const ActiveScreen = activeRoute.Screen;
+  const bottomInset = Math.max(insets.bottom, wp(10));
 
   return (
-    <TabView
-      navigationState={{ index, routes }}
-      onIndexChange={setIndex}
-      renderScene={renderScene}
-      labeled
-      hapticFeedbackEnabled
-      sidebarAdaptable={false}
-      translucent
-      scrollEdgeAppearance="default"
-      minimizeBehavior={Platform.OS === 'ios' ? 'onScrollDown' : 'never'}
-      tabBarActiveTintColor={theme.colors.primary}
-      tabBarInactiveTintColor={theme.colors.muted}
-      activeIndicatorColor={theme.colors.secondary}
-      rippleColor={theme.colors.secondary}
-      getLazy={({ route }) => route.lazy !== false}
-      getFreezeOnBlur={({ route }) => route.freezeOnBlur ?? false}
-      getSceneStyle={() => styles.scene}
-    />
+    <View style={[styles.root, { backgroundColor: exampleBackgroundColor }]}>
+      <View style={styles.scene}>
+        <ActiveScreen />
+      </View>
+
+      <View
+        style={[
+          styles.tabBar,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+            paddingBottom: bottomInset,
+            paddingTop: wp(8),
+          },
+        ]}
+      >
+        {routes.map((route) => {
+          const selected = route.key === activeKey;
+          const color = selected ? theme.colors.primary : theme.colors.muted;
+
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              onPress={() => setActiveKey(route.key)}
+              style={styles.tab}
+            >
+              <View
+                style={[
+                  styles.indicator,
+                  {
+                    backgroundColor: selected ? theme.colors.primary : 'transparent',
+                  },
+                ]}
+              />
+              {renderIcon(route.iconName, color, wp(18))}
+              <Text size="xs" weight={selected ? 'semibold' : 'medium'} style={{ color }}>
+                {route.title}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   scene: {
     flex: 1,
+  },
+  tabBar: {
+    alignItems: 'center',
+    borderTopWidth: wp(1),
+    bottom: 0,
+    flexDirection: 'row',
+    left: 0,
+    minHeight: wp(64),
+    position: 'absolute',
+    right: 0,
+  },
+  tab: {
+    alignItems: 'center',
+    flex: 1,
+    gap: wp(4),
+    justifyContent: 'center',
+    minHeight: wp(46),
+  },
+  indicator: {
+    borderRadius: wp(999),
+    height: wp(3),
+    width: wp(26),
   },
 });

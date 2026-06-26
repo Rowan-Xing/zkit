@@ -40,11 +40,6 @@ export const zhTW = {
   'betweenTime.quick.thisQuarter': '本季度',
   'betweenTime.quick.recentDays': '最近{n}天',
 
-  // ImageCropper
-  'imageCropper.reset': '重設',
-  'imageCropper.loadFailed': '圖片載入失敗，請稍後再試',
-  'imageCropper.processFailed': '圖片裁剪失敗，請稍後再試',
-
   // ImagePreview
   'imagePreview.preview': '圖片預覽',
   'imagePreview.close': '關閉圖片預覽',
@@ -69,27 +64,6 @@ export const zhTW = {
 
   // TextInput
   'textInput.clear': '清空輸入',
-
-  // OTA Update
-  'ota.retryPreparing.title': '正在重新準備更新',
-  'ota.retryPreparing.subtitle': '正在清理上次失敗狀態並重新檢查更新，請稍候',
-  'ota.downloading.title': '正在下載更新',
-  'ota.downloading.subtitle': '正在獲取最新版本資源，請稍候',
-  'ota.downloading.progressLabel': '更新進度',
-  'ota.downloading.elapsed': '已耗時 {time}',
-  'ota.installing.title': '正在安裝更新',
-  'ota.installing.subtitle': '正在校驗並寫入資源檔案，已耗時 {time}',
-  'ota.ready.title': '更新已準備就緒',
-  'ota.ready.subtitle': '已準備重啟以應用最新版本',
-  'ota.ready.hint': '點擊下方按鈕立即生效',
-  'ota.error.title': '更新失敗',
-  'ota.error.subtitle': '下載或安裝過程中出現問題，請重試',
-  'ota.warning': '請勿退出或切到後台，否則可能導致更新失敗',
-  'ota.button.retry': '重試',
-  'ota.button.dismiss': '稍後再說',
-  'ota.button.reload': '立即重啟',
-  'ota.time.minutesSeconds': '{min}分{sec}秒',
-  'ota.time.seconds': '{sec}秒',
 
   // Debug
   'debug.errorBoundary.title': '出錯了',

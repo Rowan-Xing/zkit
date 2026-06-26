@@ -3,7 +3,6 @@ import { I18nProvider } from './i18n/I18nProvider';
 import type { I18nMessages, I18nMissingKeyPolicy } from './i18n/types';
 import { ActionDialogProvider } from './services/ActionDialogService/index';
 import { ToastProvider } from './services/CardToastService/index';
-import { ImageCropperProvider } from './services/ImageCropperService/index';
 import { ImagePreviewProvider } from './services/ImagePreviewService/index';
 import { LoadingProvider, type LoadingDefaults } from './services/LoadingService/index';
 import { PermissionPurposeDialogProvider } from './services/PermissionPurposeDialogService/index';
@@ -46,7 +45,7 @@ export function ComponentLibProvider({
                 <LoadingProvider defaults={loading}>
                   <PermissionPurposeDialogProvider>
                     <ImagePreviewProvider>
-                      <ImageCropperProvider>{children}</ImageCropperProvider>
+                      {children}
                     </ImagePreviewProvider>
                   </PermissionPurposeDialogProvider>
                 </LoadingProvider>

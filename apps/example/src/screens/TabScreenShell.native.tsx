@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from 'react-native-bottom-tabs';
 import { wp } from 'y2kit-tools';
 
-import { styles as sharedStyles } from '../styles';
 import { exampleBackgroundColor } from '../theme';
+import { styles as sharedStyles } from '../styles';
 
 type TabScreenShellProps = {
   children: React.ReactNode;
@@ -16,8 +17,7 @@ export const TabScreenShell = React.memo(function TabScreenShell({
   withTopInset = true,
 }: TabScreenShellProps) {
   const insets = useSafeAreaInsets();
-  useWindowDimensions();
-  const tabBarHeight = Math.max(wp(74), insets.bottom + wp(62));
+  const tabBarHeight = useBottomTabBarHeight();
 
   return (
     <View style={[styles.screen, { backgroundColor: exampleBackgroundColor }]}>
@@ -26,6 +26,7 @@ export const TabScreenShell = React.memo(function TabScreenShell({
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
         contentContainerStyle={[
           sharedStyles.content,
           {

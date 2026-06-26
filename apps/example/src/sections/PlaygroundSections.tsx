@@ -20,14 +20,12 @@ import {
   CheckboxGroup,
   DatePicker,
   LoadingSpinner,
-  OTAUpdateManager,
   Picker,
   Radio,
   RadioGroup,
   Switch,
   Text,
   TextInput,
-  imageCropper,
   imagePreview,
   toast,
   useI18n,
@@ -699,36 +697,6 @@ export const ServicesSection = React.memo(function ServicesSection({
 }: ServicesSectionProps) {
   const theme = useTheme();
   const { t } = useI18n();
-  const [otaRunId, setOtaRunId] = React.useState(0);
-
-  const handleCropImage = React.useCallback(async () => {
-    try {
-      const result = await imageCropper.pick({
-        square: true,
-        output: { maxWidth: 1024, maxHeight: 1024, compress: 0.92, format: 'jpeg' },
-        texts: {
-          title: t('example.services.cropperEdit'),
-          confirm: t('example.common.use'),
-          cancel: t('example.common.cancel'),
-        },
-      });
-
-      if (result) {
-        toast.success(t('example.services.cropperSuccess'), { duration: 1400 });
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('example.services.cropperFailed'), { duration: 1800 });
-    }
-  }, [t]);
-
-  const handleOtaSimulation = React.useCallback(() => {
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      setOtaRunId((current) => current + 1);
-      return;
-    }
-
-    toast.info(t('example.services.otaRelease'), { duration: 1600 });
-  }, [t]);
 
   return (
     <Section
@@ -787,14 +755,6 @@ export const ServicesSection = React.memo(function ServicesSection({
           onPress={() => imagePreview.open({ images: previewImages })}
         />
         <ServiceActionCard
-          iconName="crop"
-          title={t('example.services.cropperTitle')}
-          subtitle={t('example.services.cropperSubtitle')}
-          color="#0F9F6E"
-          buttonLabel={t('example.common.pick')}
-          onPress={handleCropImage}
-        />
-        <ServiceActionCard
           iconName="shield"
           title={t('example.services.captchaTitle')}
           subtitle={t('example.services.captchaSubtitle')}
@@ -810,27 +770,7 @@ export const ServicesSection = React.memo(function ServicesSection({
           buttonLabel={t('example.common.open')}
           onPress={onDebuggerOpen}
         />
-        <ServiceActionCard
-          iconName="download-cloud"
-          title={t('example.services.otaTitle')}
-          subtitle={t('example.services.otaSubtitle')}
-          color="#2563EB"
-          buttonLabel={t('example.common.run')}
-          onPress={handleOtaSimulation}
-        />
       </View>
-      {typeof __DEV__ !== 'undefined' && __DEV__ && otaRunId > 0 ? (
-        <OTAUpdateManager
-          key={otaRunId}
-          devSimulation={{
-            enabled: true,
-            delayMs: 180,
-            downloadDurationMs: 1200,
-            installDurationMs: 800,
-            endState: 'ready',
-          }}
-        />
-      ) : null}
     </Section>
   );
 });

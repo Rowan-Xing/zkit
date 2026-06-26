@@ -40,11 +40,6 @@ export const enUS = {
   'betweenTime.quick.thisQuarter': 'This Quarter',
   'betweenTime.quick.recentDays': 'Last {n} Days',
 
-  // ImageCropper
-  'imageCropper.reset': 'Reset',
-  'imageCropper.loadFailed': 'Failed to load image. Please try again.',
-  'imageCropper.processFailed': 'Failed to crop image. Please try again.',
-
   // ImagePreview
   'imagePreview.preview': 'Image preview',
   'imagePreview.close': 'Close image preview',
@@ -69,27 +64,6 @@ export const enUS = {
 
   // TextInput
   'textInput.clear': 'Clear input',
-
-  // OTA Update
-  'ota.retryPreparing.title': 'Preparing Update Retry',
-  'ota.retryPreparing.subtitle': 'Cleaning up the failed attempt and checking again…',
-  'ota.downloading.title': 'Downloading',
-  'ota.downloading.subtitle': 'Getting latest version…',
-  'ota.downloading.progressLabel': 'Progress',
-  'ota.downloading.elapsed': '{time} elapsed',
-  'ota.installing.title': 'Installing',
-  'ota.installing.subtitle': 'Writing files, {time} elapsed',
-  'ota.ready.title': 'Update Ready',
-  'ota.ready.subtitle': 'Restart to apply update',
-  'ota.ready.hint': 'Tap below to apply',
-  'ota.error.title': 'Update Failed',
-  'ota.error.subtitle': 'Something went wrong, retry?',
-  'ota.warning': 'Stay in app, or update may fail',
-  'ota.button.retry': 'Retry',
-  'ota.button.dismiss': 'Later',
-  'ota.button.reload': 'Restart',
-  'ota.time.minutesSeconds': '{min}m {sec}s',
-  'ota.time.seconds': '{sec}s',
 
   // Debug
   'debug.errorBoundary.title': 'Something went wrong',

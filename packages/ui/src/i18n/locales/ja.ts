@@ -40,11 +40,6 @@ export const ja = {
   'betweenTime.quick.thisQuarter': '今四半期',
   'betweenTime.quick.recentDays': '過去{n}日間',
 
-  // ImageCropper
-  'imageCropper.reset': 'リセット',
-  'imageCropper.loadFailed': '画像の読み込みに失敗しました。もう一度お試しください。',
-  'imageCropper.processFailed': '画像の切り抜きに失敗しました。もう一度お試しください。',
-
   // ImagePreview
   'imagePreview.preview': '画像プレビュー',
   'imagePreview.close': '画像プレビューを閉じる',
@@ -69,27 +64,6 @@ export const ja = {
 
   // TextInput
   'textInput.clear': '入力をクリア',
-
-  // OTA Update
-  'ota.retryPreparing.title': '更新を再準備中',
-  'ota.retryPreparing.subtitle': '前回の失敗状態を整理し、更新を再確認しています',
-  'ota.downloading.title': '更新をDL中',
-  'ota.downloading.subtitle': '最新版を取得中です',
-  'ota.downloading.progressLabel': '進捗',
-  'ota.downloading.elapsed': '経過 {time}',
-  'ota.installing.title': 'インストール中',
-  'ota.installing.subtitle': 'ファイル書込中、経過 {time}',
-  'ota.ready.title': '更新準備完了',
-  'ota.ready.subtitle': '再起動で最新版を適用',
-  'ota.ready.hint': '下のボタンで適用',
-  'ota.error.title': '更新失敗',
-  'ota.error.subtitle': '問題が発生しました。再試行を',
-  'ota.warning': 'アプリを閉じないでください',
-  'ota.button.retry': '再試行',
-  'ota.button.dismiss': '後で',
-  'ota.button.reload': '再起動',
-  'ota.time.minutesSeconds': '{min}分{sec}秒',
-  'ota.time.seconds': '{sec}秒',
 
   // Debug
   'debug.errorBoundary.title': '問題が発生しました',
