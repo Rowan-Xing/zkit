@@ -965,6 +965,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   contentSlot: {
+    flexGrow: 1,
     flexShrink: 1,
     minWidth: 0,
   },
