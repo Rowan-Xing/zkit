@@ -550,6 +550,21 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
+  switchCustomContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: wp(10),
+    minWidth: 0,
+  },
+  switchCustomBadge: {
+    borderRadius: wp(999),
+    height: wp(12),
+    width: wp(12),
+  },
+  switchCustomCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
   controlLabel: {
     fontSize: wp(15),
     fontWeight: '800',
@@ -559,15 +574,6 @@ export const styles = StyleSheet.create({
     fontSize: wp(13),
     lineHeight: wp(18),
     marginTop: wp(2),
-  },
-  spinnerRow: {
-    alignItems: 'center',
-    borderRadius: wp(12),
-    borderWidth: wp(1),
-    flexDirection: 'row',
-    gap: wp(10),
-    minHeight: wp(48),
-    paddingHorizontal: wp(14),
   },
   selectionGrid: {
     gap: wp(14),
@@ -609,15 +615,16 @@ export const styles = StyleSheet.create({
     gap: wp(12),
     marginTop: wp(14),
   },
-  choiceControlGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: wp(12),
+  choiceOptionStack: {
+    gap: wp(10),
   },
-  choiceControlItem: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    minWidth: wp(132),
+  choiceOption: {
+    alignSelf: 'stretch',
+    borderRadius: wp(12),
+    borderWidth: wp(1),
+    minHeight: wp(54),
+    paddingHorizontal: wp(12),
+    paddingVertical: wp(10),
   },
   choiceCustomOption: {
     alignItems: 'center',
@@ -626,9 +633,10 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: wp(10),
     minHeight: wp(62),
-    minWidth: wp(230),
+    minWidth: 0,
     paddingHorizontal: wp(12),
     paddingVertical: wp(10),
+    width: '100%',
   },
   choiceCustomDot: {
     borderRadius: wp(999),

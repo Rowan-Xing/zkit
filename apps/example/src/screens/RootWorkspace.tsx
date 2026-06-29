@@ -28,13 +28,15 @@ import {
 } from '../theme';
 import {
   ButtonGuidePage,
-  ChoiceGuidePage,
-  FormsGuidePage,
+  CheckboxGuidePage,
   FoundationGuidePage,
   OverviewGuidePage,
   PickersGuidePage,
+  RadioGuidePage,
   ServicesGuidePage,
+  SwitchGuidePage,
   SurfacesGuidePage,
+  TextInputGuidePage,
   ToolsGuidePage,
 } from './GuidePages';
 import { ActionDialogsGuidePage } from './ActionDialogsGuidePage';
@@ -43,8 +45,10 @@ type WorkspaceRouteKey =
   | 'overview'
   | 'foundation'
   | 'button'
-  | 'forms'
-  | 'choice'
+  | 'textInput'
+  | 'switch'
+  | 'checkbox'
+  | 'radio'
   | 'surfaces'
   | 'pickers'
   | 'services'
@@ -63,8 +67,10 @@ const WORKSPACE_ROUTE_KEYS: readonly WorkspaceRouteKey[] = [
   'overview',
   'foundation',
   'button',
-  'forms',
-  'choice',
+  'textInput',
+  'switch',
+  'checkbox',
+  'radio',
   'surfaces',
   'pickers',
   'services',
@@ -76,8 +82,10 @@ const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
   overview: '/',
   foundation: '/foundation',
   button: '/button',
-  forms: '/forms',
-  choice: '/choice',
+  textInput: '/text-input',
+  switch: '/switch',
+  checkbox: '/checkbox',
+  radio: '/radio',
   surfaces: '/surfaces',
   pickers: '/pickers',
   services: '/services',
@@ -99,11 +107,21 @@ function canUseBrowserRoutes() {
 
 function getRouteKeyFromPath(pathname: string): WorkspaceRouteKey {
   const segments = pathname.split('/').map((segment) => segment.trim()).filter(Boolean);
+  const normalizedPath = `/${segments.join('/')}`.toLowerCase();
   const lastSegment = segments[segments.length - 1]?.toLowerCase();
 
   if (!lastSegment) return 'overview';
   if (lastSegment === 'overview') return 'overview';
-  return WORKSPACE_ROUTE_KEYS.find((key) => key === lastSegment) ?? 'overview';
+  if (lastSegment === 'forms') return 'textInput';
+  if (lastSegment === 'choice') return 'checkbox';
+
+  return (
+    WORKSPACE_ROUTE_KEYS.find(
+      (key) =>
+        WORKSPACE_ROUTE_PATHS[key].toLowerCase() === normalizedPath ||
+        key.toLowerCase() === lastSegment
+    ) ?? 'overview'
+  );
 }
 
 function readWorkspaceRouteFromBrowser(): WorkspaceRouteKey {
@@ -174,18 +192,32 @@ export function RootWorkspace({
         Screen: ButtonGuidePage,
       },
       {
-        key: 'forms',
-        title: t('example.page.forms.title'),
-        caption: t('example.page.forms.caption'),
+        key: 'textInput',
+        title: t('example.page.textInput.title'),
+        caption: t('example.page.textInput.caption'),
         iconName: 'edit-3',
-        Screen: FormsGuidePage,
+        Screen: TextInputGuidePage,
       },
       {
-        key: 'choice',
-        title: t('example.page.choice.title'),
-        caption: t('example.page.choice.caption'),
+        key: 'switch',
+        title: t('example.page.switch.title'),
+        caption: t('example.page.switch.caption'),
+        iconName: 'toggle-right',
+        Screen: SwitchGuidePage,
+      },
+      {
+        key: 'checkbox',
+        title: t('example.page.checkbox.title'),
+        caption: t('example.page.checkbox.caption'),
         iconName: 'check-square',
-        Screen: ChoiceGuidePage,
+        Screen: CheckboxGuidePage,
+      },
+      {
+        key: 'radio',
+        title: t('example.page.radio.title'),
+        caption: t('example.page.radio.caption'),
+        iconName: 'disc',
+        Screen: RadioGuidePage,
       },
       {
         key: 'surfaces',

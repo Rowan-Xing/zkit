@@ -393,11 +393,14 @@ export const ButtonsSection = React.memo(function ButtonsSection({
   );
 });
 
-type InputsSectionProps = {
-  enabled: boolean;
+type TextInputSectionProps = {
   note: string;
-  onEnabledChange: (next: boolean) => void;
   onNoteChange: (next: string) => void;
+};
+
+type SwitchSectionProps = {
+  enabled: boolean;
+  onEnabledChange: (next: boolean) => void;
 };
 
 type FormDemoBlockProps = {
@@ -428,33 +431,41 @@ const FormDemoBlock = React.memo(function FormDemoBlock({
   );
 });
 
-export const InputsSection = React.memo(function InputsSection({
-  enabled,
+export const TextInputSection = React.memo(function TextInputSection({
   note,
-  onEnabledChange,
   onNoteChange,
-}: InputsSectionProps) {
+}: TextInputSectionProps) {
   const theme = useTheme();
   const { t } = useI18n();
+  const handleClear = React.useCallback(() => {
+    toast.info(t('example.textInput.clearToast'));
+  }, [t]);
+  const handleSubmit = React.useCallback(
+    (next: string) => {
+      toast.info(`${t('example.textInput.submitToast')} ${next || '-'}`);
+    },
+    [t]
+  );
 
   return (
     <Section
-      eyebrow={t('example.forms.eyebrow')}
-      title={t('example.forms.title')}
-      subtitle={t('example.forms.subtitle')}
+      eyebrow={t('example.textInput.eyebrow')}
+      title={t('example.textInput.title')}
+      subtitle={t('example.textInput.subtitle')}
     >
       <View style={styles.fieldStack}>
         <FormDemoBlock
-          title={t('example.forms.inputGroupTitle')}
-          caption={t('example.forms.inputGroupCaption')}
+          title={t('example.textInput.valueGroupTitle')}
+          caption={t('example.textInput.valueGroupCaption')}
         >
           <TextInput
-            defaultValue={t('example.forms.searchValue')}
-            label={t('example.forms.searchLabel')}
-            description={t('example.forms.searchDescription')}
-            placeholder={t('example.forms.searchPlaceholder')}
+            defaultValue={t('example.textInput.searchValue')}
+            label={t('example.textInput.searchLabel')}
+            description={t('example.textInput.searchDescription')}
+            placeholder={t('example.textInput.searchPlaceholder')}
             prefix={renderIcon('search', theme.colors.muted, wp(18))}
             clearable
+            onClear={handleClear}
             returnKeyType="search"
             inputMode="search"
             autoCapitalize="none"
@@ -464,19 +475,42 @@ export const InputsSection = React.memo(function InputsSection({
           <TextInput
             value={note}
             onChange={onNoteChange}
-            label={t('example.forms.noteLabel')}
-            description={t('example.forms.noteDescription')}
-            placeholder={t('example.forms.placeholder')}
+            label={t('example.textInput.noteLabel')}
+            labelAction={
+              <Text variant="caption" tone="muted">
+                {t('example.textInput.labelAction')}
+              </Text>
+            }
+            description={t('example.textInput.noteDescription')}
+            placeholder={t('example.textInput.placeholder')}
             clearable
             maxLength={120}
+            required
             returnKeyType="done"
             showCount
           />
 
           <TextInput
+            defaultValue="https://zkit.local"
+            label={t('example.textInput.submitLabel')}
+            description={t('example.textInput.submitDescription')}
+            prefix={renderIcon('send', theme.colors.muted, wp(18))}
+            placeholder={t('example.textInput.submitPlaceholder')}
+            inputMode="url"
+            returnKeyType="send"
+            onSubmit={handleSubmit}
+            clearable
+          />
+        </FormDemoBlock>
+
+        <FormDemoBlock
+          title={t('example.textInput.affixGroupTitle')}
+          caption={t('example.textInput.affixGroupCaption')}
+        >
+          <TextInput
             defaultValue="128.00"
-            label={t('example.forms.amountLabel')}
-            description={t('example.forms.amountDescription')}
+            label={t('example.textInput.amountLabel')}
+            description={t('example.textInput.amountDescription')}
             prefix="$"
             suffix="USD"
             variant="filled"
@@ -485,50 +519,144 @@ export const InputsSection = React.memo(function InputsSection({
             inputMode="decimal"
             clearable
           />
-        </FormDemoBlock>
 
-        <FormDemoBlock
-          title={t('example.forms.feedbackGroupTitle')}
-          caption={t('example.forms.feedbackGroupCaption')}
-        >
+          <View style={styles.dualColumnGrid}>
+            <TextInput
+              defaultValue={t('example.textInput.filledValue')}
+              label={t('example.textInput.filledLabel')}
+              description={t('example.textInput.filledDescription')}
+              variant="filled"
+              tone="info"
+              size="sm"
+              style={styles.dualColumnItem}
+            />
+            <TextInput
+              defaultValue={t('example.textInput.plainValue')}
+              label={t('example.textInput.plainLabel')}
+              description={t('example.textInput.plainDescription')}
+              variant="plain"
+              status="warning"
+              size="sm"
+              style={styles.dualColumnItem}
+            />
+          </View>
+
           <TextInput
-            defaultValue={t('example.forms.validationValue')}
-            label={t('example.forms.validationLabel')}
-            error={t('example.forms.validationError')}
-            status="error"
+            defaultValue={t('example.textInput.customValue')}
+            label={t('example.textInput.customLabel')}
+            description={t('example.textInput.customDescription')}
+            color="info"
+            colors={{
+              background: '#EFF6FF',
+              border: '#93C5FD',
+              icon: '#2563EB',
+              text: '#0F172A',
+            }}
+            layout={{
+              minHeight: wp(52),
+              radius: wp(16),
+              paddingHorizontal: wp(16),
+              textSize: wp(16),
+            }}
+            prefix={renderIcon('sliders', '#2563EB', wp(18))}
             clearable
           />
 
           <TextInput
-            defaultValue={t('example.forms.multilineValue')}
-            label={t('example.forms.multilineLabel')}
-            description={t('example.forms.multilineDescription')}
+            defaultValue={t('example.textInput.styleSlotValue')}
+            label={t('example.textInput.styleSlotLabel')}
+            description={t('example.textInput.styleSlotDescription')}
+            prefix={renderIcon('edit-3', '#2563EB', wp(16))}
+            suffix="VIP"
+            clearable
+            clearIcon={renderIcon('x-circle', '#2563EB', wp(16))}
+            clearAccessibilityLabel={t('example.textInput.clearA11y')}
+            maxLength={72}
+            showCount
+            fieldStyle={{ borderStyle: 'dashed' }}
+            inputStyle={{ fontWeight: '700' }}
+            labelStyle={{ color: '#1D4ED8' }}
+            descriptionStyle={{ color: '#2563EB' }}
+            countStyle={{ color: '#1D4ED8' }}
+            prefixStyle={{
+              backgroundColor: '#DBEAFE',
+              borderRadius: wp(10),
+              padding: wp(4),
+            }}
+            suffixStyle={{
+              backgroundColor: '#DBEAFE',
+              borderRadius: wp(10),
+              paddingHorizontal: wp(8),
+              paddingVertical: wp(3),
+            }}
+            clearButtonStyle={{ backgroundColor: '#DBEAFE' }}
+          />
+        </FormDemoBlock>
+
+        <FormDemoBlock
+          title={t('example.textInput.feedbackGroupTitle')}
+          caption={t('example.textInput.feedbackGroupCaption')}
+        >
+          <TextInput
+            defaultValue={t('example.textInput.validationValue')}
+            label={t('example.textInput.validationLabel')}
+            error={t('example.textInput.validationError')}
+            status="error"
+            clearable
+            errorStyle={{ fontWeight: '800' }}
+          />
+
+          <View style={styles.dualColumnGrid}>
+            <TextInput
+              defaultValue={t('example.textInput.successValue')}
+              label={t('example.textInput.successLabel')}
+              description={t('example.textInput.successDescription')}
+              status="success"
+              size="sm"
+              style={styles.dualColumnItem}
+            />
+            <TextInput
+              defaultValue={t('example.textInput.invalidValue')}
+              label={t('example.textInput.invalidLabel')}
+              description={t('example.textInput.invalidDescription')}
+              invalid
+              size="sm"
+              style={styles.dualColumnItem}
+            />
+          </View>
+
+          <TextInput
+            defaultValue={t('example.textInput.multilineValue')}
+            label={t('example.textInput.multilineLabel')}
+            description={t('example.textInput.multilineDescription')}
             variant="outline"
             status="warning"
             multiline
             minRows={3}
             maxRows={5}
-            showCount
+            renderCount={({ count, maxLength }) =>
+              `${count}${t('example.textInput.countUnit')}${maxLength ? ` / ${maxLength}` : ''}`
+            }
             maxLength={160}
           />
         </FormDemoBlock>
 
         <FormDemoBlock
-          title={t('example.forms.stateGroupTitle')}
-          caption={t('example.forms.stateGroupCaption')}
+          title={t('example.textInput.stateGroupTitle')}
+          caption={t('example.textInput.stateGroupCaption')}
         >
           <View style={styles.dualColumnGrid}>
             <TextInput
-              defaultValue={t('example.forms.readOnlyValue')}
-              label={t('example.forms.readOnlyLabel')}
+              defaultValue={t('example.textInput.readOnlyValue')}
+              label={t('example.textInput.readOnlyLabel')}
               readOnly
               variant="outline"
               size="sm"
               style={styles.dualColumnItem}
             />
             <TextInput
-              defaultValue={t('example.forms.disabledValue')}
-              label={t('example.forms.disabledLabel')}
+              defaultValue={t('example.textInput.disabledValue')}
+              label={t('example.textInput.disabledLabel')}
               disabled
               variant="outline"
               size="sm"
@@ -536,6 +664,44 @@ export const InputsSection = React.memo(function InputsSection({
             />
           </View>
 
+          <View style={styles.dualColumnGrid}>
+            <TextInput
+              defaultValue={t('example.textInput.smallValue')}
+              label={t('example.textInput.smallLabel')}
+              size="sm"
+              style={styles.dualColumnItem}
+            />
+            <TextInput
+              defaultValue={t('example.textInput.largeValue')}
+              label={t('example.textInput.largeLabel')}
+              size="lg"
+              style={styles.dualColumnItem}
+            />
+          </View>
+        </FormDemoBlock>
+      </View>
+    </Section>
+  );
+});
+
+export const SwitchSection = React.memo(function SwitchSection({
+  enabled,
+  onEnabledChange,
+}: SwitchSectionProps) {
+  const theme = useTheme();
+  const { t } = useI18n();
+
+  return (
+    <Section
+      eyebrow={t('example.switch.eyebrow')}
+      title={t('example.switch.title')}
+      subtitle={t('example.switch.subtitle')}
+    >
+      <View style={styles.fieldStack}>
+        <FormDemoBlock
+          title={t('example.switch.stateGroupTitle')}
+          caption={t('example.switch.stateGroupCaption')}
+        >
           <View
             style={[
               styles.switchRow,
@@ -544,17 +710,17 @@ export const InputsSection = React.memo(function InputsSection({
           >
             <View style={styles.switchCopy}>
               <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
-                {t('example.forms.notifications')}
+                {t('example.switch.notifications')}
               </Text>
               <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
-                {enabled ? t('example.forms.enabled') : t('example.forms.disabled')}
+                {enabled ? t('example.switch.enabled') : t('example.switch.disabled')}
               </Text>
             </View>
             <Switch
               checked={enabled}
               stateText={{
-                checked: t('example.forms.on'),
-                unchecked: t('example.forms.off'),
+                checked: t('example.switch.on'),
+                unchecked: t('example.switch.off'),
               }}
               onCheckedChange={onEnabledChange}
             />
@@ -562,14 +728,42 @@ export const InputsSection = React.memo(function InputsSection({
 
           <View style={styles.switchOptionStack}>
             <Switch
-              label={t('example.forms.switchSmallInfo')}
-              description={t('example.forms.switchLabelPlacementEnd')}
+              label={t('example.switch.defaultLabel')}
+              description={t('example.switch.defaultDescription')}
+              defaultChecked
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.switch.uncheckedLabel')}
+              description={t('example.switch.uncheckedDescription')}
+              defaultChecked={false}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </View>
+        </FormDemoBlock>
+
+        <FormDemoBlock
+          title={t('example.switch.sizeGroupTitle')}
+          caption={t('example.switch.sizeGroupCaption')}
+        >
+          <View style={styles.switchOptionStack}>
+            <Switch
+              label={t('example.switch.smallInfo')}
+              description={t('example.switch.smallInfoDescription')}
               defaultChecked
               size="sm"
               tone="info"
               stateText={{
-                checked: t('example.forms.switchOnShort'),
-                unchecked: t('example.forms.switchOffShort'),
+                checked: t('example.switch.onShort'),
+                unchecked: t('example.switch.offShort'),
               }}
               contentStyle={styles.switchOptionContent}
               style={[
@@ -578,8 +772,114 @@ export const InputsSection = React.memo(function InputsSection({
               ]}
             />
             <Switch
-              label={t('example.forms.switchLoading')}
-              description={t('example.forms.switchBusyState')}
+              label={t('example.switch.successLarge')}
+              description={t('example.switch.successLargeDescription')}
+              defaultChecked
+              size="lg"
+              tone="success"
+              stateText={{
+                checked: t('example.switch.live'),
+                unchecked: t('example.switch.hold'),
+              }}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.switch.warningTone')}
+              description={t('example.switch.warningToneDescription')}
+              defaultChecked
+              tone="warning"
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.switch.dangerTone')}
+              description={t('example.switch.dangerToneDescription')}
+              defaultChecked
+              tone="danger"
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </View>
+        </FormDemoBlock>
+
+        <FormDemoBlock
+          title={t('example.switch.contentGroupTitle')}
+          caption={t('example.switch.contentGroupCaption')}
+        >
+          <View
+            style={[
+              styles.switchRow,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            <View style={styles.switchCopy}>
+              <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+                {t('example.switch.labelEnd')}
+              </Text>
+              <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
+                {t('example.switch.labelEndDescription')}
+              </Text>
+            </View>
+            <Switch
+              defaultChecked
+              label={t('example.switch.labelEndInline')}
+              labelPlacement="end"
+              tone="info"
+              stateText={{
+                checked: t('example.switch.onShort'),
+                unchecked: t('example.switch.offShort'),
+              }}
+            />
+          </View>
+
+          <Switch
+            defaultChecked
+            tone="neutral"
+            contentStyle={styles.switchOptionContent}
+            style={[
+              styles.switchOption,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            {({ checked }) => (
+              <View style={styles.switchCustomContent}>
+                <View
+                  style={[
+                    styles.switchCustomBadge,
+                    { backgroundColor: checked ? theme.colors.primary : theme.colors.border },
+                  ]}
+                />
+                <View style={styles.switchCustomCopy}>
+                  <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
+                    {t('example.switch.renderPropLabel')}
+                  </Text>
+                  <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
+                    {checked ? t('example.switch.renderPropOn') : t('example.switch.renderPropOff')}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </Switch>
+        </FormDemoBlock>
+
+        <FormDemoBlock
+          title={t('example.switch.busyGroupTitle')}
+          caption={t('example.switch.busyGroupCaption')}
+        >
+          <View style={styles.switchOptionStack}>
+            <Switch
+              label={t('example.switch.loading')}
+              description={t('example.switch.busyState')}
               checked
               loading
               tone="warning"
@@ -590,8 +890,21 @@ export const InputsSection = React.memo(function InputsSection({
               ]}
             />
             <Switch
-              label={t('example.forms.switchDisabled')}
-              description={t('example.forms.switchNotInteractive')}
+              label={t('example.switch.customLoading')}
+              description={t('example.switch.customLoadingDescription')}
+              checked
+              loading
+              loadingIndicator={renderIcon('loader', theme.colors.primary, wp(13))}
+              colors={{ loading: theme.colors.primary }}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.switch.disabledChecked')}
+              description={t('example.switch.notInteractive')}
               defaultChecked
               disabled
               contentStyle={styles.switchOptionContent}
@@ -601,19 +914,9 @@ export const InputsSection = React.memo(function InputsSection({
               ]}
             />
             <Switch
-              label={t('example.forms.switchCustom')}
-              defaultChecked
-              colors={{
-                checkedTrack: '#111827',
-                thumb: '#FFFFFF',
-                uncheckedTrack: '#CBD5E1',
-              }}
-              layout={{
-                width: wp(58),
-                height: wp(32),
-                thumbInset: wp(4),
-                textSize: wp(10),
-              }}
+              label={t('example.switch.disabledUnchecked')}
+              description={t('example.switch.notInteractive')}
+              disabled
               contentStyle={styles.switchOptionContent}
               style={[
                 styles.switchOption,
@@ -621,42 +924,79 @@ export const InputsSection = React.memo(function InputsSection({
               ]}
             />
           </View>
+        </FormDemoBlock>
 
-          <View
-            style={[
-              styles.switchRow,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
-            <View style={styles.switchCopy}>
-              <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
-                {t('example.forms.deliveryLane')}
-              </Text>
-              <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
-                {t('example.forms.deliveryTone')}
-              </Text>
-            </View>
+        <FormDemoBlock
+          title={t('example.switch.customGroupTitle')}
+          caption={t('example.switch.customGroupCaption')}
+        >
+          <View style={styles.switchOptionStack}>
             <Switch
+              label={t('example.switch.colorOverride')}
+              description={t('example.switch.colorOverrideDescription')}
               defaultChecked
-              size="lg"
-              tone="success"
-              stateText={{
-                checked: t('example.forms.live'),
-                unchecked: t('example.forms.hold'),
+              color="#7C3AED"
+              colors={{
+                uncheckedTrack: '#DDD6FE',
+                checkedText: '#FFFFFF',
+                uncheckedText: '#5B21B6',
+                focusRing: '#DDD6FE',
               }}
+              stateText={{
+                checked: t('example.switch.onShort'),
+                unchecked: t('example.switch.offShort'),
+              }}
+              duration={320}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
             />
-          </View>
-
-          <View
-            style={[
-              styles.spinnerRow,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
-            <LoadingSpinner size={wp(24)} color={theme.colors.primary} />
-            <Text style={[styles.controlValue, { color: theme.colors.muted }]}>
-              {t('example.forms.spinner')}
-            </Text>
+            <Switch
+              label={t('example.switch.layoutOverride')}
+              description={t('example.switch.layoutOverrideDescription')}
+              defaultChecked
+              colors={{
+                checkedTrack: '#111827',
+                thumb: '#FFFFFF',
+                uncheckedTrack: '#CBD5E1',
+              }}
+              layout={{
+                width: wp(70),
+                height: wp(34),
+                thumbInset: wp(4),
+                radius: wp(16),
+                textSize: wp(10),
+                textLineHeight: wp(12),
+              }}
+              stateText={{
+                checked: t('example.switch.live'),
+                unchecked: t('example.switch.hold'),
+              }}
+              stateTextStyle={{ fontWeight: '800' }}
+              trackStyle={{ borderWidth: wp(1), borderColor: '#94A3B8' }}
+              thumbStyle={{ shadowOpacity: 0.2 }}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Switch
+              label={t('example.switch.textStyleOverride')}
+              description={t('example.switch.textStyleOverrideDescription')}
+              defaultChecked
+              tone="info"
+              labelStyle={{ color: '#1D4ED8', fontWeight: '900' }}
+              descriptionStyle={{ color: '#2563EB' }}
+              accessibilityState={{ expanded: true }}
+              contentStyle={styles.switchOptionContent}
+              style={[
+                styles.switchOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
           </View>
         </FormDemoBlock>
       </View>
@@ -664,10 +1004,13 @@ export const InputsSection = React.memo(function InputsSection({
   );
 });
 
-type SelectionSectionProps = {
+type CheckboxSectionProps = {
   checkedItems: string[];
-  density: Density;
   onCheckedItemsChange: (next: string[]) => void;
+};
+
+type RadioSectionProps = {
+  density: Density;
   onDensityChange: (next: Density) => void;
 };
 
@@ -715,14 +1058,13 @@ const ChoiceCaseCard = React.memo(function ChoiceCaseCard({
   );
 });
 
-export const SelectionSection = React.memo(function SelectionSection({
+export const CheckboxSection = React.memo(function CheckboxSection({
   checkedItems,
-  density,
   onCheckedItemsChange,
-  onDensityChange,
-}: SelectionSectionProps) {
+}: CheckboxSectionProps) {
   const theme = useTheme();
   const { t } = useI18n();
+  const [controlledState, setControlledState] = React.useState<CheckboxCheckedState>('indeterminate');
   const selectedCount = checkedItems.length;
   const checkboxGroupState: CheckboxCheckedState =
     selectedCount === 0
@@ -739,34 +1081,222 @@ export const SelectionSection = React.memo(function SelectionSection({
 
   return (
     <Section
-      eyebrow={t('example.choice.eyebrow')}
-      title={t('example.choice.title')}
-      subtitle={t('example.choice.subtitle')}
+      eyebrow={t('example.checkbox.eyebrow')}
+      title={t('example.checkbox.title')}
+      subtitle={t('example.checkbox.subtitle')}
     >
       <View style={styles.selectionGrid}>
         <ChoiceCaseCard
           iconName="check-circle"
           iconColor="#7C3AED"
           iconBackground="#F3E8FF"
-          title={t('example.choice.checkboxStates')}
-          caption={t('example.choice.checkboxStatesCaption')}
+          title={t('example.checkbox.stateTitle')}
+          caption={t('example.checkbox.stateCaption')}
         >
-          <View style={styles.choiceControlGrid}>
-            <Checkbox style={styles.choiceControlItem} defaultChecked label={t('example.choice.checked')} description={t('example.choice.defaultChecked')} tone="success" />
-            <Checkbox style={styles.choiceControlItem} defaultChecked="indeterminate" label={t('example.choice.indeterminate')} description={t('example.choice.warningSolid')} tone="warning" />
-            <Checkbox style={styles.choiceControlItem} label={t('example.choice.unchecked')} description={t('example.choice.outline')} variant="outline" />
-            <Checkbox style={styles.choiceControlItem} defaultChecked label={t('example.choice.outlineCircle')} description={t('example.choice.shapeCircle')} variant="outline" tone="danger" shape="circle" />
-            <Checkbox style={styles.choiceControlItem} defaultChecked label={t('example.choice.solidCircle')} description={t('example.choice.solidCircleDescription')} tone="primary" shape="circle" />
-            <Checkbox style={styles.choiceControlItem} label={t('example.choice.softLg')} description={t('example.choice.infoSoft')} size="lg" variant="soft" tone="info" shape="rounded" />
+          <View style={styles.choiceOptionStack}>
             <Checkbox
-              style={styles.choiceControlItem}
+              checked={controlledState}
+              onChange={setControlledState}
+              label={t('example.checkbox.controlled')}
+              description={t('example.checkbox.controlledDescription')}
+              tone="primary"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              defaultChecked
+              label={t('example.checkbox.defaultChecked')}
+              description={t('example.checkbox.defaultCheckedDescription')}
+              tone="success"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              defaultChecked="indeterminate"
+              label={t('example.checkbox.defaultIndeterminate')}
+              description={t('example.checkbox.defaultIndeterminateDescription')}
+              tone="warning"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              label={t('example.checkbox.unchecked')}
+              description={t('example.checkbox.uncheckedDescription')}
+              variant="outline"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
               defaultChecked
               disabled
-              label={t('example.choice.disabled')}
-              description={t('example.choice.lockedState')}
+              label={t('example.checkbox.disabled')}
+              description={t('example.checkbox.disabledDescription')}
               labelPlacement="start"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
             />
           </View>
+        </ChoiceCaseCard>
+
+        <ChoiceCaseCard
+          iconName="sliders"
+          iconColor="#2563EB"
+          iconBackground="#DBEAFE"
+          title={t('example.checkbox.visualTitle')}
+          caption={t('example.checkbox.visualCaption')}
+        >
+          <View style={styles.choiceOptionStack}>
+            <Checkbox
+              defaultChecked
+              label={t('example.checkbox.solidCircle')}
+              description={t('example.checkbox.solidCircleDescription')}
+              variant="solid"
+              tone="primary"
+              shape="circle"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              defaultChecked
+              label={t('example.checkbox.outlineSquare')}
+              description={t('example.checkbox.outlineSquareDescription')}
+              variant="outline"
+              tone="danger"
+              shape="square"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              label={t('example.checkbox.softLarge')}
+              description={t('example.checkbox.softLargeDescription')}
+              size="lg"
+              variant="soft"
+              tone="info"
+              shape="rounded"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              defaultChecked
+              label={t('example.checkbox.trailingLabel')}
+              description={t('example.checkbox.trailingLabelDescription')}
+              labelPlacement="start"
+              tone="neutral"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </View>
+        </ChoiceCaseCard>
+
+        <ChoiceCaseCard
+          iconName="check-square"
+          iconColor="#4F46E5"
+          iconBackground="#EEF2FF"
+          title="CheckboxGroup"
+          caption={t('example.checkbox.groupCaption')}
+        >
+          <Checkbox
+            checked={checkboxGroupState}
+            onChange={handleSelectAllChange}
+            label={t('example.checkbox.selectAll')}
+            description={t('example.checkbox.selectAllDescription')}
+            tone="primary"
+            style={[
+              styles.choiceOption,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          />
+          <CheckboxGroup
+            value={checkedItems}
+            onChange={onCheckedItemsChange}
+            orientation="vertical"
+            gap={wp(10)}
+            variant="soft"
+            tone="primary"
+            shape="rounded"
+          >
+            <Checkbox
+              value="motion"
+              label={t('example.checkbox.motionTokens')}
+              description={t('example.checkbox.groupItemPrimary')}
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              value="forms"
+              label={t('example.checkbox.formControls')}
+              description={t('example.checkbox.groupItemOverride')}
+              tone="success"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Checkbox
+              value="overlays"
+              label={t('example.checkbox.overlayServices')}
+              description={t('example.checkbox.groupItemDisabled')}
+              disabled
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </CheckboxGroup>
+          <CheckboxGroup
+            defaultValue={['audit']}
+            orientation="horizontal"
+            wrap
+            gap={wp(12)}
+            rowGap={wp(10)}
+            align="center"
+            size="sm"
+            variant="outline"
+            tone="info"
+          >
+            <Checkbox value="audit" label={t('example.checkbox.uncontrolledAudit')} />
+            <Checkbox value="release" label={t('example.checkbox.uncontrolledRelease')} />
+            <Checkbox value="report" label={t('example.checkbox.uncontrolledReport')} />
+          </CheckboxGroup>
+          <CheckboxGroup
+            defaultValue={['locked']}
+            disabled
+            orientation="vertical"
+            gap={wp(8)}
+            variant="soft"
+            tone="neutral"
+          >
+            <Checkbox value="locked" label={t('example.checkbox.disabledGroupItem')} description={t('example.checkbox.disabledGroupDescription')} />
+          </CheckboxGroup>
+        </ChoiceCaseCard>
+
+        <ChoiceCaseCard
+          iconName="layers"
+          iconColor="#7C3AED"
+          iconBackground="#F3E8FF"
+          title={t('example.checkbox.customTitle')}
+          caption={t('example.checkbox.customCaption')}
+        >
           <Checkbox defaultChecked showIndicator={false}>
             {({ checked }) => (
               <View
@@ -781,44 +1311,116 @@ export const SelectionSection = React.memo(function SelectionSection({
                 <View style={[styles.choiceCustomDot, { backgroundColor: checked ? '#7C3AED' : '#CBD5E1' }]} />
                 <View style={styles.choiceCustomCopy}>
                   <Text style={[styles.choiceCustomTitle, { color: theme.colors.onSurface }]}>
-                    {t('example.choice.customCheckboxCard')}
+                    {t('example.checkbox.customCard')}
                   </Text>
                   <Text style={[styles.choiceCustomText, { color: theme.colors.muted }]}>
-                    {t('example.choice.customCheckboxCardDescription')}
+                    {t('example.checkbox.customCardDescription')}
                   </Text>
                 </View>
               </View>
             )}
           </Checkbox>
-        </ChoiceCaseCard>
-
-        <ChoiceCaseCard
-          iconName="check-square"
-          iconColor="#4F46E5"
-          iconBackground="#EEF2FF"
-          title="CheckboxGroup"
-          caption={t('example.choice.checkboxGroupCaption')}
-        >
           <Checkbox
-            checked={checkboxGroupState}
-            onChange={handleSelectAllChange}
-            label={t('example.choice.selectAll')}
-            description={t('example.choice.selectAllDescription')}
-            tone="primary"
+            defaultChecked
+            label={t('example.checkbox.customIndicator')}
+            description={t('example.checkbox.customIndicatorDescription')}
+            color="#7C3AED"
+            colors={{
+              checkedBackground: '#7C3AED',
+              checkedBorder: '#7C3AED',
+              uncheckedBorder: '#A78BFA',
+              focusRing: '#DDD6FE',
+            }}
+            layout={{
+              indicatorSize: wp(28),
+              indicatorRadius: wp(10),
+              indicatorIconSize: wp(16),
+              gap: wp(12),
+            }}
+            duration={320}
+            indicator={renderIcon('star', '#FFFFFF', wp(14))}
+            indicatorStyle={{ shadowOpacity: 0.18 }}
+            labelStyle={{ color: '#5B21B6', fontWeight: '900' }}
+            descriptionStyle={{ color: '#6D28D9' }}
+            accessibilityState={{ expanded: true }}
+            style={[
+              styles.choiceOption,
+              { backgroundColor: '#F5F3FF', borderColor: '#C4B5FD' },
+            ]}
           />
-          <CheckboxGroup
-            value={checkedItems}
-            onChange={onCheckedItemsChange}
-            orientation="vertical"
-            gap={wp(10)}
-            variant="soft"
-            tone="primary"
-            shape="rounded"
-          >
-            <Checkbox value="motion" label={t('example.choice.motionTokens')} description={t('example.choice.groupItemPrimary')} />
-            <Checkbox value="forms" label={t('example.choice.formControls')} description={t('example.choice.groupItemOverride')} tone="success" />
-            <Checkbox value="overlays" label={t('example.choice.overlayServices')} description={t('example.choice.groupItemDisabled')} disabled />
-          </CheckboxGroup>
+        </ChoiceCaseCard>
+      </View>
+    </Section>
+  );
+});
+
+export const RadioSection = React.memo(function RadioSection({
+  density,
+  onDensityChange,
+}: RadioSectionProps) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const [standaloneChecked, setStandaloneChecked] = React.useState(true);
+
+  return (
+    <Section
+      eyebrow={t('example.radio.eyebrow')}
+      title={t('example.radio.title')}
+      subtitle={t('example.radio.subtitle')}
+    >
+      <View style={styles.selectionGrid}>
+        <ChoiceCaseCard
+          iconName="circle"
+          iconColor="#0891B2"
+          iconBackground="#E0F2FE"
+          title={t('example.radio.stateTitle')}
+          caption={t('example.radio.stateCaption')}
+        >
+          <View style={styles.choiceOptionStack}>
+            <Radio
+              checked={standaloneChecked}
+              onChange={setStandaloneChecked}
+              label={t('example.radio.controlled')}
+              description={t('example.radio.controlledDescription')}
+              tone="primary"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              defaultChecked
+              label={t('example.radio.defaultChecked')}
+              description={t('example.radio.defaultCheckedDescription')}
+              tone="success"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              defaultChecked
+              allowDeselect
+              label={t('example.radio.allowDeselect')}
+              description={t('example.radio.allowDeselectDescription')}
+              tone="info"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              defaultChecked
+              disabled
+              label={t('example.radio.disabled')}
+              description={t('example.radio.disabledDescription')}
+              labelPlacement="start"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </View>
         </ChoiceCaseCard>
 
         <ChoiceCaseCard
@@ -826,7 +1428,7 @@ export const SelectionSection = React.memo(function SelectionSection({
           iconColor="#0F9F6E"
           iconBackground="#E8F7F1"
           title="RadioGroup"
-          caption={t('example.choice.radioGroupCaption')}
+          caption={t('example.radio.groupCaption')}
         >
           <RadioGroup<Density>
             value={density}
@@ -838,25 +1440,125 @@ export const SelectionSection = React.memo(function SelectionSection({
             variant="soft"
             tone="success"
           >
-            <Radio value="compact" label={t('example.choice.compact')} description={t('example.choice.compactDescription')} />
-            <Radio value="comfortable" label={t('example.choice.comfortable')} description={t('example.choice.comfortableDescription')} />
-            <Radio value="spacious" label={t('example.choice.spacious')} description={t('example.choice.spaciousDescription')} tone="info" />
+            <Radio
+              value="compact"
+              label={t('example.radio.compact')}
+              description={t('example.radio.compactDescription')}
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              value="comfortable"
+              label={t('example.radio.comfortable')}
+              description={t('example.radio.comfortableDescription')}
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              value="spacious"
+              label={t('example.radio.spacious')}
+              description={t('example.radio.spaciousDescription')}
+              tone="info"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </RadioGroup>
+          <RadioGroup
+            defaultValue="sync"
+            allowDeselect
+            orientation="horizontal"
+            wrap
+            gap={wp(12)}
+            rowGap={wp(10)}
+            align="center"
+            size="sm"
+            variant="outline"
+            tone="info"
+          >
+            <Radio value="sync" label={t('example.radio.uncontrolledSync')} />
+            <Radio value="manual" label={t('example.radio.uncontrolledManual')} />
+            <Radio value="off" label={t('example.radio.uncontrolledOff')} />
+          </RadioGroup>
+          <RadioGroup
+            defaultValue="locked"
+            disabled
+            orientation="vertical"
+            gap={wp(8)}
+            variant="soft"
+            tone="neutral"
+          >
+            <Radio value="locked" label={t('example.radio.disabledGroupItem')} description={t('example.radio.disabledGroupDescription')} />
           </RadioGroup>
         </ChoiceCaseCard>
 
         <ChoiceCaseCard
-          iconName="circle"
+          iconName="sliders"
+          iconColor="#D97706"
+          iconBackground="#FEF3C7"
+          title={t('example.radio.visualTitle')}
+          caption={t('example.radio.visualCaption')}
+        >
+          <View style={styles.choiceOptionStack}>
+            <Radio
+              defaultChecked
+              label={t('example.radio.solidSuccess')}
+              description={t('example.radio.solidSuccessDescription')}
+              variant="solid"
+              tone="success"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              label={t('example.radio.outlineDanger')}
+              description={t('example.radio.outlineDangerDescription')}
+              variant="outline"
+              tone="danger"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              defaultChecked
+              label={t('example.radio.softLarge')}
+              description={t('example.radio.softLargeDescription')}
+              size="lg"
+              variant="soft"
+              tone="warning"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+            <Radio
+              defaultChecked
+              label={t('example.radio.trailingLabel')}
+              description={t('example.radio.trailingLabelDescription')}
+              labelPlacement="start"
+              tone="neutral"
+              style={[
+                styles.choiceOption,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            />
+          </View>
+        </ChoiceCaseCard>
+
+        <ChoiceCaseCard
+          iconName="layers"
           iconColor="#0891B2"
           iconBackground="#E0F2FE"
-          title={t('example.choice.radioStates')}
-          caption={t('example.choice.radioStatesCaption')}
+          title={t('example.radio.customTitle')}
+          caption={t('example.radio.customCaption')}
         >
-          <View style={styles.choiceControlGrid}>
-            <Radio style={styles.choiceControlItem} defaultChecked label={t('example.choice.checked')} description={t('example.choice.standalone')} tone="success" />
-            <Radio style={styles.choiceControlItem} label={t('example.choice.allowDeselect')} description={t('example.choice.tapAgainToClear')} allowDeselect defaultChecked tone="info" />
-            <Radio style={styles.choiceControlItem} label={t('example.choice.softLg')} description={t('example.choice.warningSoft')} size="lg" variant="soft" tone="warning" />
-            <Radio style={styles.choiceControlItem} defaultChecked disabled label={t('example.choice.disabled')} labelPlacement="start" />
-          </View>
           <Radio defaultChecked showIndicator={false}>
             {({ checked }) => (
               <View
@@ -871,15 +1573,44 @@ export const SelectionSection = React.memo(function SelectionSection({
                 <View style={[styles.choiceCustomDot, { backgroundColor: checked ? '#0891B2' : '#CBD5E1' }]} />
                 <View style={styles.choiceCustomCopy}>
                   <Text style={[styles.choiceCustomTitle, { color: theme.colors.onSurface }]}>
-                    {t('example.choice.customRadioCard')}
+                    {t('example.radio.customCard')}
                   </Text>
                   <Text style={[styles.choiceCustomText, { color: theme.colors.muted }]}>
-                    {t('example.choice.customRadioCardDescription')}
+                    {t('example.radio.customCardDescription')}
                   </Text>
                 </View>
               </View>
             )}
           </Radio>
+          <Radio
+            defaultChecked
+            label={t('example.radio.customIndicator')}
+            description={t('example.radio.customIndicatorDescription')}
+            color="#0891B2"
+            colors={{
+              checkedBackground: '#CCFBF1',
+              checkedBorder: '#0891B2',
+              checkedIndicator: '#0E7490',
+              uncheckedBorder: '#67E8F9',
+              focusRing: '#CFFAFE',
+            }}
+            layout={{
+              indicatorSize: wp(28),
+              indicatorDotSize: wp(12),
+              indicatorBorderWidth: wp(2),
+              gap: wp(12),
+            }}
+            duration={320}
+            indicator={renderIcon('zap', '#0E7490', wp(13))}
+            indicatorStyle={{ backgroundColor: '#A5F3FC' }}
+            labelStyle={{ color: '#0E7490', fontWeight: '900' }}
+            descriptionStyle={{ color: '#0891B2' }}
+            accessibilityState={{ expanded: true }}
+            style={[
+              styles.choiceOption,
+              { backgroundColor: '#ECFEFF', borderColor: '#67E8F9' },
+            ]}
+          />
         </ChoiceCaseCard>
       </View>
     </Section>

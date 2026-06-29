@@ -8,8 +8,10 @@ export type Density = 'compact' | 'comfortable' | 'spacious';
 export type ShowcaseNavKey =
   | 'foundation'
   | 'actions'
-  | 'forms'
-  | 'choice'
+  | 'textInput'
+  | 'switch'
+  | 'checkbox'
+  | 'radio'
   | 'surfaces'
   | 'pickers'
   | 'services'
@@ -35,8 +37,10 @@ export type LinkedScrollItem = UILinkedScrollItem<string, LinkedDemoData>;
 export const showcaseNavItems: ShowcaseNavItem[] = [
   { key: 'foundation', titleKey: 'example.nav.foundation.title', captionKey: 'example.nav.foundation.caption' },
   { key: 'actions', titleKey: 'example.nav.actions.title', captionKey: 'example.nav.actions.caption' },
-  { key: 'forms', titleKey: 'example.nav.forms.title', captionKey: 'example.nav.forms.caption' },
-  { key: 'choice', titleKey: 'example.nav.choice.title', captionKey: 'example.nav.choice.caption' },
+  { key: 'textInput', titleKey: 'example.nav.textInput.title', captionKey: 'example.nav.textInput.caption' },
+  { key: 'switch', titleKey: 'example.nav.switch.title', captionKey: 'example.nav.switch.caption' },
+  { key: 'checkbox', titleKey: 'example.nav.checkbox.title', captionKey: 'example.nav.checkbox.caption' },
+  { key: 'radio', titleKey: 'example.nav.radio.title', captionKey: 'example.nav.radio.caption' },
   { key: 'surfaces', titleKey: 'example.nav.surfaces.title', captionKey: 'example.nav.surfaces.caption' },
   { key: 'pickers', titleKey: 'example.nav.pickers.title', captionKey: 'example.nav.pickers.caption' },
   { key: 'services', titleKey: 'example.nav.services.title', captionKey: 'example.nav.services.caption' },

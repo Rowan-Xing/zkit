@@ -25,12 +25,14 @@ import type { Density } from '../data';
 import { wait } from '../demoUtils';
 import {
   ButtonsSection,
+  CheckboxSection,
   FoundationSection,
-  InputsSection,
   PickersSection,
-  SelectionSection,
+  RadioSection,
   ServicesSection,
+  SwitchSection,
   SurfacesSection,
+  TextInputSection,
   ToolsSection,
 } from '../sections/PlaygroundSections';
 import { styles as sharedStyles } from '../styles';
@@ -43,8 +45,10 @@ const ROUTE_POP_DURATION = 220;
 type GuideKey =
   | 'foundation'
   | 'button'
-  | 'forms'
-  | 'choice'
+  | 'textInput'
+  | 'switch'
+  | 'checkbox'
+  | 'radio'
   | 'surfaces'
   | 'pickers'
   | 'services'
@@ -100,52 +104,137 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
     api: ['variant', 'tone', 'size', 'shape', 'block', 'loading', 'icon', 'iconOnly', 'layout', 'colors'],
     snippet: `import { Button } from 'zkit-ui';\n\n<Button variant="solid" tone="primary">Primary</Button>\n<Button variant="outline" tone="danger">Danger</Button>\n<Button loading loadingMode="overlay">Saving</Button>`,
   },
-  forms: {
-    title: 'TextInput / Switch',
+  textInput: {
+    title: 'TextInput',
     description:
-      '表单页展示输入与布尔设置的稳定状态模型：TextInput 使用 value / defaultValue / onChange，Switch 使用 checked / defaultChecked / onCheckedChange。',
+      'TextInput 是统一的文本输入 Field：负责标签、说明、反馈、字数、清除按钮、前后缀、主题色和跨端输入默认值，状态模型保持 value / defaultValue / onChange 单一入口。',
     blocks: [
       {
-        title: 'TextInput 覆盖用法',
+        title: '状态模型与原生输入',
         items: [
-          'label / description / error / showCount / clearable 覆盖完整 Field 形态。',
-          'prefix / suffix / multiline / minRows / maxRows / keyboardType 等原生输入能力继续透传。',
-          'disabled 与 readOnly 分离，error 存在时自动进入错误状态。',
+          'value / defaultValue / onChange 分别覆盖受控、非受控和业务值变化；onNativeChange 保留原生事件入口。',
+          'onSubmit 基于当前值触发提交，keyboardType / inputMode / returnKeyType / autoCapitalize 等原生能力继续透传。',
+          'clearable / onClear / clearIcon 与 showCount / renderCount 会同步内部值，Android、iOS、Web 保持同一清空语义。',
         ],
       },
       {
-        title: 'Switch 覆盖用法',
+        title: 'Field 结构与反馈',
         items: [
-          'checked / defaultChecked 同时支持受控与非受控，状态来源保持单一。',
-          'size / tone / stateText 覆盖尺寸、语义色和状态文案，三端使用同一自绘路径。',
+          'label / labelAction / required / description / error 组成完整表单语义；error 存在时自动进入错误状态，invalid 适合无文案错误态。',
+          'prefix / suffix 可放字符串、数字、图标或节点；readOnly 与 disabled 分离，分别表达只读和不可用。',
+          'maxLength、showCount、renderCount、multiline、minRows、maxRows 覆盖短文本、长文本和计数展示。',
+        ],
+      },
+      {
+        title: '外观、尺寸与平台',
+        items: [
+          'variant 覆盖 outline / filled / plain，tone 与 status 覆盖 primary、success、warning、danger、info 等语义反馈。',
+          'size 覆盖 sm / md / lg；layout、colors、color 与各类 style prop 是必要 escape hatch，像素值继续通过 wp(...) 传入。',
+          'selectionColor / cursorColor / selectionHandleColor 统一光标、选区和手柄；Web 会把 cursorColor 同步到 caretColor。',
         ],
       },
     ],
-    api: ['TextInput', 'value', 'onChange', 'label', 'error', 'clearable', 'Switch', 'checked', 'tone'],
-    snippet: `const [note, setNote] = React.useState('');\n\n<TextInput label="Note" value={note} onChange={setNote} clearable showCount />\n<Switch checked={enabled} onCheckedChange={setEnabled} tone="success" />`,
+    api: ['value', 'defaultValue', 'onChange', 'onSubmit', 'label', 'error', 'clearable', 'showCount', 'variant', 'layout'],
+    snippet: `const [note, setNote] = React.useState('');\n\n<TextInput\n  label="备注"\n  value={note}\n  onChange={setNote}\n  clearable\n  showCount\n  maxLength={120}\n/>`,
   },
-  choice: {
-    title: 'Checkbox / Radio',
+  switch: {
+    title: 'Switch',
     description:
-      '选择组件统一使用 value / defaultValue / onChange，单选和多选都走自绘 Pressable + Reanimated 路径，保证三端尺寸、动效、禁用态和主题表现一致。',
+      'Switch 是独立的布尔开关组件，适合立即启用或停用设置。它使用 checked / defaultChecked / onCheckedChange 状态模型，并通过自绘 Pressable + Reanimated 路径统一三端动效。',
     blocks: [
       {
-        title: 'Checkbox 覆盖用法',
+        title: '状态、交互与可访问性',
         items: [
-          'Checkbox 支持 checked / defaultChecked / indeterminate，适合协议勾选、批量选择和三态入口。',
-          'CheckboxGroup 使用 value 数组管理多选，orientation / gap / align 管理排列。',
+          'checked / defaultChecked 同时支持受控和非受控；受控模式完全跟随外部 checked，非受控模式先推进行为动画再同步状态。',
+          'disabled 与 loading 都会阻止切换；loading 会设置 accessibilityState.busy，并在 thumb 内展示默认或自定义 loadingIndicator。',
+          '根节点固定 accessibilityRole="switch"，label 可自动推导 accessibilityLabel，stateText 会同步 accessibilityValue。',
         ],
       },
       {
-        title: 'Radio 覆盖用法',
+        title: '内容、尺寸与语义色',
         items: [
-          'RadioGroup 使用单一 value 管理互斥选项，onChange 返回选中值。',
-          'size / tone / variant / labelPlacement / description 统一单项视觉和说明文案。',
+          'label / description / labelPlacement 覆盖设置项文案位置；children 和 render-prop 支持完全自定义内容区域。',
+          'size 覆盖 sm / md / lg，tone 覆盖 primary / neutral / success / warning / danger / info。',
+          'stateText 适合极短轨道内状态文案，组件会估算文案宽度并保护 thumb 滑动空间。',
+        ],
+      },
+      {
+        title: '覆盖与动画',
+        items: [
+          'color、colors、layout 分别覆盖主色、结构化色值和轨道/拇指尺寸；所有像素类值继续通过 wp(...) 传入。',
+          'trackStyle / thumbStyle / contentStyle / labelStyle / descriptionStyle / stateTextStyle 作为最后的样式 escape hatch。',
+          'duration 控制开关值动画时长，按压和焦点反馈由组件内部保持一致节奏。',
         ],
       },
     ],
-    api: ['Checkbox', 'CheckboxGroup', 'checked', 'indeterminate', 'Radio', 'RadioGroup', 'value', 'onChange'],
-    snippet: `<CheckboxGroup value={items} onChange={setItems}>\n  <Checkbox value="motion" label="Motion" />\n</CheckboxGroup>\n\n<RadioGroup value={density} onChange={setDensity}>\n  <Radio value="compact" label="Compact" />\n</RadioGroup>`,
+    api: ['checked', 'defaultChecked', 'onCheckedChange', 'loading', 'stateText', 'labelPlacement', 'children', 'colors', 'layout'],
+    snippet: `const [enabled, setEnabled] = React.useState(true);\n\n<Switch\n  checked={enabled}\n  onCheckedChange={setEnabled}\n  label="通知"\n  description="开启后接收系统消息"\n  stateText={{ checked: '开', unchecked: '关' }}\n/>`,
+  },
+  checkbox: {
+    title: 'Checkbox',
+    description:
+      'Checkbox 是独立的多选控件，适合协议确认、批量选择和三态全选。单项使用 checked / defaultChecked / onChange，组合使用 CheckboxGroup 的 value 数组。',
+    blocks: [
+      {
+        title: '状态模型',
+        items: [
+          'checked 支持 boolean 与 indeterminate；受控模式由外部状态驱动，非受控模式用 defaultChecked 初始化。',
+          'disabled 阻止交互但保留当前状态；label / description / labelPlacement 组成可读触控行。',
+          'showIndicator=false 与 children render-prop 可把 Checkbox 变成完整自定义卡片。',
+        ],
+      },
+      {
+        title: 'CheckboxGroup',
+        items: [
+          'value / defaultValue / onChange 管理选中集合，适合多选表单和批量操作。',
+          'orientation / wrap / align / gap / rowGap / columnGap 控制排列；组级 size / tone / variant / shape 可被单项覆盖。',
+          '全选入口可用 checked="indeterminate" 表达部分选中。',
+        ],
+      },
+      {
+        title: '外观与覆盖',
+        items: [
+          'size 覆盖 sm / md / lg，variant 覆盖 solid / soft / outline，shape 覆盖 rounded / square / circle。',
+          'tone、color、colors、layout、duration 覆盖语义色、结构色、尺寸与动效时长。',
+          'indicator、contentStyle、indicatorStyle、labelStyle、descriptionStyle 与 accessibilityState 是必要 escape hatch。',
+        ],
+      },
+    ],
+    api: ['checked', 'defaultChecked', 'onChange', 'CheckboxGroup', 'value', 'variant', 'shape', 'indicator', 'layout', 'colors'],
+    snippet: `const [items, setItems] = React.useState(['motion']);\n\n<CheckboxGroup value={items} onChange={setItems}>\n  <Checkbox value="motion" label="动效令牌" />\n  <Checkbox value="forms" label="表单控件" />\n</CheckboxGroup>`,
+  },
+  radio: {
+    title: 'Radio',
+    description:
+      'Radio 是独立的互斥选择控件，适合单选设置和方案选择。单项支持 checked / defaultChecked / allowDeselect，组合使用 RadioGroup 的单一 value。',
+    blocks: [
+      {
+        title: '状态模型',
+        items: [
+          'RadioGroup 使用 value / defaultValue / onChange 管理单一选中值，onChange 可返回 null 表示清空。',
+          'allowDeselect 允许再次点击取消选中；disabled 阻止交互但保留当前视觉状态。',
+          '独立 Radio 可直接用 checked / onChange，也可以交给 RadioGroup 统一注入状态。',
+        ],
+      },
+      {
+        title: '内容与排列',
+        items: [
+          'label / description / labelPlacement 覆盖选项文案位置；children render-prop 支持自定义选项卡。',
+          'orientation / wrap / align / gap / rowGap / columnGap 管理组内排列。',
+          '组级 size / tone / variant / color / colors / layout 提供默认外观，单项可以覆盖。',
+        ],
+      },
+      {
+        title: '外观与覆盖',
+        items: [
+          'size 覆盖 sm / md / lg，variant 覆盖 outline / soft / solid，tone 覆盖 primary / neutral / success / warning / danger / info。',
+          'indicator 可替换选中标记；showIndicator=false 适合卡片式单选。',
+          'contentStyle、indicatorStyle、labelStyle、descriptionStyle、accessibilityState 与 duration 覆盖最终细节。',
+        ],
+      },
+    ],
+    api: ['value', 'defaultValue', 'onChange', 'allowDeselect', 'RadioGroup', 'variant', 'indicator', 'layout', 'colors'],
+    snippet: `const [density, setDensity] = React.useState('comfortable');\n\n<RadioGroup value={density} onChange={setDensity}>\n  <Radio value="compact" label="紧凑" />\n  <Radio value="comfortable" label="舒适" />\n</RadioGroup>`,
   },
   surfaces: {
     title: 'Accordion / BottomSheet / LinkedScroll',
@@ -296,52 +385,137 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
     api: ['variant', 'tone', 'size', 'shape', 'block', 'loading', 'icon', 'iconOnly', 'layout', 'colors'],
     snippet: `import { Button } from 'zkit-ui';\n\n<Button variant="solid" tone="primary">Primary</Button>\n<Button variant="outline" tone="danger">Danger</Button>\n<Button loading loadingMode="overlay">Saving</Button>`,
   },
-  forms: {
-    title: 'TextInput / Switch',
+  textInput: {
+    title: 'TextInput',
     description:
-      'Form controls use stable state models: TextInput exposes value / defaultValue / onChange, while Switch exposes checked / defaultChecked / onCheckedChange.',
+      'TextInput is the unified text field entry point: it owns labels, helper copy, feedback, count, clear actions, affixes, theme color, and cross-platform input defaults while keeping value / defaultValue / onChange as the state model.',
     blocks: [
       {
-        title: 'TextInput coverage',
+        title: 'State model and native input',
         items: [
-          'label / description / error / showCount / clearable cover the full field shape.',
-          'prefix / suffix / multiline / minRows / maxRows / keyboardType keep native input capability available.',
-          'disabled and readOnly are separate; an error automatically enters the error state.',
+          'value / defaultValue / onChange cover controlled, uncontrolled, and business value changes; onNativeChange keeps access to the native event.',
+          'onSubmit receives the current value, while keyboardType / inputMode / returnKeyType / autoCapitalize and related native props continue to pass through.',
+          'clearable / onClear / clearIcon and showCount / renderCount synchronize the internal value so Android, iOS, and Web keep the same clear semantics.',
         ],
       },
       {
-        title: 'Switch coverage',
+        title: 'Field structure and feedback',
         items: [
-          'checked / defaultChecked support controlled and uncontrolled state with a single source of truth.',
-          'size / tone / stateText cover scale, semantic color, and state labels on one drawn path.',
+          'label / labelAction / required / description / error compose a full form field; error automatically enters the error state, while invalid covers no-copy error states.',
+          'prefix / suffix accept strings, numbers, icons, or custom nodes; readOnly and disabled stay separate.',
+          'maxLength, showCount, renderCount, multiline, minRows, and maxRows cover short text, long text, and counter display.',
+        ],
+      },
+      {
+        title: 'Visuals, sizing, and platforms',
+        items: [
+          'variant covers outline / filled / plain, while tone and status cover primary, success, warning, danger, info, and related feedback.',
+          'size covers sm / md / lg; layout, colors, color, and style props are escape hatches, with visual pixels still passed through wp(...).',
+          'selectionColor / cursorColor / selectionHandleColor align the cursor, selection, and handles; Web maps cursorColor to caretColor.',
         ],
       },
     ],
-    api: ['TextInput', 'value', 'onChange', 'label', 'error', 'clearable', 'Switch', 'checked', 'tone'],
-    snippet: `const [note, setNote] = React.useState('');\n\n<TextInput label="Note" value={note} onChange={setNote} clearable showCount />\n<Switch checked={enabled} onCheckedChange={setEnabled} tone="success" />`,
+    api: ['value', 'defaultValue', 'onChange', 'onSubmit', 'label', 'error', 'clearable', 'showCount', 'variant', 'layout'],
+    snippet: `const [note, setNote] = React.useState('');\n\n<TextInput\n  label="Note"\n  value={note}\n  onChange={setNote}\n  clearable\n  showCount\n  maxLength={120}\n/>`,
   },
-  choice: {
-    title: 'Checkbox / Radio',
+  switch: {
+    title: 'Switch',
     description:
-      'Choice controls use value / defaultValue / onChange. Checkbox and Radio both use drawn Pressable + Reanimated paths for consistent size, motion, disabled state, and theme behavior.',
+      'Switch is an independent boolean control for immediately enabling or disabling settings. It uses checked / defaultChecked / onCheckedChange and a drawn Pressable + Reanimated path for consistent cross-platform motion.',
     blocks: [
       {
-        title: 'Checkbox coverage',
+        title: 'State, interaction, and accessibility',
         items: [
-          'Checkbox supports checked / defaultChecked / indeterminate for agreements, bulk selection, and tri-state entry points.',
-          'CheckboxGroup manages a value array, with orientation / gap / align controlling layout.',
+          'checked / defaultChecked support controlled and uncontrolled usage; controlled mode follows checked exactly, while uncontrolled mode advances the UI animation before syncing state.',
+          'disabled and loading both block toggling; loading sets accessibilityState.busy and renders a default or custom loadingIndicator in the thumb.',
+          'The root always uses accessibilityRole="switch"; label can infer accessibilityLabel, and stateText feeds accessibilityValue.',
         ],
       },
       {
-        title: 'Radio coverage',
+        title: 'Content, size, and tone',
         items: [
-          'RadioGroup manages one selected value and returns it through onChange.',
-          'size / tone / variant / labelPlacement / description align item visuals and helper copy.',
+          'label / description / labelPlacement cover setting-row copy; children and render-prop children support fully custom content.',
+          'size covers sm / md / lg, while tone covers primary / neutral / success / warning / danger / info.',
+          'stateText is for very short track labels; the component estimates text width and preserves thumb travel space.',
+        ],
+      },
+      {
+        title: 'Overrides and motion',
+        items: [
+          'color, colors, and layout override the main color, structured colors, and track/thumb geometry; pixel values should still be passed through wp(...).',
+          'trackStyle / thumbStyle / contentStyle / labelStyle / descriptionStyle / stateTextStyle are final escape hatches.',
+          'duration controls value transition timing, while pressed and focus feedback keep a consistent internal rhythm.',
         ],
       },
     ],
-    api: ['Checkbox', 'CheckboxGroup', 'checked', 'indeterminate', 'Radio', 'RadioGroup', 'value', 'onChange'],
-    snippet: `<CheckboxGroup value={items} onChange={setItems}>\n  <Checkbox value="motion" label="Motion" />\n</CheckboxGroup>\n\n<RadioGroup value={density} onChange={setDensity}>\n  <Radio value="compact" label="Compact" />\n</RadioGroup>`,
+    api: ['checked', 'defaultChecked', 'onCheckedChange', 'loading', 'stateText', 'labelPlacement', 'children', 'colors', 'layout'],
+    snippet: `const [enabled, setEnabled] = React.useState(true);\n\n<Switch\n  checked={enabled}\n  onCheckedChange={setEnabled}\n  label="Notifications"\n  description="Receive system messages when enabled"\n  stateText={{ checked: 'On', unchecked: 'Off' }}\n/>`,
+  },
+  checkbox: {
+    title: 'Checkbox',
+    description:
+      'Checkbox is the independent multi-select control for agreements, batch selection, and tri-state select-all. Single items use checked / defaultChecked / onChange, while CheckboxGroup manages a value array.',
+    blocks: [
+      {
+        title: 'State model',
+        items: [
+          'checked supports boolean and indeterminate values; controlled mode follows external state, while defaultChecked initializes uncontrolled state.',
+          'disabled blocks interaction without losing current state; label / description / labelPlacement compose readable touch rows.',
+          'showIndicator=false and render-prop children can turn Checkbox into a fully custom card.',
+        ],
+      },
+      {
+        title: 'CheckboxGroup',
+        items: [
+          'value / defaultValue / onChange manage selected values for multi-select forms and batch actions.',
+          'orientation / wrap / align / gap / rowGap / columnGap control layout; group-level size / tone / variant / shape can be overridden per item.',
+          'A select-all entry can use checked="indeterminate" for partially selected state.',
+        ],
+      },
+      {
+        title: 'Visuals and overrides',
+        items: [
+          'size covers sm / md / lg, variant covers solid / soft / outline, and shape covers rounded / square / circle.',
+          'tone, color, colors, layout, and duration override semantic color, structured colors, geometry, and motion timing.',
+          'indicator, contentStyle, indicatorStyle, labelStyle, descriptionStyle, and accessibilityState are final escape hatches.',
+        ],
+      },
+    ],
+    api: ['checked', 'defaultChecked', 'onChange', 'CheckboxGroup', 'value', 'variant', 'shape', 'indicator', 'layout', 'colors'],
+    snippet: `const [items, setItems] = React.useState(['motion']);\n\n<CheckboxGroup value={items} onChange={setItems}>\n  <Checkbox value="motion" label="Motion tokens" />\n  <Checkbox value="forms" label="Form controls" />\n</CheckboxGroup>`,
+  },
+  radio: {
+    title: 'Radio',
+    description:
+      'Radio is the independent mutually exclusive choice control for settings and plan selection. Single items support checked / defaultChecked / allowDeselect, while RadioGroup manages one value.',
+    blocks: [
+      {
+        title: 'State model',
+        items: [
+          'RadioGroup uses value / defaultValue / onChange for one selected value, and onChange can return null when selection is cleared.',
+          'allowDeselect lets a selected radio clear itself; disabled blocks interaction without losing visual state.',
+          'Standalone Radio can use checked / onChange directly or receive state from RadioGroup.',
+        ],
+      },
+      {
+        title: 'Content and layout',
+        items: [
+          'label / description / labelPlacement cover option copy; render-prop children support custom option cards.',
+          'orientation / wrap / align / gap / rowGap / columnGap control group layout.',
+          'Group-level size / tone / variant / color / colors / layout provide defaults that each item can override.',
+        ],
+      },
+      {
+        title: 'Visuals and overrides',
+        items: [
+          'size covers sm / md / lg, variant covers outline / soft / solid, and tone covers primary / neutral / success / warning / danger / info.',
+          'indicator replaces the selected mark; showIndicator=false is for card-style radio options.',
+          'contentStyle, indicatorStyle, labelStyle, descriptionStyle, accessibilityState, and duration cover final details.',
+        ],
+      },
+    ],
+    api: ['value', 'defaultValue', 'onChange', 'allowDeselect', 'RadioGroup', 'variant', 'indicator', 'layout', 'colors'],
+    snippet: `const [density, setDensity] = React.useState('comfortable');\n\n<RadioGroup value={density} onChange={setDensity}>\n  <Radio value="compact" label="Compact" />\n  <Radio value="comfortable" label="Comfortable" />\n</RadioGroup>`,
   },
   surfaces: {
     title: 'Accordion / BottomSheet / LinkedScroll',
@@ -500,37 +674,59 @@ export const ButtonGuidePage = React.memo(function ButtonGuidePage() {
   );
 });
 
-export const FormsGuidePage = React.memo(function FormsGuidePage() {
+export const TextInputGuidePage = React.memo(function TextInputGuidePage() {
   const { t } = useI18n();
-  const [enabled, setEnabled] = React.useState(true);
   const [note, setNote] = React.useState(() => t('example.defaultNote'));
 
   return (
     <TabScreenShell withTopInset={false}>
-      <InputsSection
-        enabled={enabled}
+      <TextInputSection
         note={note}
-        onEnabledChange={setEnabled}
         onNoteChange={setNote}
       />
-      <GuideIntro guideKey="forms" />
+      <GuideIntro guideKey="textInput" />
     </TabScreenShell>
   );
 });
 
-export const ChoiceGuidePage = React.memo(function ChoiceGuidePage() {
+export const SwitchGuidePage = React.memo(function SwitchGuidePage() {
+  const [enabled, setEnabled] = React.useState(true);
+
+  return (
+    <TabScreenShell withTopInset={false}>
+      <SwitchSection
+        enabled={enabled}
+        onEnabledChange={setEnabled}
+      />
+      <GuideIntro guideKey="switch" />
+    </TabScreenShell>
+  );
+});
+
+export const CheckboxGuidePage = React.memo(function CheckboxGuidePage() {
   const [checkedItems, setCheckedItems] = React.useState<string[]>(['motion']);
+
+  return (
+    <TabScreenShell withTopInset={false}>
+      <CheckboxSection
+        checkedItems={checkedItems}
+        onCheckedItemsChange={setCheckedItems}
+      />
+      <GuideIntro guideKey="checkbox" />
+    </TabScreenShell>
+  );
+});
+
+export const RadioGuidePage = React.memo(function RadioGuidePage() {
   const [density, setDensity] = React.useState<Density>('comfortable');
 
   return (
     <TabScreenShell withTopInset={false}>
-      <SelectionSection
-        checkedItems={checkedItems}
+      <RadioSection
         density={density}
-        onCheckedItemsChange={setCheckedItems}
         onDensityChange={setDensity}
       />
-      <GuideIntro guideKey="choice" />
+      <GuideIntro guideKey="radio" />
     </TabScreenShell>
   );
 });
