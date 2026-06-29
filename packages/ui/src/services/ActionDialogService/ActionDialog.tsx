@@ -221,7 +221,10 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
   );
   const maxBodyHeight = Math.max(wp(88), maxDialogHeight - wp(96));
 
-  const notifyDismissComplete = React.useCallback(() => {
+  const finishDismiss = React.useCallback(() => {
+    if (!dismissCompletePendingRef.current) return;
+    dismissCompletePendingRef.current = false;
+    setMounted(false);
     onDismissCompleteRef.current?.();
   }, []);
 
@@ -277,22 +280,17 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
       backdropProgress.value = 0;
       cardOpacity.value = 0;
       cardScale.value = 1;
-      setMounted(false);
-      notifyDismissComplete();
+      finishDismiss();
       return;
     }
     backdropProgress.value = withTiming(0, EXIT_BACKDROP_TIMING);
     cardScale.value = withTiming(motion === 'scale' ? CARD_EXIT_SCALE : 1, EXIT_CARD_TIMING);
     cardOpacity.value = withTiming(0, EXIT_CARD_TIMING, (finished) => {
       if (finished) {
-        scheduleOnRN(setMounted, false);
-        if (dismissCompletePendingRef.current) {
-          dismissCompletePendingRef.current = false;
-          scheduleOnRN(notifyDismissComplete);
-        }
+        scheduleOnRN(finishDismiss);
       }
     });
-  }, [actualOpen, backdropProgress, cardOpacity, cardScale, motion, notifyDismissComplete]);
+  }, [actualOpen, backdropProgress, cardOpacity, cardScale, finishDismiss, motion]);
 
   React.useEffect(() => {
     if (actualOpen || !resolvedKeyboard.dismissOnClose) return;

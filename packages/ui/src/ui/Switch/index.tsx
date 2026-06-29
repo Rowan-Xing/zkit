@@ -185,7 +185,6 @@ const SIZE_TOKENS = {
   Omit<SwitchMetrics, 'minTouchTarget' | 'focusRingWidth' | 'focusRingOffset'>
 >;
 
-const DISABLED_OPACITY = 0.48;
 const PRESSED_OPACITY = 0.92;
 const STATE_TEXT_WIDTH_FACTOR = 0.58;
 const STATE_TEXT_WIDTH_GUARD_FACTOR = 0.25;
@@ -225,6 +224,35 @@ function colorToRgba(color: string, alpha: number) {
   const b = normalized & 255;
   const a = Math.max(0, Math.min(1, alpha));
   return `rgba(${r},${g},${b},${a})`;
+}
+
+function colorToChannels(color: string) {
+  const processed = processColor(color);
+  if (typeof processed !== 'number') return undefined;
+
+  const normalized = processed >>> 0;
+  return {
+    r: (normalized >> 16) & 255,
+    g: (normalized >> 8) & 255,
+    b: normalized & 255,
+    a: ((normalized >> 24) & 255) / 255,
+  };
+}
+
+function overlayColor(foreground: string, background: string, opacity: number) {
+  const fg = colorToChannels(foreground);
+  const bg = colorToChannels(background);
+  if (!fg || !bg) return undefined;
+
+  const fgAlpha = Math.max(0, Math.min(1, opacity)) * fg.a;
+  const bgAlpha = bg.a;
+  const alpha = fgAlpha + bgAlpha * (1 - fgAlpha);
+  if (alpha <= 0) return 'rgba(0,0,0,0)';
+
+  const r = Math.round((fg.r * fgAlpha + bg.r * bgAlpha * (1 - fgAlpha)) / alpha);
+  const g = Math.round((fg.g * fgAlpha + bg.g * bgAlpha * (1 - fgAlpha)) / alpha);
+  const b = Math.round((fg.b * fgAlpha + bg.b * bgAlpha * (1 - fgAlpha)) / alpha);
+  return `rgba(${r},${g},${b},${Math.round(alpha * 1000) / 1000})`;
 }
 
 function resolveColorToken(input: string | undefined, fallback: string, theme: Theme) {
@@ -493,11 +521,66 @@ function SwitchImpl(
       ),
     [checkedTrackColor, colors?.focusRing, scheme, theme]
   );
-  const loadingColor = React.useMemo(
-    () => resolveColorToken(colors?.loading, checked ? checkedTrackColor : theme.colors.muted, theme),
-    [checked, checkedTrackColor, colors?.loading, theme]
+  const disabledUncheckedTrackColor = React.useMemo(
+    () =>
+      overlayColor(uncheckedTrackColor, theme.colors.surface, scheme === 'dark' ? 0.68 : 0.56) ??
+      uncheckedTrackColor,
+    [scheme, theme.colors.surface, uncheckedTrackColor]
   );
-  const thumbColorChanges = checkedThumbColor !== uncheckedThumbColor;
+  const disabledCheckedTrackColor = React.useMemo(
+    () =>
+      overlayColor(checkedTrackColor, theme.colors.surface, scheme === 'dark' ? 0.5 : 0.56) ??
+      checkedTrackColor,
+    [checkedTrackColor, scheme, theme.colors.surface]
+  );
+  const visualUncheckedTrackColor = disabled ? disabledUncheckedTrackColor : uncheckedTrackColor;
+  const visualCheckedTrackColor = disabled ? disabledCheckedTrackColor : checkedTrackColor;
+  const disabledUncheckedThumbColor = React.useMemo(
+    () =>
+      overlayColor(
+        uncheckedThumbColor,
+        disabledUncheckedTrackColor,
+        scheme === 'dark' ? 0.84 : 0.95
+      ) ?? uncheckedThumbColor,
+    [disabledUncheckedTrackColor, scheme, uncheckedThumbColor]
+  );
+  const disabledCheckedThumbColor = React.useMemo(
+    () =>
+      overlayColor(
+        checkedThumbColor,
+        disabledCheckedTrackColor,
+        scheme === 'dark' ? 0.84 : 0.92
+      ) ?? checkedThumbColor,
+    [checkedThumbColor, disabledCheckedTrackColor, scheme]
+  );
+  const visualUncheckedThumbColor = disabled ? disabledUncheckedThumbColor : uncheckedThumbColor;
+  const visualCheckedThumbColor = disabled ? disabledCheckedThumbColor : checkedThumbColor;
+  const visualCheckedTextColor = React.useMemo(
+    () =>
+      disabled
+        ? overlayColor(checkedTextColor, disabledCheckedTrackColor, scheme === 'dark' ? 0.78 : 0.72) ??
+          checkedTextColor
+        : checkedTextColor,
+    [checkedTextColor, disabled, disabledCheckedTrackColor, scheme]
+  );
+  const visualUncheckedTextColor = React.useMemo(
+    () =>
+      disabled
+        ? overlayColor(uncheckedTextColor, disabledUncheckedTrackColor, scheme === 'dark' ? 0.78 : 0.72) ??
+          uncheckedTextColor
+        : uncheckedTextColor,
+    [disabled, disabledUncheckedTrackColor, scheme, uncheckedTextColor]
+  );
+  const loadingColor = React.useMemo(
+    () =>
+      resolveColorToken(
+        colors?.loading,
+        checked ? visualCheckedTrackColor : theme.colors.muted,
+        theme
+      ),
+    [checked, colors?.loading, theme, visualCheckedTrackColor]
+  );
+  const thumbColorChanges = visualCheckedThumbColor !== visualUncheckedThumbColor;
 
   const trackHeight = resolvePositiveNumber(layout?.height, metrics.height);
   const baseTrackWidth = Math.max(trackHeight, resolvePositiveNumber(layout?.width, metrics.width));
@@ -530,7 +613,7 @@ function SwitchImpl(
   const thumbStart = isRTL ? trackWidth - thumbSize - resolvedThumbInset : resolvedThumbInset;
   const travelDirection = isRTL ? -1 : 1;
   const trackRadius = Math.max(0, layout?.radius ?? trackHeight / 2);
-  const thumbRadius = Math.max(0, Math.min(thumbSize / 2, trackRadius - resolvedThumbInset));
+  const thumbRadius = thumbSize / 2;
   const defaultHitSlop = React.useMemo(
     () => resolveHitSlop(trackWidth, trackHeight, metrics.minTouchTarget),
     [metrics.minTouchTarget, trackHeight, trackWidth]
@@ -539,11 +622,11 @@ function SwitchImpl(
     () => ({
       shadowColor: '#000000',
       shadowOffset: { width: 0, height: wp(1) },
-      shadowOpacity: scheme === 'dark' ? 0.28 : 0.14,
-      shadowRadius: wp(4),
-      elevation: wp(1),
+      shadowOpacity: disabled ? 0 : scheme === 'dark' ? 0.28 : 0.14,
+      shadowRadius: disabled ? 0 : wp(4),
+      elevation: disabled ? 0 : wp(1),
     }),
-    [scheme]
+    [disabled, scheme]
   );
   const webCursorStyle = React.useMemo(
     () => resolveWebCursorStyle(interactionDisabled),
@@ -636,9 +719,8 @@ function SwitchImpl(
 
   const visualAnimatedStyle = useAnimatedStyle(() => {
     const pressedOpacity = interpolate(pressSv.value, [0, 1], [1, PRESSED_OPACITY]);
-    const opacity = disabled ? DISABLED_OPACITY : pressedOpacity;
-    return { opacity };
-  }, [disabled]);
+    return { opacity: pressedOpacity };
+  });
 
   const focusRingAnimatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(focusSv.value, [0, 1], [0, 1]);
@@ -661,10 +743,14 @@ function SwitchImpl(
     }
 
     return {
-      backgroundColor: interpolateColor(progressSv.value, [0, 1], [uncheckedThumbColor, checkedThumbColor]),
+      backgroundColor: interpolateColor(
+        progressSv.value,
+        [0, 1],
+        [visualUncheckedThumbColor, visualCheckedThumbColor]
+      ),
       transform: [{ translateX: travel * travelDirection * progressSv.value }],
     };
-  }, [checkedThumbColor, thumbColorChanges, travel, travelDirection, uncheckedThumbColor]);
+  }, [thumbColorChanges, travel, travelDirection, visualCheckedThumbColor, visualUncheckedThumbColor]);
 
   const checkedTextAnimatedStyle = useAnimatedStyle(() => {
     return { opacity: progressSv.value };
@@ -812,7 +898,7 @@ function SwitchImpl(
           StyleSheet.absoluteFillObject,
           {
             borderRadius: trackRadius,
-            backgroundColor: uncheckedTrackColor,
+            backgroundColor: visualUncheckedTrackColor,
           },
           trackStyle,
         ]}
@@ -823,7 +909,7 @@ function SwitchImpl(
           StyleSheet.absoluteFillObject,
           {
             borderRadius: trackRadius,
-            backgroundColor: checkedTrackColor,
+            backgroundColor: visualCheckedTrackColor,
           },
           checkedTrackAnimatedStyle,
         ]}
@@ -839,7 +925,7 @@ function SwitchImpl(
               style={[
                 styles.stateText,
                 {
-                  color: checkedTextColor,
+                  color: visualCheckedTextColor,
                   fontSize: stateTextSize,
                   lineHeight: stateTextLineHeight,
                 },
@@ -857,7 +943,7 @@ function SwitchImpl(
               style={[
                 styles.stateText,
                 {
-                  color: uncheckedTextColor,
+                  color: visualUncheckedTextColor,
                   fontSize: stateTextSize,
                   lineHeight: stateTextLineHeight,
                 },
@@ -879,7 +965,7 @@ function SwitchImpl(
             left: thumbStart,
             top: resolvedThumbInset,
             borderRadius: thumbRadius,
-            backgroundColor: uncheckedThumbColor,
+            backgroundColor: visualUncheckedThumbColor,
           },
           thumbAnimatedStyle,
           thumbShadowStyle,
