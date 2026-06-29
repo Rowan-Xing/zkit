@@ -209,7 +209,9 @@ const DEFAULTS: LoadingResolvedDefaults = {
   errorDuration: 1600,
   accessibilityLiveRegion: 'polite',
   labels: DEFAULT_LABELS,
-  colors: undefined,
+  colors: {
+    card: '#4d4d4d',
+  },
 };
 
 const EMPTY_SNAPSHOT: LoadingSnapshot = { item: null };
@@ -219,22 +221,22 @@ const HOST_Z_INDEX = 9999;
 const ENTER_DURATION = 170;
 const EXIT_DURATION = 150;
 const CONTENT_SWAP_DURATION = 130;
-const HUD_MIN_WIDTH = wp(128);
+const HUD_MIN_WIDTH = wp(116);
 const HUD_MAX_WIDTH = wp(260);
 const HUD_MIN_HEIGHT = wp(116);
-const HUD_RADIUS = wp(18);
-const HUD_PADDING_HORIZONTAL = wp(18);
-const HUD_PADDING_VERTICAL = wp(18);
-const ICON_FRAME_SIZE = wp(46);
-const LOADING_ICON_SIZE = wp(35);
-const RESULT_ICON_SIZE = wp(39);
-const TITLE_MARGIN_TOP = wp(10);
+const HUD_RADIUS = wp(10);
+const HUD_PADDING_HORIZONTAL = wp(16);
+const HUD_PADDING_VERTICAL = wp(16);
+const ICON_FRAME_SIZE = wp(42);
+const LOADING_ICON_SIZE = wp(34);
+const RESULT_ICON_SIZE = wp(36);
+const TITLE_MARGIN_TOP = wp(8);
 const DESCRIPTION_MARGIN_TOP = wp(4);
 const TITLE_MAX_WIDTH = wp(214);
 const IOS_SHADOW_OFFSET_Y = wp(9);
 const IOS_SHADOW_RADIUS = wp(22);
 const CONTENT_ENTER_OFFSET = wp(3);
-const HOST_BACKDROP = 'rgba(15, 23, 42, 0.10)';
+const HOST_BACKDROP = 'transparent';
 
 const IS_IOS = Platform.OS === 'ios';
 const IS_ANDROID = Platform.OS === 'android';

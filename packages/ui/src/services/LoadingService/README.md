@@ -99,7 +99,7 @@ loading.hide(); // 隐藏当前 HUD
       error: '失败',
     },
     colors: {
-      backdrop: 'rgba(15, 23, 42, 0.12)',
+      card: '#4d4d4d',
     },
   }}
 >
