@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sp, wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
-import { BottomSheet, type BottomSheetOpenChangeMeta } from '../BottomSheet';
+import { Sheet, type SheetOpenChangeDetails } from '../Sheet';
 import { Button } from '../Button';
 import { Text } from '../Text';
 import {
@@ -688,7 +688,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
     [children, disabled, openPicker]
   );
 
-  const handleSheetOpenChange = React.useCallback((nextOpen: boolean, meta: BottomSheetOpenChangeMeta) => {
+  const handleSheetOpenChange = React.useCallback((nextOpen: boolean, meta: SheetOpenChangeDetails) => {
     if (!nextOpen && visible && meta.reason !== 'api') {
       onCancel?.();
       const pair = resolveInitialPair(value, bounds, type);
@@ -703,16 +703,16 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   }, [lazyContent, onDismissComplete]);
 
   const sheetNode = (
-    <BottomSheet
+    <Sheet
+      placement="bottom"
       open={visible}
       onOpenChange={handleSheetOpenChange}
-      onDismissComplete={handleSheetDismissComplete}
+      onCloseComplete={handleSheetDismissComplete}
       detents={detents}
       backgroundColor={theme.colors.surface}
       handle={false}
       draggable={false}
       dismissible={!disabled}
-      mountStrategy={lazyContent ? 'unmountOnExit' : 'lazy'}
       nativeProps={{ insetAdjustment: 'never' }}
     >
       <View
@@ -883,7 +883,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
           </View>
         </View>
       </View>
-    </BottomSheet>
+    </Sheet>
   );
 
   return (

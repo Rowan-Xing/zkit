@@ -9,7 +9,6 @@ import { PermissionPurposeDialogProvider } from './services/PermissionPurposeDia
 import { PickerServiceProvider } from './services/PickerService/index';
 import { ThemeProvider } from './theme/ThemeProvider';
 import type { Theme, ThemeOverride } from './theme/types';
-import { BottomSheetProvider } from './ui/BottomSheet/index';
 
 export type ComponentLibProviderProps = {
   // baseTheme 用于传入完整主题作为基线（例如品牌主题）
@@ -38,21 +37,19 @@ export function ComponentLibProvider({
   return (
     <ThemeProvider baseTheme={baseTheme} theme={theme}>
       <I18nProvider locale={locale} messages={messages} missingKeyPolicy={missingKeyPolicy}>
-        <BottomSheetProvider>
-          <PickerServiceProvider>
-            <ToastProvider>
-              <ActionDialogProvider>
-                <LoadingProvider defaults={loading}>
-                  <PermissionPurposeDialogProvider>
-                    <ImagePreviewProvider>
-                      {children}
-                    </ImagePreviewProvider>
-                  </PermissionPurposeDialogProvider>
-                </LoadingProvider>
-              </ActionDialogProvider>
-            </ToastProvider>
-          </PickerServiceProvider>
-        </BottomSheetProvider>
+        <PickerServiceProvider>
+          <ToastProvider>
+            <ActionDialogProvider>
+              <LoadingProvider defaults={loading}>
+                <PermissionPurposeDialogProvider>
+                  <ImagePreviewProvider>
+                    {children}
+                  </ImagePreviewProvider>
+                </PermissionPurposeDialogProvider>
+              </LoadingProvider>
+            </ActionDialogProvider>
+          </ToastProvider>
+        </PickerServiceProvider>
       </I18nProvider>
     </ThemeProvider>
   );

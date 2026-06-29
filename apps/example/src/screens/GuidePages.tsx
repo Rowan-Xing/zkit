@@ -16,7 +16,6 @@ import type { Density } from '../data';
 import { wait } from '../demoUtils';
 import {
   AccordionSection,
-  BottomSheetSection,
   ButtonsSection,
   CheckboxSection,
   FoundationSection,
@@ -24,6 +23,7 @@ import {
   PickersSection,
   RadioSection,
   ServicesSection,
+  SheetSection,
   SwitchSection,
   TextInputSection,
   ToolsSection,
@@ -253,16 +253,24 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
     snippet: `<Accordion value={open} onChange={setOpen} variant="card">\n  <AccordionItem value="profile">\n    <AccordionTrigger title="账户资料" />\n    <AccordionContent>...</AccordionContent>\n  </AccordionItem>\n</Accordion>`,
   },
   bottomSheet: {
-    title: 'BottomSheet',
+    title: 'Sheet',
     description:
-      'BottomSheet 是跨 iOS / Android / Web 的底部浮层基础件，负责打开状态、档位、遮罩、拖拽、挂载策略和命令式入口的统一。',
+      'Sheet 是唯一弹层组件：top / right / left 与 H5 bottom 自绘，iOS / Android bottom 内部使用原生 TrueSheet。',
     blocks: [
       {
-        title: '打开状态与档位',
+        title: '通用 Sheet',
         items: [
-          'open / defaultOpen / onOpenChange 覆盖声明式使用，ref.open() / ref.close() / ref.snapTo() 覆盖流程式使用。',
+          'placement 覆盖 top / right / bottom / left，open / defaultOpen / onOpenChange 保持统一状态模型。',
+          'size、safeArea、backdrop、handle、animation 和 onCloseComplete 覆盖方向弹层常见规格。',
+          'top / left / right 的位移、遮罩和拖拽关闭走 Reanimated 与 Gesture Handler 路径。',
+        ],
+      },
+      {
+        title: '底部 TrueSheet 路径',
+        items: [
+          'open / defaultOpen / onOpenChange 覆盖声明式使用，ref.open({ detentIndex }) / ref.close() / ref.snapTo() 覆盖流程式使用。',
           'detents 支持 content、medium、large、full、百分比和数字，detentIndex 可受控。',
-          'onDetentChange、onOpenComplete、onDismissComplete 用于同步业务状态和埋点。',
+          'onCloseComplete、onDetentChange、onOpenComplete 用于同步业务状态和埋点。',
         ],
       },
       {
@@ -270,12 +278,12 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
         items: [
           'Header、Content、Footer 插槽负责稳定布局，footer 可自动处理底部安全区。',
           'backdrop、handle、cornerRadius、maxHeight、maxWidth 覆盖常见视觉规格。',
-          'mountStrategy、dismissible、draggable、disabled 明确生命周期和交互边界。',
+          'iOS / Android 没有与系统底部 sheet 对等的原生上/左/右 sheet，因此这些方向明确走自绘高性能路径。',
         ],
       },
     ],
-    api: ['open', 'defaultOpen', 'onOpenChange', 'detents', 'detentIndex', 'backdrop', 'handle', 'ref.snapTo()'],
-    snippet: `<BottomSheet open={open} onOpenChange={setOpen} detents={['content', 'medium']}>\n  <BottomSheetHeader title="筛选" />\n  <BottomSheetContent>...</BottomSheetContent>\n</BottomSheet>`,
+    api: ['Sheet', 'placement', 'size', 'open', 'onOpenChange', 'detents', 'ref.snapTo()'],
+    snippet: `<Sheet placement="right" open={open} onOpenChange={setOpen} size="md">\n  <Sheet.Header title="筛选" />\n  <Sheet.Content>...</Sheet.Content>\n</Sheet>\n\n<Sheet placement="bottom" detents={['content', 'medium']} />`,
   },
   linkedScroll: {
     title: 'LinkedScroll',
@@ -585,16 +593,24 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
     snippet: `<Accordion value={open} onChange={setOpen} variant="card">\n  <AccordionItem value="profile">\n    <AccordionTrigger title="Profile" />\n    <AccordionContent>...</AccordionContent>\n  </AccordionItem>\n</Accordion>`,
   },
   bottomSheet: {
-    title: 'BottomSheet',
+    title: 'Sheet',
     description:
-      'BottomSheet is the cross-platform foundation for bottom overlays across iOS, Android, and Web, unifying open state, detents, backdrop, drag behavior, mount strategy, and imperative methods.',
+      'Sheet is the only overlay component: top / right / left and Web bottom are custom-rendered, while iOS / Android bottom uses native TrueSheet internally.',
     blocks: [
       {
-        title: 'Open state and detents',
+        title: 'Generic Sheet',
         items: [
-          'open / defaultOpen / onOpenChange cover declarative usage; ref.open() / ref.close() / ref.snapTo() cover flow-style usage.',
+          'placement covers top / right / bottom / left, while open / defaultOpen / onOpenChange keep one state model.',
+          'size, safeArea, backdrop, handle, animation, and onCloseComplete cover common placement-aware overlay specs.',
+          'top / left / right movement, backdrop, and drag-to-close stay on Reanimated and Gesture Handler paths.',
+        ],
+      },
+      {
+        title: 'Native TrueSheet path',
+        items: [
+          'open / defaultOpen / onOpenChange cover declarative usage; ref.open({ detentIndex }) / ref.close() / ref.snapTo() cover flow-style usage.',
           'detents support content, medium, large, full, percentages, and numbers, while detentIndex can be controlled.',
-          'onDetentChange, onOpenComplete, and onDismissComplete let app state and analytics follow the sheet lifecycle.',
+          'onCloseComplete, onDetentChange, and onOpenComplete let app state and analytics follow the lifecycle.',
         ],
       },
       {
@@ -602,12 +618,12 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
         items: [
           'Header, Content, and Footer slots keep layout stable, with footer safe-area handling built in.',
           'backdrop, handle, cornerRadius, maxHeight, and maxWidth cover common visual specifications.',
-          'mountStrategy, dismissible, draggable, and disabled make lifecycle and interaction boundaries explicit.',
+          'iOS and Android do not provide top / left / right equivalents to system bottom sheets, so those placements use the custom high-performance path.',
         ],
       },
     ],
-    api: ['open', 'defaultOpen', 'onOpenChange', 'detents', 'detentIndex', 'backdrop', 'handle', 'ref.snapTo()'],
-    snippet: `<BottomSheet open={open} onOpenChange={setOpen} detents={['content', 'medium']}>\n  <BottomSheetHeader title="Filters" />\n  <BottomSheetContent>...</BottomSheetContent>\n</BottomSheet>`,
+    api: ['Sheet', 'placement', 'size', 'open', 'onOpenChange', 'detents', 'ref.snapTo()'],
+    snippet: `<Sheet placement="right" open={open} onOpenChange={setOpen} size="md">\n  <Sheet.Header title="Filters" />\n  <Sheet.Content>...</Sheet.Content>\n</Sheet>\n\n<Sheet placement="bottom" detents={['content', 'medium']} />`,
   },
   linkedScroll: {
     title: 'LinkedScroll',
@@ -878,10 +894,10 @@ export const AccordionGuidePage = React.memo(function AccordionGuidePage() {
   );
 });
 
-export const BottomSheetGuidePage = React.memo(function BottomSheetGuidePage() {
+export const SheetGuidePage = React.memo(function SheetGuidePage() {
   return (
     <TabScreenShell withTopInset={false}>
-      <BottomSheetSection />
+      <SheetSection />
       <GuideIntro guideKey="bottomSheet" />
     </TabScreenShell>
   );

@@ -156,7 +156,7 @@ type PickerSelection<TOption = PickerOption> = {
 | `open` | `boolean` | - | 受控打开状态 |
 | `defaultOpen` | `boolean` | `false` | 非受控初始打开状态 |
 | `onOpenChange` | `(open: boolean) => void` | - | 打开状态变化 |
-| `onDismissComplete` | `() => void` | - | 原生弹层完全关闭后触发 |
+| `onDismissComplete` | `() => void` | - | Sheet 完全关闭后触发 |
 | `title` | `string` | i18n `picker.title` | 弹层标题 |
 | `placeholder` | `string` | `''` | 无已确认值时给 trigger 使用 |
 | `cancelText` | `string` | i18n `picker.cancel` | 取消按钮文案 |

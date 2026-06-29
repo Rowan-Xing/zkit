@@ -108,7 +108,7 @@ function Demo() {
 - Radio：三端一致的单选框/单选组（受控/非受控、可清空组、Reanimated 指示器动画）
 - Switch：三端一致的布尔开关（受控/非受控、Reanimated 轨道与 thumb 动画）
 - TextInput / TextInputPrimitive：统一文本输入 Field 与接近 RN 原生能力的薄封装
-- BottomSheet：跨 iOS / Android / Web 的底部浮层基础件（受控/非受控 open、detents、统一遮罩与 Provider）
+- Sheet：通用方向弹层（H5 bottom/top/left/right 自绘，iOS/Android bottom 内部走原生 TrueSheet）
 - LoadingService：全局加载 HUD 服务（handle 状态模型、Promise 绑定、Android 无 elevation 残影路径）
 - ImagePreview：全屏图片预览（声明式 open/value 状态模型 + 全局 imagePreview.open 服务）
 - Picker：底部滚轮选择器（单列/级联、确认提交、iOS 原生 wheel）
@@ -152,6 +152,32 @@ export function DemoAccordion() {
 ```
 
 `Accordion` 使用 `value/defaultValue/onChange` 状态模型。默认 `type="single"` 且可折叠，空值为 `null`；`type="multiple"` 时值为数组。内容默认 `mountStrategy="eager"` 以保留内部状态，可按需切到 `lazy` 或 `unmountOnExit`。
+
+### Sheet 用法
+
+```tsx
+import * as React from 'react';
+import { Button, Sheet, Text } from 'zkit-ui';
+
+export function DemoSheet() {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <>
+      <Button onPress={() => setOpen(true)}>打开筛选</Button>
+
+      <Sheet placement="right" open={open} onOpenChange={setOpen} size="md">
+        <Sheet.Header title="筛选" description="支持上下左右方向" />
+        <Sheet.Content>
+          <Text>右侧弹层内容</Text>
+        </Sheet.Content>
+      </Sheet>
+    </>
+  );
+}
+```
+
+`Sheet` 使用 `open/defaultOpen/onOpenChange` 状态模型。iOS / Android 的 `placement="bottom"` 会使用原生 TrueSheet；H5 bottom 与 `top/left/right` 一样使用 Reanimated 自绘路径。底部档位通过根级 `detents/detentIndex/defaultDetentIndex/onDetentChange` 管理，`nativeProps` 只作为原生底部的高级逃生口。
 
 ### ImagePreview 用法
 

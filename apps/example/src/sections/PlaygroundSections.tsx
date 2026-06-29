@@ -15,10 +15,6 @@ import {
   AccordionTrigger,
   AddressCascader,
   BetweenTime,
-  BottomSheet,
-  BottomSheetContent,
-  BottomSheetFooter,
-  BottomSheetHeader,
   Button,
   Checkbox,
   CheckboxGroup,
@@ -28,6 +24,7 @@ import {
   Picker,
   Radio,
   RadioGroup,
+  Sheet,
   Switch,
   Text,
   TextInput,
@@ -35,12 +32,13 @@ import {
   toast,
   useI18n,
   useTheme,
-  type BottomSheetRef,
   type CheckboxCheckedState,
   type LinkedScrollChangeSource,
   type LinkedScrollMenuItemRenderContext,
   type LinkedScrollSectionRenderContext,
   type PickerValue,
+  type SheetPlacement,
+  type SheetRef,
 } from 'zkit-ui';
 
 import {
@@ -1829,12 +1827,14 @@ export const AccordionSection = React.memo(function AccordionSection() {
   );
 });
 
-export const BottomSheetSection = React.memo(function BottomSheetSection() {
+export const SheetSection = React.memo(function SheetSection() {
   const theme = useTheme();
   const { t } = useI18n();
-  const controlledSheetRef = React.useRef<BottomSheetRef>(null);
-  const commandSheetRef = React.useRef<BottomSheetRef>(null);
+  const controlledSheetRef = React.useRef<SheetRef>(null);
+  const commandSheetRef = React.useRef<SheetRef>(null);
   const [controlledOpen, setControlledOpen] = React.useState(false);
+  const [directionalOpen, setDirectionalOpen] = React.useState(false);
+  const [directionalPlacement, setDirectionalPlacement] = React.useState<SheetPlacement>('right');
   const [detentIndex, setDetentIndex] = React.useState(0);
   const [lastReason, setLastReason] = React.useState('default');
 
@@ -1844,7 +1844,12 @@ export const BottomSheetSection = React.memo(function BottomSheetSection() {
   }, []);
 
   const openCommandSheet = React.useCallback((nextDetentIndex = 0) => {
-    void commandSheetRef.current?.open(nextDetentIndex);
+    void commandSheetRef.current?.open({ detentIndex: nextDetentIndex });
+  }, []);
+
+  const openDirectionalSheet = React.useCallback((placement: SheetPlacement) => {
+    setDirectionalPlacement(placement);
+    setDirectionalOpen(true);
   }, []);
 
   const closeControlledSheet = React.useCallback(() => {
@@ -1858,6 +1863,37 @@ export const BottomSheetSection = React.memo(function BottomSheetSection() {
       subtitle={t('example.bottomSheet.subtitle')}
     >
       <View style={styles.surfaceGrid}>
+        <ChoiceCaseCard
+          iconName="columns"
+          iconColor="#7C3AED"
+          iconBackground="#F3E8FF"
+          title={t('example.bottomSheet.sheetTitle')}
+          caption={t('example.bottomSheet.sheetCaption')}
+        >
+          <View style={styles.surfaceActionGrid}>
+            <Button icon={renderIcon('arrow-left', '#FFFFFF', wp(17))} onPress={() => openDirectionalSheet('left')}>
+              {t('example.bottomSheet.left')}
+            </Button>
+            <Button variant="outline" tone="neutral" onPress={() => openDirectionalSheet('right')}>
+              {t('example.bottomSheet.right')}
+            </Button>
+            <Button variant="outline" tone="neutral" onPress={() => openDirectionalSheet('top')}>
+              {t('example.bottomSheet.top')}
+            </Button>
+            <Button variant="outline" tone="neutral" onPress={() => openDirectionalSheet('bottom')}>
+              {t('example.bottomSheet.bottom')}
+            </Button>
+          </View>
+          <View style={[styles.surfaceStatusRow, { backgroundColor: '#F8FAFC', borderColor: theme.colors.border }]}>
+            <Text style={[styles.surfaceStatusLabel, { color: theme.colors.muted }]}>
+              {t('example.bottomSheet.placement')}
+            </Text>
+            <Text style={[styles.surfaceStatusValue, { color: theme.colors.onSurface }]}>
+              {directionalPlacement}
+            </Text>
+          </View>
+        </ChoiceCaseCard>
+
         <ChoiceCaseCard
           iconName="layers"
           iconColor="#2563EB"
@@ -1945,7 +1981,55 @@ export const BottomSheetSection = React.memo(function BottomSheetSection() {
         </ChoiceCaseCard>
       </View>
 
-      <BottomSheet
+      <Sheet
+        placement={directionalPlacement}
+        open={directionalOpen}
+        onOpenChange={setDirectionalOpen}
+        size={directionalPlacement === 'bottom' || directionalPlacement === 'top' ? 'auto' : 'md'}
+        detents={directionalPlacement === 'bottom' ? ['content'] : undefined}
+        maxHeight={directionalPlacement === 'bottom' ? undefined : wp(360)}
+        backdrop={{ opacity: 0.36 }}
+        backgroundColor={theme.colors.surface}
+        handle={{
+          width: wp(36),
+          height: wp(4),
+          radius: wp(2),
+          color: theme.colors.border,
+        }}
+      >
+        <Sheet.Header
+          title={t('example.bottomSheet.sheetLiveTitle')}
+          description={t('example.bottomSheet.sheetLiveDescription', { placement: directionalPlacement })}
+        />
+        <Sheet.Content>
+          <View style={styles.surfaceFeatureGrid}>
+            <View style={[styles.surfaceFeatureCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+              <Text style={[styles.surfaceFeatureTitle, { color: '#1D4ED8' }]}>
+                {t('example.bottomSheet.nativePath')}
+              </Text>
+              <Text style={[styles.surfaceFeatureText, { color: '#1E40AF' }]}>
+                {directionalPlacement === 'bottom' ? 'TrueSheet / custom web' : 'Reanimated'}
+              </Text>
+            </View>
+            <View style={[styles.surfaceFeatureCard, { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' }]}>
+              <Text style={[styles.surfaceFeatureTitle, { color: '#6D28D9' }]}>
+                {t('example.bottomSheet.closeGesture')}
+              </Text>
+              <Text style={[styles.surfaceFeatureText, { color: '#5B21B6' }]}>
+                {t('example.bottomSheet.handleDrag')}
+              </Text>
+            </View>
+          </View>
+        </Sheet.Content>
+        <Sheet.Footer>
+          <Button block onPress={() => setDirectionalOpen(false)}>
+            {t('example.common.done')}
+          </Button>
+        </Sheet.Footer>
+      </Sheet>
+
+      <Sheet
+        placement="bottom"
         ref={controlledSheetRef}
         open={controlledOpen}
         onOpenChange={(open, meta) => {
@@ -1955,24 +2039,23 @@ export const BottomSheetSection = React.memo(function BottomSheetSection() {
         detents={['content', 'medium', 'large']}
         detentIndex={detentIndex}
         onDetentChange={(index) => setDetentIndex(index)}
-        mountStrategy="lazy"
         header={
-          <BottomSheetHeader
+          <Sheet.Header
             title={t('example.bottomSheet.controlledSheetTitle')}
             description={t('example.bottomSheet.controlledSheetDescription')}
           />
         }
         footer={
-          <BottomSheetFooter>
+          <Sheet.Footer>
             <Button block onPress={closeControlledSheet}>
               {t('example.common.done')}
             </Button>
-          </BottomSheetFooter>
+          </Sheet.Footer>
         }
         backgroundColor={theme.colors.surface}
         maxHeight={wp(520)}
       >
-        <BottomSheetContent>
+        <Sheet.Content>
           <View style={styles.sheetGrid}>
             <View style={[styles.sheetSwatch, { backgroundColor: '#E8F7F1' }]}>
               <Text style={[styles.sheetSwatchLabel, { color: '#0F7A57' }]}>
@@ -1987,10 +2070,11 @@ export const BottomSheetSection = React.memo(function BottomSheetSection() {
               <Text style={[styles.sheetSwatchValue, { color: '#7C2D12' }]}>{lastReason}</Text>
             </View>
           </View>
-        </BottomSheetContent>
-      </BottomSheet>
+        </Sheet.Content>
+      </Sheet>
 
-      <BottomSheet
+      <Sheet
+        placement="bottom"
         ref={commandSheetRef}
         detents={['content', 0.72]}
         backdrop={{ opacity: 0.36, dismissOnPress: true }}
@@ -2038,7 +2122,7 @@ export const BottomSheetSection = React.memo(function BottomSheetSection() {
             </View>
           </View>
         )}
-      </BottomSheet>
+      </Sheet>
     </Section>
   );
 });

@@ -28,7 +28,6 @@ import {
 } from '../theme';
 import {
   AccordionGuidePage,
-  BottomSheetGuidePage,
   ButtonGuidePage,
   CheckboxGuidePage,
   FoundationGuidePage,
@@ -37,6 +36,7 @@ import {
   PickersGuidePage,
   RadioGuidePage,
   ServicesGuidePage,
+  SheetGuidePage,
   SwitchGuidePage,
   TextInputGuidePage,
   ToolsGuidePage,
@@ -242,7 +242,7 @@ export function RootWorkspace({
         title: t('example.page.bottomSheet.title'),
         caption: t('example.page.bottomSheet.caption'),
         iconName: 'layers',
-        Screen: BottomSheetGuidePage,
+        Screen: SheetGuidePage,
       },
       {
         key: 'linkedScroll',
