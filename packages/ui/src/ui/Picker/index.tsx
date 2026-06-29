@@ -13,7 +13,6 @@ import { sp, wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { Sheet, type SheetOpenChangeDetails } from '../Sheet';
-import { Button } from '../Button';
 import { Text } from '../Text';
 import {
   WheelColumn,
@@ -40,6 +39,7 @@ import {
   toArrayValue,
   transparentizeColor,
 } from './utils';
+import { PickerActionBar, getPickerActionBarBottomInset } from './actionBar';
 import type {
   PickerColumnHeaderContext,
   PickerDraftChangePayload,
@@ -252,7 +252,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const theme = useTheme();
   const { height: screenH, width: screenW } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const safeBottom = insets.bottom >= 10 ? insets.bottom : wp(20);
+  const safeBottom = getPickerActionBarBottomInset(insets.bottom);
   const effectiveMaxColumns = React.useMemo(() => normalizeMaxColumns(maxColumns), [maxColumns]);
 
   const accessors = React.useMemo<PickerOptionAccessors<TOption>>(
@@ -599,29 +599,14 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
           </View>
         )}
 
-        <View style={styles.footer}>
-          <View style={styles.footerButtonWrapper}>
-            <Button
-              variant="soft"
-              onPress={handleCancel}
-              disabled={disabled}
-              block
-              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
-            >
-              {cancelText ?? t('picker.cancel')}
-            </Button>
-          </View>
-          <View style={styles.footerButtonWrapper}>
-            <Button
-              onPress={handleConfirm}
-              disabled={confirmDisabled}
-              block
-              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
-            >
-              {confirmText ?? t('picker.confirm')}
-            </Button>
-          </View>
-        </View>
+        <PickerActionBar
+          cancelText={cancelText ?? t('picker.cancel')}
+          confirmText={confirmText ?? t('picker.confirm')}
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+          disabled={disabled}
+          confirmDisabled={confirmDisabled}
+        />
       </View>
     </Sheet>
   );
@@ -706,12 +691,5 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     justifyContent: 'space-between',
     zIndex: 1,
-  },
-  footer: {
-    flexDirection: 'row',
-    gap: wp(14),
-  },
-  footerButtonWrapper: {
-    flex: 1,
   },
 });

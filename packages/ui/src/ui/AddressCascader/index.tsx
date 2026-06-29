@@ -15,9 +15,9 @@ import { sp, wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { Sheet, type SheetOpenChangeDetails } from '../Sheet';
-import { Button } from '../Button';
 import { Text } from '../Text';
 import type { PickerTreeNode } from '../Picker';
+import { PickerActionBar, getPickerActionBarBottomInset } from '../Picker/actionBar';
 import { areaList } from '@vant/area-data';
 
 export type AddressCascaderHandle = {
@@ -368,7 +368,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   const theme = useTheme();
   const { height: screenH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const safeBottom = Math.max(insets.bottom, wp(12));
+  const safeBottom = getPickerActionBarBottomInset(insets.bottom);
   const areaData = React.useMemo(() => list ?? getAreaData(), [list]);
 
   const isValueControlled = valueProp !== undefined;
@@ -945,29 +945,15 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
           <View style={styles.lazyPlaceholder} />
         )}
 
-        <View style={styles.footer}>
-          <View style={styles.footerBtnWrapper}>
-            <Button
-              variant="soft"
-              onPress={handleCancel}
-              disabled={disabled}
-              block
-              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
-            >
-              {t('picker.cancel')}
-            </Button>
-          </View>
-          <View style={styles.footerBtnWrapper}>
-            <Button
-              onPress={handleConfirm}
-              disabled={confirmDisabled}
-              block
-              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
-            >
-              {t('picker.confirm')}
-            </Button>
-          </View>
-        </View>
+        <PickerActionBar
+          cancelText={t('picker.cancel')}
+          confirmText={t('picker.confirm')}
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+          disabled={disabled}
+          confirmDisabled={confirmDisabled}
+          style={styles.footer}
+        />
       </View>
     </Sheet>
   );
@@ -1073,11 +1059,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    flexDirection: 'row',
-    gap: wp(14),
     paddingTop: wp(12),
-  },
-  footerBtnWrapper: {
-    flex: 1,
   },
 });

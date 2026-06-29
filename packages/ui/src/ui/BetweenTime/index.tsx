@@ -16,6 +16,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { Sheet, type SheetOpenChangeDetails } from '../Sheet';
 import { Button } from '../Button';
+import { PickerActionBar, getPickerActionBarBottomInset } from '../Picker/actionBar';
 import { Text } from '../Text';
 import {
   WheelColumn,
@@ -431,7 +432,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
   const theme = useTheme();
   const { height: screenH, width: screenW } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const safeBottom = Math.max(insets.bottom, wp(12));
+  const safeBottom = getPickerActionBarBottomInset(insets.bottom);
 
   const bounds = React.useMemo<DateBounds>(() => {
     const min = parseStandardDateStrict(start);
@@ -720,7 +721,7 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
           styles.sheetInner,
           {
             backgroundColor: theme.colors.surface,
-            paddingBottom: wp(16) + safeBottom,
+            paddingBottom: safeBottom,
           },
         ]}
         pointerEvents={disabled ? 'none' : 'auto'}
@@ -859,29 +860,14 @@ export const BetweenTime = React.forwardRef<BetweenTimeHandle, BetweenTimeProps>
           <View style={[styles.pickerArea, { height: WHEEL_AREA_HEIGHT + wp(26) }]} />
         )}
 
-        <View style={styles.footer}>
-          <View style={styles.footerBtnWrapper}>
-            <Button
-              variant="soft"
-              onPress={handleCancel}
-              disabled={disabled}
-              block
-              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
-            >
-              {t('betweenTime.cancel')}
-            </Button>
-          </View>
-          <View style={styles.footerBtnWrapper}>
-            <Button
-              onPress={handleConfirm}
-              disabled={disabled}
-              block
-              layout={{ minHeight: wp(44), radius: wp(14), textSize: sp(16) }}
-            >
-              {t('betweenTime.confirm')}
-            </Button>
-          </View>
-        </View>
+        <PickerActionBar
+          cancelText={t('betweenTime.cancel')}
+          confirmText={t('betweenTime.confirm')}
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+          disabled={disabled}
+          style={styles.footer}
+        />
       </View>
     </Sheet>
   );
@@ -899,7 +885,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: wp(16),
     paddingTop: wp(14),
-    paddingBottom: wp(16),
   },
   header: {
     height: wp(44),
@@ -1011,11 +996,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   footer: {
-    flexDirection: 'row',
-    gap: wp(14),
-    paddingTop: wp(16),
-  },
-  footerBtnWrapper: {
-    flex: 1,
+    paddingTop: wp(12),
   },
 });
