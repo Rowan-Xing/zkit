@@ -214,6 +214,12 @@ const WEB_INPUT_RESET_STYLE =
         outlineWidth: 0,
       } as TextStyle)
     : null;
+const IS_IOS = Platform.OS === 'ios';
+const IS_WEB = Platform.OS === 'web';
+
+type WebTextInputStyle = TextStyle & {
+  caretColor?: ColorValue;
+};
 
 function isPrimitiveNode(node: React.ReactNode): node is string | number {
   return typeof node === 'string' || typeof node === 'number';
@@ -491,15 +497,19 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   const initialValueRef = React.useRef(defaultValue);
   const currentValueRef = React.useRef(isControlled ? value ?? '' : initialValueRef.current);
   const shouldTrackValue = clearable || showCount || renderCount != null;
-  const [trackedValue, setTrackedValue] = React.useState(() => currentValueRef.current);
+  const hasSyncedUncontrolledValueRef = React.useRef(false);
+  const [, scheduleValueRender] = React.useReducer((revision: number) => revision + 1, 0);
 
   if (isControlled) {
     currentValueRef.current = value ?? '';
   }
 
+  const shouldSyncUncontrolledValue =
+    !isControlled && (shouldTrackValue || hasSyncedUncontrolledValueRef.current);
+
   React.useEffect(() => {
     if (!isControlled && shouldTrackValue) {
-      setTrackedValue(currentValueRef.current);
+      hasSyncedUncontrolledValueRef.current = true;
     }
   }, [isControlled, shouldTrackValue]);
 
@@ -530,7 +540,10 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
     [colors, disabled, resolvedStatus, theme, variant]
   );
 
-  const displayValue = isControlled ? value ?? '' : trackedValue;
+  const displayValue = isControlled ? value ?? '' : currentValueRef.current;
+  const nativeValue = isControlled || shouldSyncUncontrolledValue ? displayValue : undefined;
+  const nativeDefaultValue =
+    !isControlled && !shouldSyncUncontrolledValue ? initialValueRef.current : undefined;
   const hasValue = displayValue.length > 0;
   const count = displayValue.length;
   const resolvedMinRows = multiline
@@ -614,7 +627,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
       color: visualColors.textColor,
       fontSize: metrics.textSize,
       includeFontPadding: false,
-      lineHeight: metrics.textLineHeight,
+      lineHeight: IS_IOS && !multiline ? undefined : metrics.textLineHeight,
       maxHeight: multiline ? inputMaxHeight : undefined,
       minHeight: multiline ? inputMinHeight : singleLineInputHeight,
       padding: 0,
@@ -637,6 +650,10 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   const finalSelectionColor = selectionColor ?? accentColor;
   const finalCursorColor = cursorColor ?? finalSelectionColor;
   const finalHandleColor = selectionHandleColor ?? finalSelectionColor;
+  const webCaretStyle = React.useMemo<WebTextInputStyle | null>(
+    () => (IS_WEB ? { caretColor: finalCursorColor } : null),
+    [finalCursorColor]
+  );
   const computedAccessibilityLabel =
     accessibilityLabel ?? extractReadableText(label) ?? nativeProps.placeholder;
   const computedAccessibilityHint =
@@ -647,12 +664,12 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   const commitValue = React.useCallback(
     (nextValue: string) => {
       currentValueRef.current = nextValue;
-      if (!isControlled && shouldTrackValue) {
-        setTrackedValue(nextValue);
+      if (shouldSyncUncontrolledValue) {
+        scheduleValueRender();
       }
       onChange?.(nextValue);
     },
-    [isControlled, onChange, shouldTrackValue]
+    [onChange, shouldSyncUncontrolledValue]
   );
 
   const handleChangeText = React.useCallback(
@@ -783,7 +800,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
             disabled,
           }}
           cursorColor={finalCursorColor}
-          defaultValue={isControlled ? undefined : initialValueRef.current}
+          defaultValue={nativeDefaultValue}
           editable={interactive}
           maxFontSizeMultiplier={maxFontSizeMultiplier}
           maxLength={maxLength}
@@ -798,10 +815,10 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
           readOnly={readOnly || disabled}
           selectionColor={finalSelectionColor}
           selectionHandleColor={finalHandleColor}
-          style={[styles.input, inputBaseStyle, WEB_INPUT_RESET_STYLE, inputStyle]}
+          style={[styles.input, inputBaseStyle, WEB_INPUT_RESET_STYLE, webCaretStyle, inputStyle]}
           testID={testID}
           underlineColorAndroid={underlineColorAndroid ?? 'transparent'}
-          value={isControlled ? value ?? '' : undefined}
+          value={nativeValue}
         />
 
         {showClearButton ? (
