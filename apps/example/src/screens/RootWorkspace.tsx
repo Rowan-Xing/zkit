@@ -27,15 +27,17 @@ import {
   type ExampleThemePresetKey,
 } from '../theme';
 import {
+  AccordionGuidePage,
+  BottomSheetGuidePage,
   ButtonGuidePage,
   CheckboxGuidePage,
   FoundationGuidePage,
+  LinkedScrollGuidePage,
   OverviewGuidePage,
   PickersGuidePage,
   RadioGuidePage,
   ServicesGuidePage,
   SwitchGuidePage,
-  SurfacesGuidePage,
   TextInputGuidePage,
   ToolsGuidePage,
 } from './GuidePages';
@@ -49,7 +51,9 @@ type WorkspaceRouteKey =
   | 'switch'
   | 'checkbox'
   | 'radio'
-  | 'surfaces'
+  | 'accordion'
+  | 'bottomSheet'
+  | 'linkedScroll'
   | 'pickers'
   | 'services'
   | 'dialogs'
@@ -71,7 +75,9 @@ const WORKSPACE_ROUTE_KEYS: readonly WorkspaceRouteKey[] = [
   'switch',
   'checkbox',
   'radio',
-  'surfaces',
+  'accordion',
+  'bottomSheet',
+  'linkedScroll',
   'pickers',
   'services',
   'dialogs',
@@ -86,7 +92,9 @@ const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
   switch: '/switch',
   checkbox: '/checkbox',
   radio: '/radio',
-  surfaces: '/surfaces',
+  accordion: '/accordion',
+  bottomSheet: '/bottom-sheet',
+  linkedScroll: '/linked-scroll',
   pickers: '/pickers',
   services: '/services',
   dialogs: '/dialogs',
@@ -114,6 +122,9 @@ function getRouteKeyFromPath(pathname: string): WorkspaceRouteKey {
   if (lastSegment === 'overview') return 'overview';
   if (lastSegment === 'forms') return 'textInput';
   if (lastSegment === 'choice') return 'checkbox';
+  if (lastSegment === 'surfaces') return 'accordion';
+  if (lastSegment === 'sheet' || lastSegment === 'bottomsheet') return 'bottomSheet';
+  if (lastSegment === 'linked' || lastSegment === 'linkedscroll') return 'linkedScroll';
 
   return (
     WORKSPACE_ROUTE_KEYS.find(
@@ -220,11 +231,25 @@ export function RootWorkspace({
         Screen: RadioGuidePage,
       },
       {
-        key: 'surfaces',
-        title: t('example.page.surfaces.title'),
-        caption: t('example.page.surfaces.caption'),
+        key: 'accordion',
+        title: t('example.page.accordion.title'),
+        caption: t('example.page.accordion.caption'),
+        iconName: 'chevron-down',
+        Screen: AccordionGuidePage,
+      },
+      {
+        key: 'bottomSheet',
+        title: t('example.page.bottomSheet.title'),
+        caption: t('example.page.bottomSheet.caption'),
         iconName: 'layers',
-        Screen: SurfacesGuidePage,
+        Screen: BottomSheetGuidePage,
+      },
+      {
+        key: 'linkedScroll',
+        title: t('example.page.linkedScroll.title'),
+        caption: t('example.page.linkedScroll.caption'),
+        iconName: 'columns',
+        Screen: LinkedScrollGuidePage,
       },
       {
         key: 'pickers',

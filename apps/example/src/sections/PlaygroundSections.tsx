@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import {
   getDeviceBrand,
   getMaxFontSizeMultiplier,
@@ -10,15 +10,20 @@ import {
 import {
   Accordion,
   AccordionContent,
+  AccordionIndicator,
   AccordionItem,
   AccordionTrigger,
   AddressCascader,
   BetweenTime,
   BottomSheet,
+  BottomSheetContent,
+  BottomSheetFooter,
+  BottomSheetHeader,
   Button,
   Checkbox,
   CheckboxGroup,
   DatePicker,
+  LinkedScroll,
   LoadingSpinner,
   Picker,
   Radio,
@@ -32,12 +37,19 @@ import {
   useTheme,
   type BottomSheetRef,
   type CheckboxCheckedState,
+  type LinkedScrollChangeSource,
+  type LinkedScrollMenuItemRenderContext,
+  type LinkedScrollSectionRenderContext,
   type PickerValue,
 } from 'zkit-ui';
 
 import {
+  linkedFallbackData,
+  linkedScrollItems,
   previewImages,
   type Density,
+  type LinkedDemoData,
+  type LinkedScrollItem as ExampleLinkedScrollItem,
 } from '../data';
 import { normalizePickerValue, renderIcon, type FeatherIconName } from '../demoUtils';
 import { FieldTrigger } from '../components/FieldTrigger';
@@ -1617,111 +1629,371 @@ export const RadioSection = React.memo(function RadioSection({
   );
 });
 
-export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinkedScroll }: { onOpenLinkedScroll: () => void }) {
+export const AccordionSection = React.memo(function AccordionSection() {
   const theme = useTheme();
   const { t } = useI18n();
-  const sheetRef = React.useRef<BottomSheetRef>(null);
+  const [openItem, setOpenItem] = React.useState<string | null>('profile');
+  const [lockedItem, setLockedItem] = React.useState<string | null>('metrics');
 
-  const openSheet = React.useCallback(() => {
-    void sheetRef.current?.open();
+  return (
+    <Section
+      eyebrow={t('example.accordion.eyebrow')}
+      title={t('example.accordion.title')}
+      subtitle={t('example.accordion.subtitle')}
+    >
+      <View style={styles.surfaceGrid}>
+        <ChoiceCaseCard
+          iconName="chevron-down"
+          iconColor="#2563EB"
+          iconBackground="#DBEAFE"
+          title={t('example.accordion.stateTitle')}
+          caption={t('example.accordion.stateCaption')}
+        >
+          <Accordion value={openItem} onChange={setOpenItem} itemGap={wp(10)} size="md" variant="card">
+            <AccordionItem value="profile">
+              <AccordionTrigger
+                title={t('example.accordion.profileTitle')}
+                description={t('example.accordion.profileDescription')}
+                leading={renderIcon('navigation', theme.colors.primary, wp(17))}
+              />
+              <AccordionContent>
+                <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
+                  {t('example.accordion.profileBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="security">
+              <AccordionTrigger
+                title={t('example.accordion.securityTitle')}
+                description={t('example.accordion.securityDescription')}
+                leading={renderIcon('check', '#0F9F6E', wp(17))}
+              />
+              <AccordionContent>
+                <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
+                  {t('example.accordion.securityBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem disabled value="locked">
+              <AccordionTrigger
+                title={t('example.accordion.lockedTitle')}
+                description={t('example.accordion.lockedDescription')}
+                leading={renderIcon('alert-triangle', '#D97706', wp(17))}
+              />
+              <AccordionContent>
+                <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
+                  {t('example.accordion.lockedBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <View style={[styles.surfaceStatusRow, { backgroundColor: '#F8FAFC', borderColor: theme.colors.border }]}>
+            <Text style={[styles.surfaceStatusLabel, { color: theme.colors.muted }]}>
+              {t('example.accordion.current')}
+            </Text>
+            <Text style={[styles.surfaceStatusValue, { color: theme.colors.onSurface }]}>
+              {openItem ?? t('example.accordion.none')}
+            </Text>
+          </View>
+        </ChoiceCaseCard>
+
+        <ChoiceCaseCard
+          iconName="layers"
+          iconColor="#7C3AED"
+          iconBackground="#F3E8FF"
+          title={t('example.accordion.multipleTitle')}
+          caption={t('example.accordion.multipleCaption')}
+        >
+          <Accordion
+            type="multiple"
+            defaultValue={['motion', 'density']}
+            itemGap={wp(10)}
+            size="md"
+            color="#7C3AED"
+            variant="card"
+            mountStrategy="lazy"
+            itemStyle={[styles.surfaceAccordionItem, { backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' }]}
+          >
+            <AccordionItem value="motion">
+              <AccordionTrigger
+                title={t('example.accordion.motionTitle')}
+                description={t('example.accordion.motionDescription')}
+              />
+              <AccordionContent>
+                <Text style={[styles.surfaceAccordionText, { color: '#6D28D9' }]}>
+                  {t('example.accordion.motionBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="density">
+              <AccordionTrigger
+                title={t('example.accordion.densityTitle')}
+                description={t('example.accordion.densityDescription')}
+              />
+              <AccordionContent>
+                <Text style={[styles.surfaceAccordionText, { color: '#6D28D9' }]}>
+                  {t('example.accordion.densityBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="mount">
+              <AccordionTrigger
+                title={t('example.accordion.mountTitle')}
+                description={t('example.accordion.mountDescription')}
+              />
+              <AccordionContent>
+                <Text style={[styles.surfaceAccordionText, { color: '#6D28D9' }]}>
+                  {t('example.accordion.mountBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </ChoiceCaseCard>
+
+        <ChoiceCaseCard
+          iconName="sliders"
+          iconColor="#0F9F6E"
+          iconBackground="#DCFCE7"
+          title={t('example.accordion.visualTitle')}
+          caption={t('example.accordion.visualCaption')}
+        >
+          <Accordion
+            defaultValue="appearance"
+            itemGap={wp(8)}
+            size="sm"
+            tone="success"
+            variant="filled"
+            mountStrategy="unmountOnExit"
+          >
+            <AccordionItem value="appearance">
+              <AccordionTrigger
+                title={t('example.accordion.appearanceTitle')}
+                description={t('example.accordion.appearanceDescription')}
+                indicator={<AccordionIndicator color="#16A34A" size={wp(20)} strokeWidth={wp(2.2)} />}
+                trailing={
+                  <Text style={[styles.surfaceBadgeText, { backgroundColor: '#DCFCE7', color: '#15803D' }]}>
+                    sm
+                  </Text>
+                }
+              />
+              <AccordionContent>
+                <Text style={[styles.surfaceAccordionText, { color: '#166534' }]}>
+                  {t('example.accordion.appearanceBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <Accordion
+            value={lockedItem}
+            onChange={setLockedItem}
+            collapsible={false}
+            itemGap={wp(8)}
+            size="lg"
+            color="#0891B2"
+            variant="plain"
+          >
+            <AccordionItem value="metrics">
+              <AccordionTrigger
+                title={t('example.accordion.nonCollapsibleTitle')}
+                description={t('example.accordion.nonCollapsibleDescription')}
+                pressEffect="scale-opacity"
+              />
+              <AccordionContent>
+                <Text style={[styles.surfaceAccordionText, { color: '#0E7490' }]}>
+                  {t('example.accordion.nonCollapsibleBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="details">
+              <AccordionTrigger
+                title={t('example.accordion.customSlotTitle')}
+                description={t('example.accordion.customSlotDescription')}
+                indicator={({ open }) => (
+                  <View style={[styles.surfaceSlotIndicator, { backgroundColor: open ? '#CFFAFE' : '#E2E8F0' }]}>
+                    {renderIcon('chevron-down', open ? '#0891B2' : '#64748B', wp(15))}
+                  </View>
+                )}
+              />
+              <AccordionContent>
+                <Text style={[styles.surfaceAccordionText, { color: '#0E7490' }]}>
+                  {t('example.accordion.customSlotBody')}
+                </Text>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </ChoiceCaseCard>
+      </View>
+    </Section>
+  );
+});
+
+export const BottomSheetSection = React.memo(function BottomSheetSection() {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const controlledSheetRef = React.useRef<BottomSheetRef>(null);
+  const commandSheetRef = React.useRef<BottomSheetRef>(null);
+  const [controlledOpen, setControlledOpen] = React.useState(false);
+  const [detentIndex, setDetentIndex] = React.useState(0);
+  const [lastReason, setLastReason] = React.useState('default');
+
+  const openControlledSheet = React.useCallback((nextDetentIndex: number) => {
+    setDetentIndex(nextDetentIndex);
+    setControlledOpen(true);
   }, []);
 
-  const closeSheet = React.useCallback(() => {
-    void sheetRef.current?.close();
+  const openCommandSheet = React.useCallback((nextDetentIndex = 0) => {
+    void commandSheetRef.current?.open(nextDetentIndex);
+  }, []);
+
+  const closeControlledSheet = React.useCallback(() => {
+    setControlledOpen(false);
   }, []);
 
   return (
     <Section
-      eyebrow={t('example.surfaces.eyebrow')}
-      title={t('example.surfaces.title')}
-      subtitle={t('example.surfaces.subtitle')}
+      eyebrow={t('example.bottomSheet.eyebrow')}
+      title={t('example.bottomSheet.title')}
+      subtitle={t('example.bottomSheet.subtitle')}
     >
       <View style={styles.surfaceGrid}>
-        <Accordion defaultValue="state" itemGap={wp(10)} size="md" variant="card">
-          <AccordionItem value="state">
-            <AccordionTrigger title={t('example.surfaces.accordionState')} />
-            <AccordionContent>
-              <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
-                {t('example.surfaces.accordionStateBody')}
-              </Text>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="services">
-            <AccordionTrigger title={t('example.surfaces.accordionServices')} />
-            <AccordionContent>
-              <Text style={[styles.paragraph, { color: theme.colors.muted }]}>
-                {t('example.surfaces.accordionServicesBody')}
-              </Text>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-
-        <Accordion
-          type="multiple"
-          defaultValue={['motion', 'mount']}
-          itemGap={wp(10)}
-          size="md"
-          color="#2563EB"
-          variant="card"
-          mountStrategy="lazy"
-          itemStyle={[styles.surfaceAccordionItem, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}
+        <ChoiceCaseCard
+          iconName="layers"
+          iconColor="#2563EB"
+          iconBackground="#DBEAFE"
+          title={t('example.bottomSheet.controlledTitle')}
+          caption={t('example.bottomSheet.controlledCaption')}
         >
-          <AccordionItem value="motion">
-            <AccordionTrigger
-              title={t('example.surfaces.multipleLazyTitle')}
-              description={t('example.surfaces.multipleLazyDescription')}
-            />
-            <AccordionContent>
-              <Text style={[styles.surfaceAccordionText, { color: '#475569' }]}>
-                {t('example.surfaces.multipleLazyBody')}
-              </Text>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="mount">
-            <AccordionTrigger
-              title={t('example.surfaces.compactAccordionTitle')}
-              description={t('example.surfaces.compactAccordionDescription')}
-            />
-            <AccordionContent>
-              <Text style={[styles.surfaceAccordionText, { color: '#475569' }]}>
-                {t('example.surfaces.compactAccordionBody')}
-              </Text>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-
-        <View style={[styles.linkedIntro, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <View style={styles.linkedIntroCopy}>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
-              {t('example.surfaces.linkedTitle')}
+          <View style={styles.surfaceActionGrid}>
+            <Button icon={renderIcon('layers', '#FFFFFF', wp(17))} onPress={() => openControlledSheet(0)}>
+              {t('example.bottomSheet.openContent')}
+            </Button>
+            <Button variant="outline" tone="neutral" onPress={() => openControlledSheet(1)}>
+              {t('example.bottomSheet.openMedium')}
+            </Button>
+            <Button variant="outline" tone="neutral" onPress={() => openControlledSheet(2)}>
+              {t('example.bottomSheet.openLarge')}
+            </Button>
+          </View>
+          <View style={[styles.surfaceStatusRow, { backgroundColor: '#F8FAFC', borderColor: theme.colors.border }]}>
+            <Text style={[styles.surfaceStatusLabel, { color: theme.colors.muted }]}>
+              {t('example.bottomSheet.currentDetent')}
             </Text>
-            <Text style={[styles.linkedIntroText, { color: theme.colors.muted }]}>
-              {t('example.surfaces.linkedBody')}
+            <Text style={[styles.surfaceStatusValue, { color: theme.colors.onSurface }]}>
+              {detentIndex}
+            </Text>
+            <Text style={[styles.surfaceStatusLabel, { color: theme.colors.muted }]}>
+              {t('example.bottomSheet.lastReason')}
+            </Text>
+            <Text style={[styles.surfaceStatusValue, { color: theme.colors.onSurface }]}>
+              {lastReason}
             </Text>
           </View>
-          <Button icon={renderIcon('columns', '#FFFFFF', wp(17))} onPress={onOpenLinkedScroll}>
-            {t('example.common.open')}
-          </Button>
-        </View>
+        </ChoiceCaseCard>
 
-        <View style={[styles.linkedIntro, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <View style={styles.linkedIntroCopy}>
-            <Text style={[styles.controlLabel, { color: theme.colors.onSurface }]}>
-              {t('example.surfaces.sheetTitle')}
-            </Text>
-            <Text style={[styles.linkedIntroText, { color: theme.colors.muted }]}>
-              {t('example.surfaces.sheetBody')}
-            </Text>
+        <ChoiceCaseCard
+          iconName="sliders"
+          iconColor="#0F9F6E"
+          iconBackground="#DCFCE7"
+          title={t('example.bottomSheet.commandTitle')}
+          caption={t('example.bottomSheet.commandCaption')}
+        >
+          <View style={styles.surfaceActionGrid}>
+            <Button icon={renderIcon('send', '#FFFFFF', wp(17))} onPress={() => openCommandSheet(0)}>
+              {t('example.bottomSheet.refOpen')}
+            </Button>
+            <Button variant="outline" tone="neutral" onPress={() => openCommandSheet(1)}>
+              {t('example.bottomSheet.refOpenTall')}
+            </Button>
           </View>
-          <Button variant="outline" tone="neutral" icon={renderIcon('layers', theme.colors.onSurface, wp(17))} onPress={openSheet}>
-            {t('example.common.sheet')}
-          </Button>
-        </View>
+        </ChoiceCaseCard>
+
+        <ChoiceCaseCard
+          iconName="check"
+          iconColor="#EB5A17"
+          iconBackground="#FFF1E7"
+          title={t('example.bottomSheet.coverageTitle')}
+          caption={t('example.bottomSheet.coverageCaption')}
+        >
+          <View style={styles.surfaceFeatureGrid}>
+            <View style={[styles.surfaceFeatureCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+              <Text style={[styles.surfaceFeatureTitle, { color: '#1D4ED8' }]}>
+                {t('example.bottomSheet.detentsLabel')}
+              </Text>
+              <Text style={[styles.surfaceFeatureText, { color: '#1E40AF' }]}>
+                content / medium / large
+              </Text>
+            </View>
+            <View style={[styles.surfaceFeatureCard, { backgroundColor: '#ECFDF3', borderColor: '#BBF7D0' }]}>
+              <Text style={[styles.surfaceFeatureTitle, { color: '#15803D' }]}>
+                {t('example.bottomSheet.mountLabel')}
+              </Text>
+              <Text style={[styles.surfaceFeatureText, { color: '#166534' }]}>
+                lazy / unmountOnExit
+              </Text>
+            </View>
+            <View style={[styles.surfaceFeatureCard, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
+              <Text style={[styles.surfaceFeatureTitle, { color: '#C2410C' }]}>
+                {t('example.bottomSheet.gestureLabel')}
+              </Text>
+              <Text style={[styles.surfaceFeatureText, { color: '#9A3412' }]}>
+                backdrop / handle / drag
+              </Text>
+            </View>
+          </View>
+        </ChoiceCaseCard>
       </View>
 
       <BottomSheet
-        ref={sheetRef}
+        ref={controlledSheetRef}
+        open={controlledOpen}
+        onOpenChange={(open, meta) => {
+          setControlledOpen(open);
+          setLastReason(meta.reason);
+        }}
+        detents={['content', 'medium', 'large']}
+        detentIndex={detentIndex}
+        onDetentChange={(index) => setDetentIndex(index)}
+        mountStrategy="lazy"
+        header={
+          <BottomSheetHeader
+            title={t('example.bottomSheet.controlledSheetTitle')}
+            description={t('example.bottomSheet.controlledSheetDescription')}
+          />
+        }
+        footer={
+          <BottomSheetFooter>
+            <Button block onPress={closeControlledSheet}>
+              {t('example.common.done')}
+            </Button>
+          </BottomSheetFooter>
+        }
+        backgroundColor={theme.colors.surface}
+        maxHeight={wp(520)}
+      >
+        <BottomSheetContent>
+          <View style={styles.sheetGrid}>
+            <View style={[styles.sheetSwatch, { backgroundColor: '#E8F7F1' }]}>
+              <Text style={[styles.sheetSwatchLabel, { color: '#0F7A57' }]}>
+                {t('example.bottomSheet.currentDetent')}
+              </Text>
+              <Text style={[styles.sheetSwatchValue, { color: '#0F513F' }]}>{detentIndex}</Text>
+            </View>
+            <View style={[styles.sheetSwatch, { backgroundColor: '#FFF1E7' }]}>
+              <Text style={[styles.sheetSwatchLabel, { color: '#9A3412' }]}>
+                {t('example.bottomSheet.lastReason')}
+              </Text>
+              <Text style={[styles.sheetSwatchValue, { color: '#7C2D12' }]}>{lastReason}</Text>
+            </View>
+          </View>
+        </BottomSheetContent>
+      </BottomSheet>
+
+      <BottomSheet
+        ref={commandSheetRef}
         detents={['content', 0.72]}
+        backdrop={{ opacity: 0.36, dismissOnPress: true }}
         backgroundColor={theme.colors.surface}
         handle={{
           width: wp(36),
@@ -1732,35 +2004,294 @@ export const SurfacesSection = React.memo(function SurfacesSection({ onOpenLinke
         }}
         maxHeight={wp(420)}
       >
-        <View style={styles.sheetContent}>
-          <View>
-            <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
-              {t('example.surfaces.sheetTitle')}
-            </Text>
-            <Text style={[styles.sheetSubtitle, { color: theme.colors.muted }]}>
-              {t('example.surfaces.sheetSubtitle')}
-            </Text>
-          </View>
-          <View style={styles.sheetGrid}>
-            <View style={[styles.sheetSwatch, { backgroundColor: '#E8F7F1' }]}>
-              <Text style={[styles.sheetSwatchLabel, { color: '#0F7A57' }]}>
-                {t('example.surfaces.detent')}
+        {({ close, detentIndex: currentCommandDetent, snapTo }) => (
+          <View style={styles.sheetContent}>
+            <View>
+              <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
+                {t('example.bottomSheet.commandSheetTitle')}
               </Text>
-              <Text style={[styles.sheetSwatchValue, { color: '#0F513F' }]}>auto</Text>
-            </View>
-            <View style={[styles.sheetSwatch, { backgroundColor: '#FFF1E7' }]}>
-              <Text style={[styles.sheetSwatchLabel, { color: '#9A3412' }]}>
-                {t('example.surfaces.max')}
+              <Text style={[styles.sheetSubtitle, { color: theme.colors.muted }]}>
+                {t('example.bottomSheet.commandSheetDescription')}
               </Text>
-              <Text style={[styles.sheetSwatchValue, { color: '#7C2D12' }]}>72%</Text>
+            </View>
+            <View style={styles.sheetGrid}>
+              <View style={[styles.sheetSwatch, { backgroundColor: '#E8F7F1' }]}>
+                <Text style={[styles.sheetSwatchLabel, { color: '#0F7A57' }]}>
+                  {t('example.bottomSheet.detentsLabel')}
+                </Text>
+                <Text style={[styles.sheetSwatchValue, { color: '#0F513F' }]}>auto</Text>
+              </View>
+              <View style={[styles.sheetSwatch, { backgroundColor: '#FFF1E7' }]}>
+                <Text style={[styles.sheetSwatchLabel, { color: '#9A3412' }]}>
+                  {t('example.bottomSheet.maxLabel')}
+                </Text>
+                <Text style={[styles.sheetSwatchValue, { color: '#7C2D12' }]}>72%</Text>
+              </View>
+            </View>
+            <View style={styles.surfaceActionGrid}>
+              <Button variant="outline" tone="neutral" onPress={() => void snapTo(currentCommandDetent === 0 ? 1 : 0)}>
+                {t('example.bottomSheet.snap')}
+              </Button>
+              <Button onPress={() => void close()}>
+                {t('example.common.done')}
+              </Button>
             </View>
           </View>
-          <Button block onPress={closeSheet}>
-            {t('example.common.done')}
-          </Button>
-        </View>
+        )}
       </BottomSheet>
     </Section>
+  );
+});
+
+export const LinkedScrollSection = React.memo(function LinkedScrollSection() {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const [menuOnRight, setMenuOnRight] = React.useState(false);
+  const [changeSource, setChangeSource] = React.useState<LinkedScrollChangeSource>('menu');
+  const items = React.useMemo(
+    () =>
+      linkedScrollItems.slice(0, 14).map((item, index) => {
+        const order = index + 1;
+        const kind = item.data?.kind ?? linkedFallbackData.kind;
+        const summary =
+          kind === 'overview'
+            ? t('example.linked.summary.overview')
+            : kind === 'media'
+              ? t('example.linked.summary.media')
+              : t('example.linked.summary.metrics');
+
+        return {
+          ...item,
+          disabled: index === 5,
+          label: t('example.linked.section', { n: order }),
+          data: {
+            ...(item.data ?? linkedFallbackData),
+            summary,
+            chips: [
+              t('example.linked.batch', { n: Math.ceil(order / 4) }),
+              t(`example.linked.kind.${kind}`),
+              t('example.linked.items', { n: 24 + index * 3 }),
+            ],
+          },
+        };
+      }),
+    [t]
+  );
+  const [selectedSection, setSelectedSection] = React.useState(items[0].value);
+  const selectedItem = React.useMemo(
+    () => items.find((item) => item.value === selectedSection) ?? items[0],
+    [items, selectedSection]
+  );
+  const menuListProps = React.useMemo(
+    () => ({
+      drawDistance: wp(360),
+      nestedScrollEnabled: true,
+      contentContainerStyle: styles.linkedMenuContent,
+    }),
+    []
+  );
+  const contentListProps = React.useMemo(
+    () => ({
+      drawDistance: wp(760),
+      nestedScrollEnabled: true,
+      contentContainerStyle: styles.linkedPreviewContent,
+    }),
+    []
+  );
+  const renderMenuItem = React.useCallback(
+    (context: LinkedScrollMenuItemRenderContext<string, LinkedDemoData>) => (
+      <LinkedScrollPreviewMenuItem {...context} />
+    ),
+    []
+  );
+  const renderSection = React.useCallback(
+    (context: LinkedScrollSectionRenderContext<string, LinkedDemoData>) => (
+      <LinkedScrollPreviewCard {...context} />
+    ),
+    []
+  );
+  const getMenuItemType = React.useCallback(() => 'menu', []);
+  const getSectionType = React.useCallback(
+    (item: ExampleLinkedScrollItem) => item.data?.kind ?? linkedFallbackData.kind,
+    []
+  );
+
+  return (
+    <Section
+      eyebrow={t('example.linkedScroll.eyebrow')}
+      title={t('example.linkedScroll.title')}
+      subtitle={t('example.linkedScroll.subtitle')}
+    >
+      <ChoiceCaseCard
+        iconName="columns"
+        iconColor="#2563EB"
+        iconBackground="#DBEAFE"
+        title={t('example.linkedScroll.liveTitle')}
+        caption={t('example.linkedScroll.liveCaption')}
+      >
+        <View style={styles.linkedDocControlRow}>
+          <Button
+            size="sm"
+            variant={menuOnRight ? 'outline' : 'solid'}
+            tone={menuOnRight ? 'neutral' : 'primary'}
+            onPress={() => setMenuOnRight(false)}
+          >
+            {t('example.linkedScroll.leftMenu')}
+          </Button>
+          <Button
+            size="sm"
+            variant={menuOnRight ? 'solid' : 'outline'}
+            tone={menuOnRight ? 'primary' : 'neutral'}
+            onPress={() => setMenuOnRight(true)}
+          >
+            {t('example.linkedScroll.rightMenu')}
+          </Button>
+        </View>
+
+        <View style={styles.linkedDocStatusGrid}>
+          <View style={[styles.linkedDocStatusCard, { backgroundColor: '#F8FAFC', borderColor: theme.colors.border }]}>
+            <Text style={[styles.surfaceStatusLabel, { color: theme.colors.muted }]}>
+              {t('example.linkedScroll.selected')}
+            </Text>
+            <Text numberOfLines={1} style={[styles.surfaceStatusValue, { color: theme.colors.onSurface }]}>
+              {selectedItem.label}
+            </Text>
+          </View>
+          <View style={[styles.linkedDocStatusCard, { backgroundColor: '#F8FAFC', borderColor: theme.colors.border }]}>
+            <Text style={[styles.surfaceStatusLabel, { color: theme.colors.muted }]}>
+              {t('example.linkedScroll.source')}
+            </Text>
+            <Text style={[styles.surfaceStatusValue, { color: theme.colors.onSurface }]}>
+              {changeSource}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.linkedDocPreview, { borderColor: theme.colors.border }]}>
+          <LinkedScroll
+            items={items}
+            value={selectedSection}
+            onChange={(value, _item, meta) => {
+              setSelectedSection(value);
+              setChangeSource(meta.source);
+            }}
+            menuPosition={menuOnRight ? 'right' : 'left'}
+            menuWidth={wp(108)}
+            menuItemHeight={wp(56)}
+            sectionGap={wp(12)}
+            contentPaddingHorizontal={wp(12)}
+            contentPaddingVertical={wp(12)}
+            activeBackgroundColor="#DCEBFF"
+            activeColor={theme.colors.primary}
+            inactiveColor={theme.colors.muted}
+            menuBackgroundColor="#F0F3F8"
+            contentBackgroundColor="#F8FAFC"
+            activeViewAreaCoveragePercentThreshold={8}
+            getMenuItemType={getMenuItemType}
+            getSectionType={getSectionType}
+            menuListProps={menuListProps}
+            contentListProps={contentListProps}
+            renderMenuItem={renderMenuItem}
+            renderSection={renderSection}
+          />
+        </View>
+      </ChoiceCaseCard>
+    </Section>
+  );
+});
+
+const LinkedScrollPreviewMenuItem = React.memo(function LinkedScrollPreviewMenuItem({
+  item,
+  index,
+  selected,
+  disabled,
+  press,
+}: LinkedScrollMenuItemRenderContext<string, LinkedDemoData>) {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
+      onPress={press}
+      style={({ pressed }) => [
+        styles.linkedPreviewMenuItem,
+        {
+          backgroundColor: selected ? '#DCEBFF' : 'transparent',
+          opacity: disabled ? 0.42 : pressed ? 0.72 : 1,
+        },
+      ]}
+    >
+      <Text style={[styles.linkedPreviewMenuIndex, { color: selected ? theme.colors.primary : theme.colors.muted }]}>
+        {String(index + 1).padStart(2, '0')}
+      </Text>
+      <Text
+        numberOfLines={2}
+        style={[styles.linkedPreviewMenuText, { color: selected ? theme.colors.primary : theme.colors.onSurface }]}
+      >
+        {item.label}
+      </Text>
+    </Pressable>
+  );
+});
+
+const LinkedScrollPreviewCard = React.memo(function LinkedScrollPreviewCard({
+  item,
+  index,
+  selected,
+}: LinkedScrollSectionRenderContext<string, LinkedDemoData>) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const data = item.data ?? linkedFallbackData;
+  const summary = item.data ? data.summary : t('example.linked.summary.fallback');
+
+  return (
+    <View
+      style={[
+        styles.linkedSectionCard,
+        {
+          minHeight: wp(data.height),
+          backgroundColor: selected ? data.accent : theme.colors.surface,
+          borderColor: selected ? theme.colors.primary : theme.colors.border,
+        },
+      ]}
+    >
+      <View style={styles.linkedSectionHeader}>
+        <Text style={[styles.linkedSectionNumber, { color: theme.colors.primary }]}>
+          {String(index + 1).padStart(2, '0')}
+        </Text>
+        <View style={styles.linkedSectionTitleWrap}>
+          <Text style={[styles.linkedSectionTitle, { color: theme.colors.onSurface }]}>{item.label}</Text>
+          <Text style={[styles.linkedSummary, { color: theme.colors.muted }]}>{summary}</Text>
+        </View>
+      </View>
+
+      <View style={styles.linkedChipRow}>
+        {data.chips.map((chip) => (
+          <View key={chip} style={[styles.linkedChip, { borderColor: theme.colors.border }]}>
+            <Text style={[styles.linkedChipText, { color: theme.colors.onSurface }]}>{chip}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.linkedMetricStack}>
+        <LinkedPreviewMetric label={t('example.linked.renderType')} value={t(`example.linked.kind.${data.kind}`)} />
+        <LinkedPreviewMetric label={t('example.linked.sectionHeight')} value={String(data.height)} />
+        <LinkedPreviewMetric label={t('example.linked.source')} value="FlashList" />
+      </View>
+    </View>
+  );
+});
+
+const LinkedPreviewMetric = React.memo(function LinkedPreviewMetric({ label, value }: { label: string; value: string }) {
+  const theme = useTheme();
+
+  return (
+    <View style={styles.linkedMetricRow}>
+      <Text style={[styles.linkedMetricLabel, { color: theme.colors.muted }]}>{label}</Text>
+      <Text style={[styles.linkedMetricValue, { color: theme.colors.onSurface }]}>{value}</Text>
+    </View>
   );
 });
 

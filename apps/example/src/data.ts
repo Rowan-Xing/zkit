@@ -12,7 +12,9 @@ export type ShowcaseNavKey =
   | 'switch'
   | 'checkbox'
   | 'radio'
-  | 'surfaces'
+  | 'accordion'
+  | 'bottomSheet'
+  | 'linkedScroll'
   | 'pickers'
   | 'services'
   | 'dialogs'
@@ -41,7 +43,9 @@ export const showcaseNavItems: ShowcaseNavItem[] = [
   { key: 'switch', titleKey: 'example.nav.switch.title', captionKey: 'example.nav.switch.caption' },
   { key: 'checkbox', titleKey: 'example.nav.checkbox.title', captionKey: 'example.nav.checkbox.caption' },
   { key: 'radio', titleKey: 'example.nav.radio.title', captionKey: 'example.nav.radio.caption' },
-  { key: 'surfaces', titleKey: 'example.nav.surfaces.title', captionKey: 'example.nav.surfaces.caption' },
+  { key: 'accordion', titleKey: 'example.nav.accordion.title', captionKey: 'example.nav.accordion.caption' },
+  { key: 'bottomSheet', titleKey: 'example.nav.bottomSheet.title', captionKey: 'example.nav.bottomSheet.caption' },
+  { key: 'linkedScroll', titleKey: 'example.nav.linkedScroll.title', captionKey: 'example.nav.linkedScroll.caption' },
   { key: 'pickers', titleKey: 'example.nav.pickers.title', captionKey: 'example.nav.pickers.caption' },
   { key: 'services', titleKey: 'example.nav.services.title', captionKey: 'example.nav.services.caption' },
   { key: 'dialogs', titleKey: 'example.nav.dialogs.title', captionKey: 'example.nav.dialogs.caption' },

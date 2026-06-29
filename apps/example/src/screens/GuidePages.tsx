@@ -1,12 +1,4 @@
 import * as React from 'react';
-import { BackHandler, useWindowDimensions, View } from 'react-native';
-import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import {
   SliderCaptcha,
   loading,
@@ -18,29 +10,26 @@ import {
 } from 'zkit-ui';
 import { createRouterGuard } from 'zkit-tools';
 
-import { LinkedScrollDemo } from '../LinkedScrollDemo';
 import { UsageGuide, type UsageGuideProps } from '../components/UsageGuide';
 import { captchaChallenge } from '../data';
 import type { Density } from '../data';
 import { wait } from '../demoUtils';
 import {
+  AccordionSection,
+  BottomSheetSection,
   ButtonsSection,
   CheckboxSection,
   FoundationSection,
+  LinkedScrollSection,
   PickersSection,
   RadioSection,
   ServicesSection,
   SwitchSection,
-  SurfacesSection,
   TextInputSection,
   ToolsSection,
 } from '../sections/PlaygroundSections';
-import { styles as sharedStyles } from '../styles';
 import { HomeScreen } from './HomeScreen';
 import { TabScreenShell } from './TabScreenShell';
-
-const ROUTE_PUSH_DURATION = 280;
-const ROUTE_POP_DURATION = 220;
 
 type GuideKey =
   | 'foundation'
@@ -49,7 +38,9 @@ type GuideKey =
   | 'switch'
   | 'checkbox'
   | 'radio'
-  | 'surfaces'
+  | 'accordion'
+  | 'bottomSheet'
+  | 'linkedScroll'
   | 'pickers'
   | 'services'
   | 'tools';
@@ -236,29 +227,80 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
     api: ['value', 'defaultValue', 'onChange', 'allowDeselect', 'RadioGroup', 'variant', 'indicator', 'layout', 'colors'],
     snippet: `const [density, setDensity] = React.useState('comfortable');\n\n<RadioGroup value={density} onChange={setDensity}>\n  <Radio value="compact" label="紧凑" />\n  <Radio value="comfortable" label="舒适" />\n</RadioGroup>`,
   },
-  surfaces: {
-    title: 'Accordion / BottomSheet / LinkedScroll',
+  accordion: {
+    title: 'Accordion',
     description:
-      '界面层组件负责展开收起、底部浮层和菜单内容联动。动画、手势和滚动关键帧优先走原生或 Reanimated 路径，不把平台差异暴露给业务。',
+      'Accordion 负责信息分组、设置项折叠和渐进披露。状态模型收敛在 value / defaultValue / onChange，复杂内容通过 Trigger、Content 与 Indicator 组合完成。',
     blocks: [
       {
-        title: 'Accordion 覆盖用法',
+        title: '状态模型',
         items: [
-          '支持 single / multiple，open 状态可受控或非受控，itemGap / size / variant 管理布局。',
-          'AccordionTrigger / AccordionContent / AccordionIndicator 保持组合式 API，适合复杂内容。',
+          'single 模式使用单一 value，默认可折叠为空；multiple 模式使用 value 数组。',
+          '受控和非受控状态只能有一个来源，切换时由组件内部 store 保证展开项同步。',
+          'disabled 可放在根或单项，触发器会同步可访问性状态和视觉禁用反馈。',
         ],
       },
       {
-        title: 'BottomSheet 与 LinkedScroll',
+        title: '布局、内容与动画',
         items: [
-          'BottomSheet 使用 open / defaultOpen / onOpenChange，也支持 ref.open() / ref.close() 命令式入口。',
-          'detents / maxHeight / backdrop / handle 覆盖常见浮层规格，iOS / Android / Web 由组件层适配。',
-          'LinkedScroll 适合左侧菜单和右侧内容同步滚动，页面内 demo 展示独立路由式进入。',
+          'variant 覆盖 card / filled / plain，size 覆盖 sm / md / lg，tone 或 color 控制强调色。',
+          'itemGap、itemStyle、leading、trailing、indicator、children render-prop 覆盖复杂业务外观。',
+          'mountStrategy 支持 eager / lazy / unmountOnExit；高度与指示器动画走 Reanimated。',
         ],
       },
     ],
-    api: ['Accordion', 'open', 'defaultOpen', 'BottomSheet', 'detents', 'ref.open()', 'LinkedScroll', 'value'],
-    snippet: `<Accordion defaultValue="state" variant="card">\n  <AccordionItem value="state">\n    <AccordionTrigger title="State" />\n    <AccordionContent>...</AccordionContent>\n  </AccordionItem>\n</Accordion>\n\n<BottomSheet ref={sheetRef} detents={['content', 0.72]} />`,
+    api: ['value', 'defaultValue', 'onChange', 'type', 'collapsible', 'variant', 'size', 'tone', 'mountStrategy'],
+    snippet: `<Accordion value={open} onChange={setOpen} variant="card">\n  <AccordionItem value="profile">\n    <AccordionTrigger title="账户资料" />\n    <AccordionContent>...</AccordionContent>\n  </AccordionItem>\n</Accordion>`,
+  },
+  bottomSheet: {
+    title: 'BottomSheet',
+    description:
+      'BottomSheet 是跨 iOS / Android / Web 的底部浮层基础件，负责打开状态、档位、遮罩、拖拽、挂载策略和命令式入口的统一。',
+    blocks: [
+      {
+        title: '打开状态与档位',
+        items: [
+          'open / defaultOpen / onOpenChange 覆盖声明式使用，ref.open() / ref.close() / ref.snapTo() 覆盖流程式使用。',
+          'detents 支持 content、medium、large、full、百分比和数字，detentIndex 可受控。',
+          'onDetentChange、onOpenComplete、onDismissComplete 用于同步业务状态和埋点。',
+        ],
+      },
+      {
+        title: '结构与平台',
+        items: [
+          'Header、Content、Footer 插槽负责稳定布局，footer 可自动处理底部安全区。',
+          'backdrop、handle、cornerRadius、maxHeight、maxWidth 覆盖常见视觉规格。',
+          'mountStrategy、dismissible、draggable、disabled 明确生命周期和交互边界。',
+        ],
+      },
+    ],
+    api: ['open', 'defaultOpen', 'onOpenChange', 'detents', 'detentIndex', 'backdrop', 'handle', 'ref.snapTo()'],
+    snippet: `<BottomSheet open={open} onOpenChange={setOpen} detents={['content', 'medium']}>\n  <BottomSheetHeader title="筛选" />\n  <BottomSheetContent>...</BottomSheetContent>\n</BottomSheet>`,
+  },
+  linkedScroll: {
+    title: 'LinkedScroll',
+    description:
+      'LinkedScroll 负责左/右菜单与内容区的双向联动。它把菜单点击、内容滚动、受控 value 和 FlashList 性能参数收敛成一个稳定组件。',
+    blocks: [
+      {
+        title: '选择与同步',
+        items: [
+          'value / defaultValue / onChange 管理当前分区，onChange 会带 source、item 和 index。',
+          '菜单点击会同步滚动内容区，内容区可见项变化也会反向同步菜单。',
+          'programmaticScrollGuardDuration 避免程序滚动期间被瞬时 viewability 回调反向打断。',
+        ],
+      },
+      {
+        title: '布局与渲染',
+        items: [
+          'menuPosition、menuWidth、menuItemHeight、sectionGap 与 content padding 覆盖双列布局。',
+          'renderMenuItem / renderSection 负责完整自定义菜单项和内容卡片。',
+          'getMenuItemType、getSectionType、menuListProps、contentListProps 可把 FlashList 性能参数暴露给业务。',
+        ],
+      },
+    ],
+    api: ['items', 'value', 'onChange', 'menuPosition', 'renderMenuItem', 'renderSection', 'menuListProps'],
+    snippet: `<LinkedScroll\n  items={sections}\n  value={value}\n  onChange={setValue}\n  renderSection={({ item }) => <SectionCard item={item} />}\n/>`,
   },
   pickers: {
     title: 'Picker / DatePicker / AddressCascader / BetweenTime',
@@ -517,29 +559,80 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
     api: ['value', 'defaultValue', 'onChange', 'allowDeselect', 'RadioGroup', 'variant', 'indicator', 'layout', 'colors'],
     snippet: `const [density, setDensity] = React.useState('comfortable');\n\n<RadioGroup value={density} onChange={setDensity}>\n  <Radio value="compact" label="Compact" />\n  <Radio value="comfortable" label="Comfortable" />\n</RadioGroup>`,
   },
-  surfaces: {
-    title: 'Accordion / BottomSheet / LinkedScroll',
+  accordion: {
+    title: 'Accordion',
     description:
-      'Surface components handle expansion, sheet presentation, and scroll-linked navigation. Motion, gestures, and scroll frames prefer native or Reanimated paths.',
+      'Accordion handles grouped information, collapsible settings, and progressive disclosure. The state model centers on value / defaultValue / onChange, while Trigger, Content, and Indicator compose rich content.',
     blocks: [
       {
-        title: 'Accordion coverage',
+        title: 'State model',
         items: [
-          'Supports single / multiple state, controlled or uncontrolled open values, plus itemGap / size / variant layout.',
-          'AccordionTrigger / AccordionContent / AccordionIndicator keep a composable API for rich content.',
+          'single mode uses one value and can collapse to empty by default; multiple mode uses a value array.',
+          'Controlled and uncontrolled usage keep one source of truth, with the internal store synchronizing opened items.',
+          'disabled can live on the root or an item, and triggers keep accessibility and visual feedback aligned.',
         ],
       },
       {
-        title: 'BottomSheet and LinkedScroll',
+        title: 'Layout, content, and motion',
         items: [
-          'BottomSheet exposes open / defaultOpen / onOpenChange and ref.open() / ref.close().',
-          'detents / maxHeight / backdrop / handle cover common sheet specifications across iOS, Android, and Web.',
-          'LinkedScroll synchronizes a side menu and content panes; the live demo opens as an independent route-like page.',
+          'variant covers card / filled / plain, size covers sm / md / lg, and tone or color controls accent treatment.',
+          'itemGap, itemStyle, leading, trailing, indicator, and render-prop children cover advanced presentation.',
+          'mountStrategy supports eager / lazy / unmountOnExit; height and indicator motion run through Reanimated.',
         ],
       },
     ],
-    api: ['Accordion', 'open', 'defaultOpen', 'BottomSheet', 'detents', 'ref.open()', 'LinkedScroll', 'value'],
-    snippet: `<Accordion defaultValue="state" variant="card">\n  <AccordionItem value="state">\n    <AccordionTrigger title="State" />\n    <AccordionContent>...</AccordionContent>\n  </AccordionItem>\n</Accordion>\n\n<BottomSheet ref={sheetRef} detents={['content', 0.72]} />`,
+    api: ['value', 'defaultValue', 'onChange', 'type', 'collapsible', 'variant', 'size', 'tone', 'mountStrategy'],
+    snippet: `<Accordion value={open} onChange={setOpen} variant="card">\n  <AccordionItem value="profile">\n    <AccordionTrigger title="Profile" />\n    <AccordionContent>...</AccordionContent>\n  </AccordionItem>\n</Accordion>`,
+  },
+  bottomSheet: {
+    title: 'BottomSheet',
+    description:
+      'BottomSheet is the cross-platform foundation for bottom overlays across iOS, Android, and Web, unifying open state, detents, backdrop, drag behavior, mount strategy, and imperative methods.',
+    blocks: [
+      {
+        title: 'Open state and detents',
+        items: [
+          'open / defaultOpen / onOpenChange cover declarative usage; ref.open() / ref.close() / ref.snapTo() cover flow-style usage.',
+          'detents support content, medium, large, full, percentages, and numbers, while detentIndex can be controlled.',
+          'onDetentChange, onOpenComplete, and onDismissComplete let app state and analytics follow the sheet lifecycle.',
+        ],
+      },
+      {
+        title: 'Structure and platform behavior',
+        items: [
+          'Header, Content, and Footer slots keep layout stable, with footer safe-area handling built in.',
+          'backdrop, handle, cornerRadius, maxHeight, and maxWidth cover common visual specifications.',
+          'mountStrategy, dismissible, draggable, and disabled make lifecycle and interaction boundaries explicit.',
+        ],
+      },
+    ],
+    api: ['open', 'defaultOpen', 'onOpenChange', 'detents', 'detentIndex', 'backdrop', 'handle', 'ref.snapTo()'],
+    snippet: `<BottomSheet open={open} onOpenChange={setOpen} detents={['content', 'medium']}>\n  <BottomSheetHeader title="Filters" />\n  <BottomSheetContent>...</BottomSheetContent>\n</BottomSheet>`,
+  },
+  linkedScroll: {
+    title: 'LinkedScroll',
+    description:
+      'LinkedScroll coordinates a menu pane and content pane in both directions, unifying menu taps, content scrolling, controlled value, and FlashList performance hooks.',
+    blocks: [
+      {
+        title: 'Selection and sync',
+        items: [
+          'value / defaultValue / onChange manage the current section, and onChange includes source, item, and index.',
+          'Menu taps scroll the content pane, while content viewability updates scroll the menu pane back into place.',
+          'programmaticScrollGuardDuration prevents programmatic scrolls from being interrupted by transient viewability callbacks.',
+        ],
+      },
+      {
+        title: 'Layout and rendering',
+        items: [
+          'menuPosition, menuWidth, menuItemHeight, sectionGap, and content padding cover the two-pane layout.',
+          'renderMenuItem and renderSection allow fully custom menu rows and content cards.',
+          'getMenuItemType, getSectionType, menuListProps, and contentListProps expose FlashList performance tuning.',
+        ],
+      },
+    ],
+    api: ['items', 'value', 'onChange', 'menuPosition', 'renderMenuItem', 'renderSection', 'menuListProps'],
+    snippet: `<LinkedScroll\n  items={sections}\n  value={value}\n  onChange={setValue}\n  renderSection={({ item }) => <SectionCard item={item} />}\n/>`,
   },
   pickers: {
     title: 'Picker / DatePicker / AddressCascader / BetweenTime',
@@ -776,75 +869,30 @@ export const PickersGuidePage = React.memo(function PickersGuidePage() {
   );
 });
 
-export const SurfacesGuidePage = React.memo(function SurfacesGuidePage() {
-  const { width: screenWidth } = useWindowDimensions();
-  const [linkedScrollMounted, setLinkedScrollMounted] = React.useState(false);
-  const linkedRouteProgress = useSharedValue(0);
-
-  const completeLinkedScrollClose = React.useCallback(() => {
-    setLinkedScrollMounted(false);
-  }, []);
-
-  const openLinkedScrollDemo = React.useCallback(() => {
-    linkedRouteProgress.value = 0;
-    setLinkedScrollMounted(true);
-    requestAnimationFrame(() => {
-      linkedRouteProgress.value = withTiming(1, {
-        duration: ROUTE_PUSH_DURATION,
-        easing: Easing.out(Easing.cubic),
-      });
-    });
-  }, [linkedRouteProgress]);
-
-  const closeLinkedScrollDemo = React.useCallback(() => {
-    linkedRouteProgress.value = withTiming(
-      0,
-      {
-        duration: ROUTE_POP_DURATION,
-        easing: Easing.in(Easing.cubic),
-      },
-      (finished) => {
-        if (finished) runOnJS(completeLinkedScrollClose)();
-      }
-    );
-  }, [completeLinkedScrollClose, linkedRouteProgress]);
-
-  React.useEffect(() => {
-    if (!linkedScrollMounted) return undefined;
-
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      closeLinkedScrollDemo();
-      return true;
-    });
-
-    return () => subscription.remove();
-  }, [closeLinkedScrollDemo, linkedScrollMounted]);
-
-  const linkedRouteAnimatedStyle = useAnimatedStyle(
-    () => ({
-      opacity: linkedRouteProgress.value,
-      transform: [{ translateX: (1 - linkedRouteProgress.value) * screenWidth }],
-    }),
-    [screenWidth]
-  );
-
+export const AccordionGuidePage = React.memo(function AccordionGuidePage() {
   return (
-    <View
-      style={[
-        sharedStyles.linkedRouteHost,
-        linkedScrollMounted ? sharedStyles.linkedRouteHostActive : null,
-      ]}
-    >
-      <TabScreenShell withTopInset={false}>
-        <SurfacesSection onOpenLinkedScroll={openLinkedScrollDemo} />
-        <GuideIntro guideKey="surfaces" />
-      </TabScreenShell>
-      {linkedScrollMounted ? (
-        <Animated.View style={[sharedStyles.linkedRouteLayer, linkedRouteAnimatedStyle]}>
-          <LinkedScrollDemo onBack={closeLinkedScrollDemo} />
-        </Animated.View>
-      ) : null}
-    </View>
+    <TabScreenShell withTopInset={false}>
+      <AccordionSection />
+      <GuideIntro guideKey="accordion" />
+    </TabScreenShell>
+  );
+});
+
+export const BottomSheetGuidePage = React.memo(function BottomSheetGuidePage() {
+  return (
+    <TabScreenShell withTopInset={false}>
+      <BottomSheetSection />
+      <GuideIntro guideKey="bottomSheet" />
+    </TabScreenShell>
+  );
+});
+
+export const LinkedScrollGuidePage = React.memo(function LinkedScrollGuidePage() {
+  return (
+    <TabScreenShell withTopInset={false}>
+      <LinkedScrollSection />
+      <GuideIntro guideKey="linkedScroll" />
+    </TabScreenShell>
   );
 });
 
