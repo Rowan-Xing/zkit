@@ -2427,9 +2427,11 @@ export const PickersSection = React.memo(function PickersSection({
   const [monthLabel, setMonthLabel] = React.useState('2026-04');
   const languageOptions = React.useMemo(
     () => [
-      { value: 'en', label: t('example.language.en') },
-      { value: 'zh', label: t('example.language.zh') },
+      { value: 'zh-CN', label: t('example.language.zhCN') },
+      { value: 'zh-TW', label: t('example.language.zhTW') },
       { value: 'ja', label: t('example.language.ja') },
+      { value: 'en-US', label: t('example.language.en') },
+      { value: 'de', label: t('example.language.de') },
     ],
     [t]
   );

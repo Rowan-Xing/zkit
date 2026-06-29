@@ -243,6 +243,13 @@ export { useTheme } from './theme/useTheme';
 export type { Theme, ThemeOverride } from './theme/types';
 export { configureComponentLib } from './config';
 export type { ComponentLibConfig, ComponentLibI18nConfig } from './config';
+export {
+  BUILTIN_I18N_LOCALES,
+  DEFAULT_I18N_LOCALE,
+  resolveBuiltinLocale,
+  resolveSystemBuiltinLocale,
+} from './i18n/locale';
+export type { BuiltinI18nLocale } from './i18n/locale';
 export { I18nProvider } from './i18n/I18nProvider';
 export { useI18n } from './i18n/useI18n';
 export type {

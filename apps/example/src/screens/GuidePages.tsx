@@ -842,7 +842,7 @@ export const RadioGuidePage = React.memo(function RadioGuidePage() {
 
 export const PickersGuidePage = React.memo(function PickersGuidePage() {
   const { t } = useI18n();
-  const [language, setLanguage] = React.useState('en');
+  const [language, setLanguage] = React.useState('en-US');
   const [languageLabel, setLanguageLabel] = React.useState(() => t('example.language.en'));
   const [workflow, setWorkflow] = React.useState<PickerValue>(['design', 'tokens']);
   const [workflowLabel, setWorkflowLabel] = React.useState(() => t('example.workflow.designTokens'));

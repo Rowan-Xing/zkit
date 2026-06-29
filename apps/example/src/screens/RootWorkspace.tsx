@@ -20,7 +20,7 @@ import { Text, useI18n, useTheme } from 'zkit-ui';
 import { wp } from 'zkit-tools';
 
 import { renderIcon, type FeatherIconName } from '../demoUtils';
-import type { ExampleLocale } from '../i18n';
+import { EXAMPLE_LOCALES, type ExampleLocale } from '../i18n';
 import {
   exampleBackgroundColor,
   exampleThemePresets,
@@ -102,7 +102,21 @@ const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
 };
 
 const DRAWER_DURATION = 240;
-const LANGUAGE_OPTIONS: ExampleLocale[] = ['zh-CN', 'en-US'];
+const LANGUAGE_OPTIONS = EXAMPLE_LOCALES;
+const LANGUAGE_LABEL_KEYS: Record<ExampleLocale, string> = {
+  'zh-CN': 'example.language.zhCN',
+  'zh-TW': 'example.language.zhTW',
+  ja: 'example.language.ja',
+  'en-US': 'example.language.en',
+  de: 'example.language.de',
+};
+const LANGUAGE_SHORT_LABEL_KEYS: Record<ExampleLocale, string> = {
+  'zh-CN': 'example.language.short.zhCN',
+  'zh-TW': 'example.language.short.zhTW',
+  ja: 'example.language.short.ja',
+  'en-US': 'example.language.short.en',
+  de: 'example.language.short.de',
+};
 const THEME_PRESET_KEYS: ExampleThemePresetKey[] = ['blue', 'emerald', 'rose', 'violet'];
 
 function canUseBrowserRoutes() {
@@ -340,6 +354,10 @@ export function RootWorkspace({
     }),
     [drawerWidth]
   );
+  const drawerContentStyle = React.useMemo(
+    () => [styles.drawerContent, { paddingBottom: insets.bottom + wp(28) }],
+    [insets.bottom]
+  );
 
   return (
     <View style={[styles.root, { backgroundColor: exampleBackgroundColor }]}>
@@ -393,7 +411,6 @@ export function RootWorkspace({
             {
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border,
-              paddingBottom: insets.bottom + wp(16),
               paddingTop: insets.top + wp(16),
               width: drawerWidth,
             },
@@ -425,8 +442,10 @@ export function RootWorkspace({
 
           <ScrollView
             bounces={false}
+            contentInsetAdjustmentBehavior="never"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.drawerContent}
+            style={styles.drawerScroll}
+            contentContainerStyle={drawerContentStyle}
           >
             {routes.map((route) => (
               <DrawerRouteItem
@@ -449,12 +468,13 @@ export function RootWorkspace({
                 <View style={[styles.segmentedControl, { backgroundColor: '#F1F5F9' }]}>
                   {LANGUAGE_OPTIONS.map((item) => {
                     const selected = item === locale;
-                    const label = item === 'zh-CN' ? t('example.language.zh') : t('example.language.en');
+                    const label = t(LANGUAGE_SHORT_LABEL_KEYS[item]);
 
                     return (
                       <Pressable
                         key={item}
                         accessibilityRole="button"
+                        accessibilityLabel={t(LANGUAGE_LABEL_KEYS[item])}
                         accessibilityState={{ selected }}
                         onPress={() => onLocaleChange(item)}
                         style={({ pressed }) => [
@@ -657,7 +677,10 @@ const styles = StyleSheet.create({
   },
   drawerContent: {
     gap: wp(6),
-    paddingBottom: wp(12),
+  },
+  drawerScroll: {
+    flex: 1,
+    minHeight: 0,
   },
   drawerItem: {
     alignItems: 'center',

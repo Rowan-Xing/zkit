@@ -25,7 +25,14 @@ export const UsageGuide = React.memo(function UsageGuide({
 }: UsageGuideProps) {
   const theme = useTheme();
   const { locale } = useI18n();
-  const guideLabel = locale.toLowerCase().startsWith('zh') ? '指南' : 'Guide';
+  const normalizedLocale = locale.toLowerCase();
+  const guideLabel = normalizedLocale.startsWith('zh')
+    ? '指南'
+    : normalizedLocale.startsWith('ja')
+      ? 'ガイド'
+      : normalizedLocale.startsWith('de')
+        ? 'Anleitung'
+        : 'Guide';
 
   return (
     <View style={styles.root}>
@@ -36,12 +43,12 @@ export const UsageGuide = React.memo(function UsageGuide({
       </View>
 
       <View style={styles.blockGrid}>
-        {blocks.map((block) => (
-          <View key={block.title} style={styles.block}>
+        {blocks.map((block, blockIndex) => (
+          <View key={`${block.title}-${blockIndex}`} style={styles.block}>
             <Text style={[styles.blockTitle, { color: theme.colors.onSurface }]}>{block.title}</Text>
             <View style={styles.pointStack}>
-              {block.items.map((item) => (
-                <View key={item} style={styles.pointRow}>
+              {block.items.map((item, itemIndex) => (
+                <View key={`${item}-${itemIndex}`} style={styles.pointRow}>
                   <View style={[styles.pointDot, { backgroundColor: theme.colors.primary }]} />
                   <Text style={[styles.pointText, { color: theme.colors.muted }]}>{item}</Text>
                 </View>
@@ -52,8 +59,8 @@ export const UsageGuide = React.memo(function UsageGuide({
       </View>
 
       <View style={styles.apiWrap}>
-        {api.map((item) => (
-          <View key={item} style={[styles.apiChip, { backgroundColor: theme.colors.secondary }]}>
+        {api.map((item, itemIndex) => (
+          <View key={`${item}-${itemIndex}`} style={[styles.apiChip, { backgroundColor: theme.colors.secondary }]}>
             <Text style={[styles.apiText, { color: theme.colors.onSecondary }]}>{item}</Text>
           </View>
         ))}

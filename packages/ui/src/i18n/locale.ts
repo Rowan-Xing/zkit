@@ -2,10 +2,10 @@ import { NativeModules } from 'react-native';
 
 export const DEFAULT_I18N_LOCALE = 'zh-CN';
 
-const SUPPORTED_BUILTIN_LOCALES = ['zh-CN', 'zh-TW', 'en-US', 'ja'] as const;
+export const BUILTIN_I18N_LOCALES = ['zh-CN', 'zh-TW', 'ja', 'en-US', 'de'] as const;
 const TRADITIONAL_CHINESE_REGIONS = new Set(['HK', 'MO', 'TW']);
 
-type BuiltinLocale = (typeof SUPPORTED_BUILTIN_LOCALES)[number];
+export type BuiltinI18nLocale = (typeof BUILTIN_I18N_LOCALES)[number];
 type NavigatorLike = {
   language?: string;
   languages?: readonly string[];
@@ -49,11 +49,11 @@ function normalizeLocaleParts(locale: string) {
   };
 }
 
-function matchBuiltinLocale(locale?: string | null): BuiltinLocale | undefined {
+function matchBuiltinLocale(locale?: string | null): BuiltinI18nLocale | undefined {
   const rawLocale = getString(locale);
   if (!rawLocale) return undefined;
 
-  const exactLocale = SUPPORTED_BUILTIN_LOCALES.find(
+  const exactLocale = BUILTIN_I18N_LOCALES.find(
     (supportedLocale) => supportedLocale.toLowerCase() === rawLocale.toLowerCase()
   );
   if (exactLocale) return exactLocale;
@@ -68,13 +68,14 @@ function matchBuiltinLocale(locale?: string | null): BuiltinLocale | undefined {
     return usesTraditionalChinese ? 'zh-TW' : 'zh-CN';
   }
 
-  if (normalized.language === 'en') return 'en-US';
   if (normalized.language === 'ja') return 'ja';
+  if (normalized.language === 'en') return 'en-US';
+  if (normalized.language === 'de') return 'de';
 
   return undefined;
 }
 
-export function resolveBuiltinLocale(locale?: string | null): BuiltinLocale {
+export function resolveBuiltinLocale(locale?: string | null): BuiltinI18nLocale {
   return matchBuiltinLocale(locale) ?? DEFAULT_I18N_LOCALE;
 }
 
