@@ -154,7 +154,7 @@ export function Demo() {
 }
 ```
 
-渐变依赖 `expo-linear-gradient`，缺失时会使用第一段颜色作为稳定兜底。默认 `pressEffect="auto"` 走普通 `Pressable` 静态路径，并用原生 pressed style 做轻量透明度反馈；只有 `scale`、`scale-opacity`、`highlight`、`scale-highlight` 和 loading 过渡会升级到 Reanimated 动画路径。
+渐变依赖 `expo-linear-gradient`，缺失时会使用第一段颜色作为稳定兜底。默认 `pressEffect="auto"` 走普通 `Pressable` 静态路径，并用原生 pressed style 做轻量透明度反馈；只有 `scale`、`scale-opacity`、`highlight`、`scale-highlight` 和 loading 过渡会升级到 Reanimated 动画路径。动静态切换由 Button 内部自动管理，loading 退出动画结束后才会回到静态路径。
 
 ## 列表高频渲染
 
