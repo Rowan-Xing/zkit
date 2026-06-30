@@ -69,7 +69,7 @@ export function Demo() {
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| list | PickerTreeNode[] | - | 内置省市区数据 | 自定义级联数据，每个节点包含 `value/text/children` |
+| list | AddressCascaderOption[] | - | 内置省市区数据 | 自定义级联数据，每个节点包含 `value/text/children` |
 
 ### 值与状态
 
@@ -128,7 +128,7 @@ type AddressCascaderConfirmPayload = {
   values: string[];
   label: string;
   labels: string[];
-  items: PickerTreeNode[];
+  items: AddressCascaderOption[];
 };
 ```
 
@@ -139,6 +139,6 @@ type AddressCascaderRenderContext = {
   value: string[];
   label: string;
   labels: string[];
-  items: PickerTreeNode[];
+  items: AddressCascaderOption[];
 };
 ```

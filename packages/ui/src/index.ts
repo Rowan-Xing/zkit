@@ -140,7 +140,6 @@ export type {
   PickerTriggerContext,
   PickerValue,
   PickerValueMode,
-  PickerTreeNode,
 } from './ui/Picker/index';
 export {
   WheelColumn,
@@ -164,6 +163,7 @@ export type {
   AddressCascaderChangePayload,
   AddressCascaderConfirmPayload,
   AddressCascaderHandle,
+  AddressCascaderOption,
   AddressCascaderProps,
   AddressCascaderRenderContext,
   AddressCascaderValue,
@@ -367,7 +367,6 @@ export type {
   PermissionPurpose,
   PermissionPurposeDialogHandle,
   PermissionPurposeDialogOptions,
-  PermissionPurposeType,
 } from './services/PermissionPurposeDialogService/index';
 export { imagePreview, ImagePreview, ImagePreviewProvider } from './services/ImagePreviewService/index';
 export type {

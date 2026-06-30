@@ -16,7 +16,6 @@ import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { Sheet, type SheetOpenChangeDetails } from '../Sheet';
 import { Text } from '../Text';
-import type { PickerTreeNode } from '../Picker';
 import { PickerActionBar, getPickerActionBarBottomInset } from '../Picker/actionBar';
 import { areaList } from '@vant/area-data';
 
@@ -25,15 +24,29 @@ export type AddressCascaderHandle = {
   close: () => void;
 };
 
-// 懒加载转换省市区数据。
-let cachedAreaData: PickerTreeNode[] | null = null;
+export type AddressCascaderOption = {
+  value?: string | number;
+  text?: string | number;
+  label?: string | number;
+  title?: string | number;
+  name?: string | number;
+  id?: string | number;
+  code?: string | number;
+  key?: string | number;
+  disabled?: boolean;
+  children?: AddressCascaderOption[];
+  [key: string]: unknown;
+};
 
-function getAreaData(): PickerTreeNode[] {
+// 懒加载转换省市区数据。
+let cachedAreaData: AddressCascaderOption[] | null = null;
+
+function getAreaData(): AddressCascaderOption[] {
   if (cachedAreaData) return cachedAreaData;
 
   const { province_list, city_list, county_list } = areaList;
 
-  const countiesByCity = new Map<string, PickerTreeNode[]>();
+  const countiesByCity = new Map<string, AddressCascaderOption[]>();
   for (const [countyCode, countyName] of Object.entries(county_list)) {
     const cityPrefix = countyCode.slice(0, 4);
     const county = { value: countyCode, text: String(countyName) };
@@ -46,11 +59,11 @@ function getAreaData(): PickerTreeNode[] {
     }
   }
 
-  const citiesByProvince = new Map<string, PickerTreeNode[]>();
+  const citiesByProvince = new Map<string, AddressCascaderOption[]>();
   for (const [cityCode, cityName] of Object.entries(city_list)) {
     const provincePrefix = cityCode.slice(0, 2);
     const children = countiesByCity.get(cityCode.slice(0, 4));
-    const city: PickerTreeNode = children?.length
+    const city: AddressCascaderOption = children?.length
       ? { value: cityCode, text: String(cityName), children }
       : { value: cityCode, text: String(cityName) };
     const cities = citiesByProvince.get(provincePrefix);
@@ -62,7 +75,7 @@ function getAreaData(): PickerTreeNode[] {
     }
   }
 
-  const provinces: PickerTreeNode[] = Object.entries(province_list).map(([provinceCode, provinceName]) => {
+  const provinces: AddressCascaderOption[] = Object.entries(province_list).map(([provinceCode, provinceName]) => {
     const children = citiesByProvince.get(provinceCode.slice(0, 2));
     return children?.length
       ? { value: provinceCode, text: String(provinceName), children }
@@ -80,7 +93,7 @@ export type AddressCascaderConfirmPayload = {
   values: string[];
   label: string;
   labels: string[];
-  items: PickerTreeNode[];
+  items: AddressCascaderOption[];
 };
 
 export type AddressCascaderChangePayload = AddressCascaderConfirmPayload;
@@ -89,11 +102,11 @@ export type AddressCascaderRenderContext = {
   value: AddressCascaderValue;
   label: string;
   labels: string[];
-  items: PickerTreeNode[];
+  items: AddressCascaderOption[];
 };
 
 export type AddressCascaderProps = {
-  list?: PickerTreeNode[];
+  list?: AddressCascaderOption[];
 
   value?: AddressCascaderValue;
   defaultValue?: AddressCascaderValue;
@@ -126,12 +139,12 @@ export type AddressCascaderProps = {
 type AddressDraft = {
   value: AddressCascaderValue;
   labels: string[];
-  items: PickerTreeNode[];
+  items: AddressCascaderOption[];
   activeLevel: number;
 };
 
 type AddressOption = {
-  item: PickerTreeNode;
+  item: AddressCascaderOption;
   index: number;
   level: number;
   value: string;
@@ -153,7 +166,7 @@ function clampNumber(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function pickPrimitive(node: PickerTreeNode, keys: string[], fallback?: Primitive): Primitive | undefined {
+function pickPrimitive(node: AddressCascaderOption, keys: string[], fallback?: Primitive): Primitive | undefined {
   for (const key of keys) {
     const v = node?.[key];
     if (typeof v === 'string' || typeof v === 'number') return v;
@@ -161,21 +174,21 @@ function pickPrimitive(node: PickerTreeNode, keys: string[], fallback?: Primitiv
   return fallback;
 }
 
-function pickValue(node: PickerTreeNode, fallbackIndex?: number) {
+function pickValue(node: AddressCascaderOption, fallbackIndex?: number) {
   const fallback = fallbackIndex == null ? undefined : String(fallbackIndex);
   return String(pickPrimitive(node, ['value', 'id', 'code', 'key'], fallback) ?? '');
 }
 
-function pickText(node: PickerTreeNode) {
+function pickText(node: AddressCascaderOption) {
   const v = pickPrimitive(node, ['text', 'label', 'title', 'name']);
   return v == null ? '' : String(v);
 }
 
-function getChildren(node: PickerTreeNode | undefined) {
+function getChildren(node: AddressCascaderOption | undefined) {
   return Array.isArray(node?.children) ? node.children : [];
 }
 
-function hasNextLevel(node: PickerTreeNode | undefined, level: number) {
+function hasNextLevel(node: AddressCascaderOption | undefined, level: number) {
   return level < MAX_LEVELS - 1 && getChildren(node).length > 0;
 }
 
@@ -183,10 +196,13 @@ function buildLabel(labels: string[], separator: string) {
   return labels.filter(Boolean).join(separator);
 }
 
-function resolvePath(list: PickerTreeNode[], value: AddressCascaderValue | undefined): Omit<AddressDraft, 'activeLevel'> {
+function resolvePath(
+  list: AddressCascaderOption[],
+  value: AddressCascaderValue | undefined
+): Omit<AddressDraft, 'activeLevel'> {
   const nextValue: string[] = [];
   const labels: string[] = [];
-  const items: PickerTreeNode[] = [];
+  const items: AddressCascaderOption[] = [];
   let currentList = Array.isArray(list) ? list : [];
 
   for (let level = 0; level < MAX_LEVELS; level += 1) {
@@ -208,7 +224,7 @@ function resolvePath(list: PickerTreeNode[], value: AddressCascaderValue | undef
   return { value: nextValue, labels, items };
 }
 
-function getActiveLevelFromItems(items: PickerTreeNode[]) {
+function getActiveLevelFromItems(items: AddressCascaderOption[]) {
   if (!items.length) return 0;
   const lastIndex = Math.min(items.length - 1, MAX_LEVELS - 1);
   const lastItem = items[lastIndex];
@@ -216,7 +232,7 @@ function getActiveLevelFromItems(items: PickerTreeNode[]) {
   return lastIndex;
 }
 
-function createDraft(list: PickerTreeNode[], value: AddressCascaderValue | undefined): AddressDraft {
+function createDraft(list: AddressCascaderOption[], value: AddressCascaderValue | undefined): AddressDraft {
   const resolved = resolvePath(list, value);
   return {
     ...resolved,
@@ -224,7 +240,11 @@ function createDraft(list: PickerTreeNode[], value: AddressCascaderValue | undef
   };
 }
 
-function getListForLevel(list: PickerTreeNode[], items: PickerTreeNode[], level: number) {
+function getListForLevel(
+  list: AddressCascaderOption[],
+  items: AddressCascaderOption[],
+  level: number
+) {
   let currentList = Array.isArray(list) ? list : [];
   for (let i = 0; i < level; i += 1) {
     const next = getChildren(items[i]);
@@ -285,7 +305,7 @@ type AddressOptionRowProps = {
   primaryColor: string;
   onSurfaceColor: string;
   mutedColor: string;
-  onPress: (item: PickerTreeNode, index: number, level: number) => void;
+  onPress: (item: AddressCascaderOption, index: number, level: number) => void;
   onLayout?: (event: LayoutChangeEvent) => void;
 };
 
@@ -685,7 +705,7 @@ export const AddressCascader = React.forwardRef<AddressCascaderHandle, AddressCa
   );
 
   const handleItemPress = React.useCallback(
-    (item: PickerTreeNode, index: number, level: number) => {
+    (item: AddressCascaderOption, index: number, level: number) => {
       if (disabled || item.disabled) return;
       const prevDraft = draftRef.current;
       if (level !== prevDraft.activeLevel) return;

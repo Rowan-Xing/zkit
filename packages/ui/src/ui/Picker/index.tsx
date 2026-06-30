@@ -63,7 +63,6 @@ export type {
   PickerPrimitiveValue,
   PickerProps,
   PickerSelection,
-  PickerTreeNode,
   PickerTriggerContext,
   PickerValue,
   PickerValueMode,
@@ -89,7 +88,7 @@ type WheelColumnSlotProps<TOption> = {
   onIndexChange: (columnIndex: number, index: number) => void;
   width: number;
   disabled: boolean;
-  wheelsRef: React.MutableRefObject<Array<WheelColumnHandle | null>>;
+  wheelsRef: React.RefObject<Array<WheelColumnHandle | null>>;
 };
 
 function toWheelOptions<TOption>(

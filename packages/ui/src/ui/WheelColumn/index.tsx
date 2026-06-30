@@ -13,11 +13,11 @@ import {
 import Animated, {
   cancelAnimation,
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { getMaxFontSizeMultiplier, sp, wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import {
@@ -569,7 +569,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
         (finished) => {
           if (!finished) return;
           isUserInteracting.value = false;
-          runOnJS(emitSelectedIndex)(nextIndex, 'user');
+          scheduleOnRN(emitSelectedIndex, nextIndex, 'user');
         }
       );
     },

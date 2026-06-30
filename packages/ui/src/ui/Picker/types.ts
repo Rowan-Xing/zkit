@@ -15,16 +15,6 @@ export type PickerOption<TValue extends PickerPrimitiveValue = PickerPrimitiveVa
   [key: string]: unknown;
 };
 
-/**
- * @deprecated Prefer `PickerOption`. Kept as a loose internal bridge for adjacent
- * components that still accept external tree-shaped data.
- */
-export type PickerTreeNode = {
-  [key: string]: unknown;
-  disabled?: boolean;
-  children?: PickerTreeNode[];
-};
-
 export type PickerSelection<TOption = PickerOption> = {
   value: PickerValue;
   values: PickerPrimitiveValue[];

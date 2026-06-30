@@ -13,12 +13,12 @@ import Animated, {
   ReduceMotion,
   cancelAnimation,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
@@ -902,7 +902,7 @@ function LoadingCard({ item, onExited }: LoadingCardProps) {
         reduceMotion: ReduceMotion.System,
       },
       (finished) => {
-        if (finished) runOnJS(onExited)(item.id);
+        if (finished) scheduleOnRN(onExited, item.id);
       }
     );
     scale.value = withTiming(0.965, {

@@ -20,13 +20,13 @@ import Animated, {
   Easing,
   cancelAnimation,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 import { wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui/Text';
@@ -935,7 +935,7 @@ function IOSToastCard({ item, placement, onExited }: ToastCardProps) {
     }
 
     opacity.value = withTiming(0, { duration: 160, easing: IOS_TOAST_EXIT_EASING }, (finished) => {
-      if (finished) runOnJS(onExited)(item.id);
+      if (finished) scheduleOnRN(onExited, item.id);
     });
     translateY.value = withTiming(exitOffset, { duration: 180, easing: IOS_TOAST_EXIT_EASING });
     scale.value = withTiming(0.975, { duration: 180, easing: IOS_TOAST_EXIT_EASING });

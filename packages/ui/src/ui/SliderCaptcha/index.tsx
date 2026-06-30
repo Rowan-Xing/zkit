@@ -16,11 +16,11 @@ import {
 import Animated, {
   Easing,
   cancelAnimation,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
@@ -543,7 +543,7 @@ export function SliderCaptcha<TChallenge extends SliderCaptchaChallenge = Slider
       },
       (finished) => {
         if (finished) {
-          runOnJS(handleDismissAnimationFinished)(animationId);
+          scheduleOnRN(handleDismissAnimationFinished, animationId);
         }
       }
     );

@@ -16,10 +16,14 @@ import {
   type PickerConfirmPayload,
   type PickerValue,
   type PickerProps,
-  type PickerTreeNode,
 } from '../../ui/Picker';
 import { DatePicker, type DatePickerProps, type DatePickerValue } from '../../ui/DatePicker';
-import { AddressCascader, type AddressCascaderProps, type AddressCascaderValue } from '../../ui/AddressCascader';
+import {
+  AddressCascader,
+  type AddressCascaderOption,
+  type AddressCascaderProps,
+  type AddressCascaderValue,
+} from '../../ui/AddressCascader';
 import { BetweenTime, type BetweenTimeProps } from '../../ui/BetweenTime';
 
 // ============ Types ============
@@ -57,7 +61,7 @@ export type AddressPickerResult = {
   /** 各级地址文本数组 */
   labels: string[];
   /** 选中项数据 */
-  items: PickerTreeNode[];
+  items: AddressCascaderOption[];
 } | null;
 
 /** 时间区间选择器返回结果 */

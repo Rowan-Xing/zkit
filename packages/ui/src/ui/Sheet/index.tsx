@@ -12,13 +12,13 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, {
   Easing,
   ReduceMotion,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 import type { WithTimingConfig } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 import { wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { NativeBottomSheet, type NativeBottomSheetRef } from './nativeBottom';
@@ -603,7 +603,7 @@ const SheetRoot = React.forwardRef<SheetRef, SheetProps>(function Sheet(
         1,
         presentAnimatedRef.current ? animationRef.current.openTiming : { ...animationRef.current.openTiming, duration: 0 },
         (finished) => {
-          if (finished) runOnJS(finishOpenLifecycle)();
+          if (finished) scheduleOnRN(finishOpenLifecycle);
         }
       );
     });
@@ -629,7 +629,7 @@ const SheetRoot = React.forwardRef<SheetRef, SheetProps>(function Sheet(
       0,
       dismissAnimatedRef.current ? animationRef.current.closeTiming : { ...animationRef.current.closeTiming, duration: 0 },
       (finished) => {
-        if (finished) runOnJS(finishClosedLifecycle)();
+        if (finished) scheduleOnRN(finishClosedLifecycle);
       }
     );
 
@@ -861,7 +861,7 @@ const SheetRoot = React.forwardRef<SheetRef, SheetProps>(function Sheet(
         if (shouldClose) {
           gestureClosePending.value = true;
           progress.value = withTiming(0, dragCloseTiming);
-          runOnJS(requestGestureClose)();
+          scheduleOnRN(requestGestureClose);
         }
       })
       .onFinalize(() => {

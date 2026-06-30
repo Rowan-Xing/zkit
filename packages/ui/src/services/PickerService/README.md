@@ -124,7 +124,7 @@ if (result) {
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| list | PickerTreeNode[] | - | 自定义地址数据，默认使用内置省市区 |
+| list | AddressCascaderOption[] | - | 自定义地址数据，默认使用内置省市区 |
 | value | string[] | - | 当前地址码数组 |
 | defaultValue | string[] | - | 默认地址码数组 |
 | title | string | - | 标题 |

@@ -41,7 +41,7 @@ export type ZKitWheelPickerProps = ViewProps & {
 const NativeZKitWheelPicker =
   Platform.OS === 'ios' ? requireNativeComponent<ZKitWheelPickerProps>(COMPONENT_NAME) : null;
 
-type NativeRef = React.ElementRef<NonNullable<typeof NativeZKitWheelPicker>>;
+type NativeRef = React.ComponentRef<NonNullable<typeof NativeZKitWheelPicker>>;
 
 export const ZKitWheelPicker = React.forwardRef<NativeRef, ZKitWheelPickerProps>(function ZKitWheelPicker(
   props,

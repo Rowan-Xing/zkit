@@ -10,7 +10,8 @@
   "scripts": {
     "build": "pnpm --filter zkit-tools build && pnpm --filter zkit-ui build",
     "typecheck": "pnpm --filter zkit-tools typecheck && pnpm --filter zkit-ui typecheck && pnpm --filter @zkit/example typecheck",
-    "validate": "pnpm build && pnpm typecheck",
+    "check:deprecated": "node scripts/check-deprecated.cjs",
+    "validate": "pnpm build && pnpm typecheck && pnpm check:deprecated",
     "changeset": "changeset",
     "version:packages": "changeset version",
     "release:packages": "changeset publish",

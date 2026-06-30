@@ -34,17 +34,12 @@ export type PermissionPurpose =
   | 'motion'
   | 'custom';
 
-/** 历史命名别名，语义等同于 `PermissionPurpose`。 */
-export type PermissionPurposeType = PermissionPurpose;
-
 /** 弹窗配置 */
 export type PermissionPurposeDialogOptions = {
   /** 作用域标识，用于按标识关闭 */
   scopeKey?: string;
   /** 权限用途，会自动填充默认标题与描述 */
   permission?: PermissionPurpose;
-  /** @deprecated 请使用 `permission` */
-  permissionType?: PermissionPurposeType;
   /** 自定义标题（优先于默认文案） */
   title?: string;
   /** 自定义描述（优先于默认文案） */
@@ -158,7 +153,7 @@ function resolveOptions(
   options: PermissionPurposeDialogOptions,
   id: string
 ): ResolvedPermissionPurposeDialogOptions {
-  const rawPermission = options.permission ?? options.permissionType ?? DEFAULT_PERMISSION;
+  const rawPermission = options.permission ?? DEFAULT_PERMISSION;
   const permission: PermissionPurpose =
     rawPermission === 'custom' || isPresetPermission(rawPermission) ? rawPermission : DEFAULT_PERMISSION;
   const preset = isPresetPermission(permission) ? DEFAULT_PURPOSE_TEXT[permission] : null;
