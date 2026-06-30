@@ -394,5 +394,3 @@ export type {
   ImagePreviewSource,
   ImagePreviewTapBehavior,
 } from './services/ImagePreviewService/index';
-export { ErrorBoundary } from './debug/ErrorBoundary';
-export type { ErrorBoundaryProps } from './debug/ErrorBoundary';

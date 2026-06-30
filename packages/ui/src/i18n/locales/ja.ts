@@ -64,10 +64,4 @@ export const ja = {
 
   // TextInput
   'textInput.clear': '入力をクリア',
-
-  // Debug
-  'debug.errorBoundary.title': '問題が発生しました',
-  'debug.errorBoundary.retry': '再試行',
-  'debug.errorBoundary.debugInfo': 'デバッグ情報',
-  'debug.errorBoundary.unknownError': '不明なエラー',
 };

@@ -64,10 +64,4 @@ export const de = {
 
   // TextInput
   'textInput.clear': 'Eingabe löschen',
-
-  // Debug
-  'debug.errorBoundary.title': 'Etwas ist schiefgelaufen',
-  'debug.errorBoundary.retry': 'Erneut versuchen',
-  'debug.errorBoundary.debugInfo': 'Debug-Informationen',
-  'debug.errorBoundary.unknownError': 'Unbekannter Fehler',
 };

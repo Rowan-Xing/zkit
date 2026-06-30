@@ -64,10 +64,4 @@ export const enUS = {
 
   // TextInput
   'textInput.clear': 'Clear input',
-
-  // Debug
-  'debug.errorBoundary.title': 'Something went wrong',
-  'debug.errorBoundary.retry': 'Retry',
-  'debug.errorBoundary.debugInfo': 'Debug info',
-  'debug.errorBoundary.unknownError': 'Unknown error',
 };

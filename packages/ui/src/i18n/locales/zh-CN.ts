@@ -64,10 +64,4 @@ export const zhCN = {
 
   // TextInput
   'textInput.clear': '清空输入',
-
-  // Debug
-  'debug.errorBoundary.title': '出错了',
-  'debug.errorBoundary.retry': '重试',
-  'debug.errorBoundary.debugInfo': '调试信息',
-  'debug.errorBoundary.unknownError': '未知错误',
 };

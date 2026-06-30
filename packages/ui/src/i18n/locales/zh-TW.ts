@@ -64,10 +64,4 @@ export const zhTW = {
 
   // TextInput
   'textInput.clear': '清空輸入',
-
-  // Debug
-  'debug.errorBoundary.title': '出錯了',
-  'debug.errorBoundary.retry': '重試',
-  'debug.errorBoundary.debugInfo': '調試資訊',
-  'debug.errorBoundary.unknownError': '未知錯誤',
 };
