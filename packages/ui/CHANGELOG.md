@@ -1,5 +1,11 @@
 # zkit-ui
 
+## 1.0.2
+
+### Patch Changes
+
+- Make Button default press feedback use the lightweight Pressable path.
+
 ## 1.0.1
 
 ### Patch Changes

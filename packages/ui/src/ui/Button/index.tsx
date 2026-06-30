@@ -4,6 +4,7 @@ import type {
   DimensionValue,
   GestureResponderEvent,
   Insets,
+  PressableStateCallbackType,
   StyleProp,
   TextStyle,
   ViewStyle,
@@ -837,6 +838,15 @@ function resolveWebCursorStyle(disabled: boolean): ViewStyle | undefined {
   return { cursor: disabled ? 'not-allowed' : 'pointer' } as ViewStyle;
 }
 
+function requiresAnimatedPressEffect(effect: ButtonPressEffect | undefined) {
+  return (
+    effect === 'scale' ||
+    effect === 'scale-opacity' ||
+    effect === 'highlight' ||
+    effect === 'scale-highlight'
+  );
+}
+
 function shouldUseStaticButtonPath({
   disabled,
   loading,
@@ -846,7 +856,9 @@ function shouldUseStaticButtonPath({
   loading?: boolean;
   pressEffect?: ButtonPressEffect;
 }) {
-  return !loading && (pressEffect === 'none' || disabled === true);
+  if (loading) return false;
+  if (disabled) return true;
+  return !requiresAnimatedPressEffect(pressEffect);
 }
 
 function useButtonFrame({
@@ -1079,7 +1091,7 @@ function ButtonStaticImpl(
     disabled = false,
     loading = false,
     loadingMode: _loadingMode = 'inline',
-    pressEffect: _pressEffect = 'auto',
+    pressEffect = 'auto',
     icon,
     iconPlacement = 'start',
     iconOnly = false,
@@ -1151,6 +1163,28 @@ function ButtonStaticImpl(
     },
     [interactionDisabled, onPress]
   );
+  const pressOpacityEnabled = !interactionDisabled && (pressEffect === 'auto' || pressEffect === 'opacity');
+  const rootStyle = React.useCallback(
+    ({ pressed }: PressableStateCallbackType) => [
+      styles.root,
+      rootSizeStyle,
+      radiusStyle,
+      shadowStyle,
+      visualDisabled ? styles.disabledRoot : null,
+      pressOpacityEnabled && pressed ? styles.pressedRoot : null,
+      webCursorStyle,
+      style,
+    ],
+    [
+      pressOpacityEnabled,
+      radiusStyle,
+      rootSizeStyle,
+      shadowStyle,
+      style,
+      visualDisabled,
+      webCursorStyle,
+    ]
+  );
 
   return (
     <Pressable
@@ -1166,15 +1200,7 @@ function ButtonStaticImpl(
       disabled={interactionDisabled}
       hitSlop={hitSlop ?? defaultHitSlop}
       onPress={handlePress}
-      style={[
-        styles.root,
-        rootSizeStyle,
-        radiusStyle,
-        shadowStyle,
-        visualDisabled ? styles.disabledRoot : null,
-        webCursorStyle,
-        style,
-      ]}
+      style={rootStyle}
       testID={testID}
     >
       <View
@@ -1646,6 +1672,9 @@ const styles = StyleSheet.create({
   root: {},
   disabledRoot: {
     opacity: DISABLED_OPACITY,
+  },
+  pressedRoot: {
+    opacity: PRESSED_OPACITY,
   },
   spinnerBox: {
     alignItems: 'center',
