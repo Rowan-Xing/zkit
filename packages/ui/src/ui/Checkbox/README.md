@@ -10,6 +10,7 @@ Checkbox 是三端一致的复选框组件，适合协议勾选、多选列表�
 - 非受控模式先在 UI 线程推进动画，再同步内部状态
 - `CheckboxGroup` 使用 `value/defaultValue/onChange` 管理选中集合
 - 默认触控热区至少补到 `wp(44)`，小尺寸也保持可点性
+- 自定义 `layout.indicatorSize` 但未传 `layout.indicatorIconSize` 时，默认勾号会按最终指示器尺寸等比缩放并取整
 
 ## 基础用法
 
@@ -102,6 +103,8 @@ export function Demo() {
 />
 ```
 
+只覆盖 `indicatorSize` 时，内置勾号尺寸会随最终指示器尺寸按比例取整；显式传入 `indicatorIconSize` 或 `indicatorRadius` 时仍以调用侧配置为准。`shape="circle"` 且未传 `indicatorRadius` 时，默认圆角会对 `indicatorSize / 2` 取整，减少 17、18 等小尺寸下的半像素圆角毛边。
+
 ## 自定义内容
 
 `children` 支持 render-prop。根节点本身就是可点击区域，子节点通常只读取状态做视觉变化，不需要再绑定一次点击。
@@ -149,7 +152,7 @@ Checkbox 透传 React Native `Pressable` 的常用属性和事件；组件自身
 - `shape?: 'rounded' | 'square' | 'circle'`：指示器形状，默认 `'rounded'`。
 - `color?: string`：主色覆盖，支持主题 token、语义色或颜色字符串。
 - `colors?: CheckboxColors`：结构化颜色覆盖。
-- `layout?: CheckboxLayout`：结构化尺寸覆盖。
+- `layout?: CheckboxLayout`：结构化尺寸覆盖；自定义 `indicatorSize` 且未显式传 `indicatorIconSize` 时，勾号默认随最终尺寸缩放。
 - `duration?: number`：状态切换动画时长，默认 `170`。
 
 ### 内容

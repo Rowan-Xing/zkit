@@ -173,6 +173,9 @@ const baseStyles = StyleSheet.create({
   },
 });
 
+const DEFAULT_LINE_HEIGHT_RATIO = 1.4;
+const NestedTextContext = React.createContext(false);
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
@@ -306,23 +309,62 @@ function resolveTypographyToken(size: TextSizeValue): TypographyToken {
   const fontSize = Math.max(0, size);
   return {
     fontSize,
-    lineHeight: Math.ceil(fontSize * 1.4),
+    lineHeight: Math.ceil(fontSize * DEFAULT_LINE_HEIGHT_RATIO),
   };
 }
 
-function resolveTypographyStyle(size: TextSizeValue, explicitLineHeight: number | undefined): TextStyle {
-  const token = resolveTypographyToken(size);
-  return {
-    fontSize: wp(token.fontSize),
-    lineHeight: wp(isFiniteNumber(explicitLineHeight) ? Math.max(0, explicitLineHeight) : token.lineHeight),
-  };
+function readStyleNumber(style: TextStyle | undefined, key: 'fontSize' | 'lineHeight') {
+  const value = style?.[key];
+  return isFiniteNumber(value) ? Math.max(0, value) : undefined;
 }
 
-function normalizeStyleFontWeight(style: StyleProp<TextStyle>): StyleProp<TextStyle> {
+function resolveTypographyStyle({
+  explicitLineHeight,
+  hasExplicitSize,
+  shouldUseVariantDefaults,
+  size,
+  styleFontSize,
+  styleLineHeight,
+}: {
+  explicitLineHeight: number | undefined;
+  hasExplicitSize: boolean;
+  shouldUseVariantDefaults: boolean;
+  size: TextSizeValue;
+  styleFontSize: number | undefined;
+  styleLineHeight: number | undefined;
+}): TextStyle | undefined {
+  const shouldResolveSize = hasExplicitSize || shouldUseVariantDefaults;
+  const token = shouldResolveSize ? resolveTypographyToken(size) : undefined;
+  const nextStyle: TextStyle = {};
+  let hasStyle = false;
+
+  if (token) {
+    nextStyle.fontSize = wp(token.fontSize);
+    hasStyle = true;
+  }
+
+  if (styleLineHeight != null) {
+    return hasStyle ? nextStyle : undefined;
+  }
+
+  if (isFiniteNumber(explicitLineHeight)) {
+    nextStyle.lineHeight = wp(Math.max(0, explicitLineHeight));
+    hasStyle = true;
+  } else if (token && styleFontSize == null) {
+    nextStyle.lineHeight = wp(token.lineHeight);
+    hasStyle = true;
+  }
+
+  return hasStyle ? nextStyle : undefined;
+}
+
+function normalizeStyleFontWeight(
+  style: StyleProp<TextStyle>,
+  flattenedStyle: TextStyle | undefined
+): StyleProp<TextStyle> {
   if (!style) return style;
 
-  const flattened = StyleSheet.flatten(style);
-  const fontWeight = flattened?.fontWeight;
+  const fontWeight = flattenedStyle?.fontWeight;
   if (fontWeight == null) return style;
 
   const normalizedFontWeight = normalizeFontWeight(fontWeight);
@@ -352,7 +394,7 @@ function resolveAccessibilityState(
 
 const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
   {
-    variant = 'body',
+    variant: variantProp,
     size,
     lineHeight,
     weight,
@@ -374,11 +416,16 @@ const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
   },
   ref
 ) {
+  const nested = React.useContext(NestedTextContext);
   const theme = useTheme();
   const { width: viewportWidth } = useWindowDimensions();
+  const hasExplicitVariant = variantProp != null;
+  const shouldUseVariantDefaults = !nested || hasExplicitVariant;
+  const variant = variantProp ?? 'body';
   const variantToken: VariantToken = VARIANT_TOKENS[variant] ?? VARIANT_TOKENS.body;
+  const hasExplicitSize = size != null;
   const resolvedSize = size ?? variantToken.size;
-  const resolvedWeight = weight ?? variantToken.weight;
+  const resolvedWeight = weight ?? (shouldUseVariantDefaults ? variantToken.weight : undefined);
   const toneColor = resolveToneColor(theme.colors, disabled ? 'disabled' : tone);
   const resolvedColor = resolveColorToken(color, toneColor, theme);
   const resolvedNumberOfLines = resolveNumberOfLines(truncate, numberOfLines);
@@ -388,19 +435,44 @@ const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
     [accessibilityState, disabled]
   );
 
+  const flattenedStyle = React.useMemo(() => StyleSheet.flatten(style), [style]);
+  const styleFontSize = readStyleNumber(flattenedStyle, 'fontSize');
+  const styleLineHeight = readStyleNumber(flattenedStyle, 'lineHeight');
   const typographyStyle = React.useMemo(
-    () => resolveTypographyStyle(resolvedSize, lineHeight),
-    [lineHeight, resolvedSize, viewportWidth]
+    () =>
+      resolveTypographyStyle({
+        explicitLineHeight: lineHeight,
+        hasExplicitSize,
+        shouldUseVariantDefaults,
+        size: resolvedSize,
+        styleFontSize,
+        styleLineHeight,
+      }),
+    [
+      hasExplicitSize,
+      lineHeight,
+      resolvedSize,
+      shouldUseVariantDefaults,
+      styleFontSize,
+      styleLineHeight,
+      viewportWidth,
+    ]
   );
 
   const semanticStyle = React.useMemo<TextStyle>(() => {
     const nextStyle: TextStyle = {
-      fontFamily: variantToken.fontFamily,
       fontVariant: tabularNumbers ? ['tabular-nums'] : undefined,
-      fontWeight: normalizeFontWeight(resolveTextWeight(resolvedWeight)),
       textAlign: align,
       textTransform: transform,
     };
+
+    if (shouldUseVariantDefaults && variantToken.fontFamily !== undefined) {
+      nextStyle.fontFamily = variantToken.fontFamily;
+    }
+
+    if (resolvedWeight !== undefined) {
+      nextStyle.fontWeight = normalizeFontWeight(resolveTextWeight(resolvedWeight));
+    }
 
     if (resolvedColor !== undefined) {
       nextStyle.color = resolvedColor;
@@ -411,12 +483,13 @@ const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
     align,
     resolvedColor,
     resolvedWeight,
+    shouldUseVariantDefaults,
     tabularNumbers,
     transform,
     variantToken.fontFamily,
   ]);
 
-  const normalizedStyle = React.useMemo(() => normalizeStyleFontWeight(style), [style]);
+  const normalizedStyle = React.useMemo(() => normalizeStyleFontWeight(style, flattenedStyle), [flattenedStyle, style]);
   const finalStyle = React.useMemo<StyleProp<TextStyle>>(
     () =>
       normalizedStyle
@@ -426,21 +499,23 @@ const TextBase = React.forwardRef<TextRef, TextProps>(function Text(
   );
 
   return (
-    <RNText
-      ref={ref}
-      {...rest}
-      accessibilityState={resolvedAccessibilityState}
-      allowFontScaling={allowFontScaling}
-      disabled={disabled}
-      ellipsizeMode={resolvedEllipsizeMode}
-      maxFontSizeMultiplier={
-        allowFontScaling === false ? maxFontSizeMultiplier : (maxFontSizeMultiplier ?? getMaxFontSizeMultiplier())
-      }
-      numberOfLines={resolvedNumberOfLines}
-      style={finalStyle}
-    >
-      {children}
-    </RNText>
+    <NestedTextContext.Provider value>
+      <RNText
+        ref={ref}
+        {...rest}
+        accessibilityState={resolvedAccessibilityState}
+        allowFontScaling={allowFontScaling}
+        disabled={disabled}
+        ellipsizeMode={resolvedEllipsizeMode}
+        maxFontSizeMultiplier={
+          allowFontScaling === false ? maxFontSizeMultiplier : (maxFontSizeMultiplier ?? getMaxFontSizeMultiplier())
+        }
+        numberOfLines={resolvedNumberOfLines}
+        style={finalStyle}
+      >
+        {children}
+      </RNText>
+    </NestedTextContext.Provider>
   );
 });
 

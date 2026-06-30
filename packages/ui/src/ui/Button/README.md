@@ -156,6 +156,10 @@ export function Demo() {
 
 渐变依赖 `expo-linear-gradient`，缺失时会使用第一段颜色作为稳定兜底。按压、loading 显隐与内容切换都走 Reanimated，减少 JS 抖动对关键帧的影响。
 
+## 列表高频渲染
+
+在 `FlatList` / `FlashList` cell 中批量渲染普通静态按钮时，建议显式使用 `pressEffect="none"`。非 loading 场景会走轻量 `Pressable + View` 路径，避免为每个 cell 挂载 Reanimated press/loading 动画结构。
+
 ## 常用 Props
 
 - `variant?: 'solid' | 'soft' | 'outline' | 'ghost' | 'link'`
