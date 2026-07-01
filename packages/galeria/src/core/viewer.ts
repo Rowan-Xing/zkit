@@ -107,6 +107,7 @@ export class GaleriaViewer implements GaleriaController {
 
     this.lockDocumentScroll();
     this.mount();
+    await this.layoutMediaElements();
     this.updateCounter();
     this.updateTrack();
 
@@ -715,9 +716,11 @@ export class GaleriaViewer implements GaleriaController {
   private handleResize = (): void => {
     this.captureViewportSize();
     this.applyViewportStyle();
-    this.clampActiveState();
-    this.updateTrack();
-    this.applyActiveMediaTransform(false);
+    void this.layoutMediaElements().then(() => {
+      this.clampActiveState();
+      this.updateTrack();
+      this.applyActiveMediaTransform(false);
+    });
   };
 
   private handleWindowBlur = (): void => {
@@ -961,6 +964,23 @@ export class GaleriaViewer implements GaleriaController {
         element.pause();
       }
     });
+  }
+
+  private async layoutMediaElements(): Promise<void> {
+    const viewport = this.viewportRect();
+    await Promise.all(this.items.map(async (item, index) => {
+      const media = this.mediaElements[index];
+      if (!media) {
+        return;
+      }
+      const size = await resolveMediaSize(
+        item,
+        index === this.index ? this.options?.sourceImageSize : null
+      );
+      const frame = targetGeometryFor(size, viewport).visibleFrame;
+      media.style.width = `${frame.width}px`;
+      media.style.height = `${frame.height}px`;
+    }));
   }
 
   private lockDocumentScroll(): void {

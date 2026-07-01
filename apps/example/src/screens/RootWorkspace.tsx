@@ -42,6 +42,7 @@ import {
   ToolsGuidePage,
 } from './GuidePages';
 import { ActionDialogsGuidePage } from './ActionDialogsGuidePage';
+import { GaleriaGuidePage } from './GaleriaGuidePage';
 
 type WorkspaceRouteKey =
   | 'overview'
@@ -54,6 +55,7 @@ type WorkspaceRouteKey =
   | 'accordion'
   | 'bottomSheet'
   | 'linkedScroll'
+  | 'galeria'
   | 'pickers'
   | 'services'
   | 'dialogs'
@@ -78,6 +80,7 @@ const WORKSPACE_ROUTE_KEYS: readonly WorkspaceRouteKey[] = [
   'accordion',
   'bottomSheet',
   'linkedScroll',
+  'galeria',
   'pickers',
   'services',
   'dialogs',
@@ -95,6 +98,7 @@ const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
   accordion: '/accordion',
   bottomSheet: '/bottom-sheet',
   linkedScroll: '/linked-scroll',
+  galeria: '/galeria',
   pickers: '/pickers',
   services: '/services',
   dialogs: '/dialogs',
@@ -139,6 +143,7 @@ function getRouteKeyFromPath(pathname: string): WorkspaceRouteKey {
   if (lastSegment === 'surfaces') return 'accordion';
   if (lastSegment === 'sheet' || lastSegment === 'bottomsheet') return 'bottomSheet';
   if (lastSegment === 'linked' || lastSegment === 'linkedscroll') return 'linkedScroll';
+  if (lastSegment === 'gallery') return 'galeria';
 
   return (
     WORKSPACE_ROUTE_KEYS.find(
@@ -264,6 +269,13 @@ export function RootWorkspace({
         caption: t('example.page.linkedScroll.caption'),
         iconName: 'columns',
         Screen: LinkedScrollGuidePage,
+      },
+      {
+        key: 'galeria',
+        title: t('example.page.galeria.title'),
+        caption: t('example.page.galeria.caption'),
+        iconName: 'image',
+        Screen: GaleriaGuidePage,
       },
       {
         key: 'pickers',

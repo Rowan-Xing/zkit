@@ -7,6 +7,9 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 const config = getDefaultConfig(projectRoot);
 const defaultResolveRequest = config.resolver.resolveRequest;
 const localSourceEntries = {
+  'zkit-galeria': path.resolve(workspaceRoot, 'packages/galeria/src/index.ts'),
+  'zkit-galeria/react-native': path.resolve(workspaceRoot, 'packages/galeria/src/react-native/index.ts'),
+  'zkit-galeria/styles.css': path.resolve(workspaceRoot, 'packages/galeria/src/galeria.css'),
   'zkit-tools': path.resolve(workspaceRoot, 'packages/tools/src/index.ts'),
   'zkit-ui': path.resolve(workspaceRoot, 'packages/ui/src/index.ts'),
 };
