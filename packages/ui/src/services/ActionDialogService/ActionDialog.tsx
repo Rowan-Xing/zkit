@@ -627,7 +627,10 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
                   style={{ maxHeight: maxBodyHeight }}
                   contentContainerStyle={[
                     styles.body,
-                    { padding: wp(resolvedLayout.contentPadding) },
+                    {
+                      minHeight: wp(resolvedLayout.contentMinHeight),
+                      padding: wp(resolvedLayout.contentPadding),
+                    },
                     !renderedFooter ? styles.bodyWithoutFooter : null,
                   ]}
                 >
@@ -721,6 +724,7 @@ const styles = StyleSheet.create({
   body: {
     alignItems: 'center',
     gap: wp(10),
+    justifyContent: 'center',
   },
   bodyWithoutFooter: {
     paddingBottom: wp(22),

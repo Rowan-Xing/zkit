@@ -33,7 +33,7 @@ import { ImagePreview } from 'zkit-ui';
 
 ## 命令式用法
 
-`ComponentLibProvider` 已内置 `ImagePreviewProvider`。如果没有使用统一 Provider，需要在应用根部单独挂载。
+`ZKitProvider` 已内置 `ImagePreviewProvider`。如果没有使用统一 Provider，需要在应用根部单独挂载。
 
 ```tsx
 import { imagePreview } from 'zkit-ui';

@@ -30,7 +30,7 @@ export function ThemeProvider({ baseTheme, theme, children }: ThemeProviderProps
   const value = React.useMemo(() => {
     // 优先级（低 -> 高）：
     // 1) defaultTheme
-    // 2) configureComponentLib({ theme })
+    // 2) configureZKit({ theme })
     // 3) ThemeProvider({ baseTheme })
     // 4) ThemeProvider({ theme })
     const finalTheme = mergeTheme(baseTheme ?? getDefaultTheme(), theme);

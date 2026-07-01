@@ -31,17 +31,17 @@ import { Button } from 'zkit-ui';
 ### 推荐用法：统一 Provider（主题 + i18n + 全局浮层）
 
 ```tsx
-import { ComponentLibProvider } from 'zkit-ui';
+import { ZKitProvider } from 'zkit-ui';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ComponentLibProvider
+    <ZKitProvider
       theme={{ colors: { primary: '#2563EB' } }}
       messages={{ 'button.ok': '确定' }}
       missingKeyPolicy="throw"
     >
       {children}
-    </ComponentLibProvider>
+    </ZKitProvider>
   );
 }
 ```
@@ -61,9 +61,9 @@ import { ThemeProvider } from 'zkit-ui';
 如果你的项目希望“即便没包 Provider，也要有一致默认值”，可以在应用启动时配置：
 
 ```ts
-import { configureComponentLib } from 'zkit-ui';
+import { configureZKit } from 'zkit-ui';
 
-configureComponentLib({
+configureZKit({
   theme: { colors: { primary: '#0F172A' } },
   i18n: {
     locale: 'zh-CN',
@@ -195,7 +195,7 @@ import { ImagePreview, imagePreview } from 'zkit-ui';
 imagePreview.open({ images, index: 0 });
 ```
 
-`ImagePreview` 使用 `open/defaultOpen/onOpenChange` 管理显隐，使用 `value/defaultValue/onChange` 管理当前图片索引。全局 `imagePreview.open()` 返回 handle，可通过 `handle.result` 获取关闭原因和最终索引；`ComponentLibProvider` 已内置 `ImagePreviewProvider`。
+`ImagePreview` 使用 `open/defaultOpen/onOpenChange` 管理显隐，使用 `value/defaultValue/onChange` 管理当前图片索引。全局 `imagePreview.open()` 返回 handle，可通过 `handle.result` 获取关闭原因和最终索引；`ZKitProvider` 已内置 `ImagePreviewProvider`。
 
 ### 目录与导出
 

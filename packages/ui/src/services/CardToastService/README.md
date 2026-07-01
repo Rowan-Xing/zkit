@@ -2,7 +2,7 @@
 
 全局卡片 Toast 服务，适合保存成功、网络失败、轻量操作反馈这类不应打断用户流程的提示。
 
-`ComponentLibProvider` 已内置 `ToastProvider`。如果单独接入，需要把 `ToastProvider` 放在应用根部。
+`ZKitProvider` 已内置 `ToastProvider`。如果单独接入，需要把 `ToastProvider` 放在应用根部。
 
 ```tsx
 import { ToastProvider } from 'zkit-ui';

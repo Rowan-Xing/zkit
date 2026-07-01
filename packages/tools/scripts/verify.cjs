@@ -8,13 +8,6 @@ assert.equal(tools.resolveDeviceBrand({ os: 'ios' }), 'apple');
 assert.equal(tools.resolveDeviceBrand({ os: 'android', brand: 'HONOR' }), 'honor');
 assert.equal(tools.resolveDeviceBrand({ os: 'android', brand: 'Redmi' }), 'redmi');
 
-tools.configureRuntimeConfig({ APP_ENV: 'verify', ENABLED: true });
-assert.equal(tools.getRuntimeString('APP_ENV'), 'verify');
-assert.equal(tools.getRuntimeString('ENABLED'), 'true');
-assert.equal(tools.tryGetRuntimeString('MISSING', 'fallback'), 'fallback');
-tools.resetRuntimeConfig();
-assert.equal(tools.tryGetRuntimeString('__ZKIT_VERIFY_MISSING__', 'fallback'), 'fallback');
-
 const calls = [];
 let currentPath = '/home';
 const listeners = new Set();

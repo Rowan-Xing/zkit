@@ -387,7 +387,7 @@ function PermissionPurposeCard({
 
 /**
  * 权限用途说明 Provider
- * @description 需要在应用根组件中包裹，已内置于 ComponentLibProvider
+ * @description 需要在应用根组件中包裹，已内置于 ZKitProvider
  */
 export function PermissionPurposeDialogProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<PermissionPurposeDialogState>(initialState);

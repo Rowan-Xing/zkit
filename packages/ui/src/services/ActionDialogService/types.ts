@@ -81,6 +81,7 @@ export type ActionDialogLayoutOptions = {
   width?: number;
   maxWidth?: number;
   contentPadding?: number;
+  contentMinHeight?: number;
   radius?: number;
 };
 
