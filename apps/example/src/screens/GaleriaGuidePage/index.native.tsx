@@ -39,7 +39,7 @@ export function GaleriaGuidePage() {
   const theme = useTheme();
 
   return (
-    <TabScreenShell>
+    <TabScreenShell withTopInset={false}>
       <View style={styles.header}>
         <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>Galeria</Text>
         <Text style={[styles.title, { color: theme.colors.onSurface }]}>Shared transition gallery</Text>
