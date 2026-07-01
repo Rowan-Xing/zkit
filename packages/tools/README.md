@@ -1,6 +1,6 @@
 # zkit-tools
 
-`zkit-tools` 是 `zkit` 的非业务基础工具库，用来支撑组件库和应用层的通用基础设施：尺寸缩放、字体缩放上限、设备品牌归一化、路由重复跳转守卫、运行时配置读取等。
+`zkit-tools` 是 `zkit` 的非业务基础工具库，用来支撑组件库和应用层的通用基础设施：尺寸缩放、字体缩放上限、设备品牌归一化、路由重复跳转守卫等。
 
 它不是业务工具箱，也不是 UI 组件层。公共 API 的目标是少、稳、直觉统一，并且在 iOS / Android / Web / Node-like 构建场景下尽量可预测。
 
@@ -9,7 +9,7 @@
 - 稳定：根入口不因缺少 React Native 运行时而崩溃
 - 可预测：配置缺失、非法输入和平台差异都有明确兜底或错误
 - 轻量：不引入 UI 逻辑，不绑定 Expo 作为包级依赖
-- 高性能：尺寸缩放、环境读取、路由守卫这些热路径避免多余订阅和全局副作用
+- 高性能：尺寸缩放、路由守卫这些热路径避免多余订阅和全局副作用
 - API 统一：命名直接表达能力，不继续扩散历史近义词
 - 可维护：公开入口集中在 [src/index.ts](src/index.ts)，内部能力按模块分层
 
@@ -359,70 +359,6 @@ createRouterGuard({
 - `destroy()` 会尽量只恢复自己 patch 的方法，不覆盖之后其它代码替换的方法
 - `onEvent` 不应触发高频同步重渲染
 
-## 运行时配置
-
-运行时配置用于读取应用启动时已确定的环境值，例如 `APP_ENV`、`API_BASE_URL`、`CHANNEL`。
-
-### 显式注入
-
-```ts
-import {
-  configureRuntimeConfig,
-  getRuntimeString,
-  getRuntimeValue,
-  requireRuntimeString,
-  tryGetRuntimeString,
-} from 'zkit-tools';
-
-configureRuntimeConfig({
-  APP_ENV: 'local',
-  API_BASE_URL: 'https://api.example.com',
-  FEATURE_FLAG: true,
-});
-
-const appEnv = requireRuntimeString('APP_ENV');
-const apiBase = getRuntimeString('API_BASE_URL', '');
-const rawFlag = getRuntimeValue('FEATURE_FLAG', false);
-const channel = tryGetRuntimeString('CHANNEL', 'dev');
-```
-
-### 配置来源优先级
-
-1. `configureRuntimeConfig(...)` 显式注入
-2. `zkit-tools-runtime-config` 虚拟模块
-3. `process.env`
-
-如果调用 `getRuntimeConfig()` / `getRuntimeString()` 时没有任何配置来源，会抛出 `MISSING_RUNTIME_CONFIG_PROVIDER`。如果希望缺失时不抛错，使用 `tryGetRuntimeConfig()` 或 `tryGetRuntimeString()`。
-
-### 虚拟模块形态
-
-```ts
-export default {
-  APP_ENV: 'production',
-  API_BASE_URL: 'https://api.example.com',
-};
-```
-
-或：
-
-```ts
-export const runtimeConfig = {
-  APP_ENV: 'production',
-};
-```
-
-### API 区别
-
-- `getRuntimeConfig()`：返回完整配置；缺失 provider 会抛错
-- `tryGetRuntimeConfig()`：缺失 provider 返回 `null`
-- `getRuntimeValue(key, fallback?)`：读取原始值
-- `hasRuntimeValue(key)`：判断 key 存在且值不是 `null/undefined`
-- `getRuntimeString(key, fallback?)`：读取字符串化后的 primitive 值；对象/数组返回 fallback
-- `requireRuntimeString(key)`：要求存在非空字符串，否则抛 `MISSING_RUNTIME_CONFIG_VALUE`
-- `tryGetRuntimeString(key, fallback?)`：provider 或值缺失时返回 fallback
-- `configureRuntimeConfig(source)`：显式设置配置源
-- `resetRuntimeConfig()`：清除显式配置和缓存
-
 ## 公开 API 清单
 
 ### layout
@@ -455,18 +391,6 @@ export const runtimeConfig = {
 
 - `createRouterGuard(options)`
 
-### config
-
-- `configureRuntimeConfig(source)`
-- `resetRuntimeConfig()`
-- `getRuntimeConfig()`
-- `tryGetRuntimeConfig()`
-- `getRuntimeValue(key, fallback?)`
-- `hasRuntimeValue(key)`
-- `getRuntimeString(key, fallback?)`
-- `requireRuntimeString(key)`
-- `tryGetRuntimeString(key, fallback?)`
-
 ## 破坏性迁移
 
 | 旧 API | 新 API |
@@ -481,10 +405,6 @@ export const runtimeConfig = {
 | `resolvePhoneBrand` | `resolveDeviceBrand` |
 | `initRouterGuard` | `createRouterGuard` |
 | `fallbackLockMs` | `lockMs` |
-| `getEnv` | `getRuntimeString` / `tryGetRuntimeString` |
-| `getRequiredEnv` | `requireRuntimeString` |
-| `hasEnv` | `hasRuntimeValue` |
-| `runtimeConfig` Proxy | `getRuntimeValue` / `getRuntimeString` |
 
 ## 三端行为说明
 
@@ -505,7 +425,7 @@ export const runtimeConfig = {
 
 - 在 React Native Web 环境下优先读取 RN `Dimensions`
 - 在非 RN / Node-like 环境下，尺寸使用 `fallbackWidth`
-- 根入口可被 Node require，用于纯函数、运行时配置和构建验证
+- 根入口可被 Node require，用于纯函数和构建验证
 
 ## 包边界与维护规则
 
@@ -523,4 +443,4 @@ pnpm --filter zkit-tools verify
 pnpm validate
 ```
 
-`verify` 会构建 `zkit-tools`，并在 Node 中直接 require `dist`，验证根入口无 RN 环境可加载、核心纯函数可运行、运行时配置和路由守卫基础行为正常。
+`verify` 会构建 `zkit-tools`，并在 Node 中直接 require `dist`，验证根入口无 RN 环境可加载、核心纯函数可运行、路由守卫基础行为正常。

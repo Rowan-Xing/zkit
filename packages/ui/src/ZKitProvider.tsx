@@ -10,7 +10,7 @@ import { PickerServiceProvider } from './services/PickerService/index';
 import { ThemeProvider } from './theme/ThemeProvider';
 import type { Theme, ThemeOverride } from './theme/types';
 
-export type ComponentLibProviderProps = {
+export type ZKitProviderProps = {
   // baseTheme 用于传入完整主题作为基线（例如品牌主题）
   baseTheme?: Theme;
   // theme 用于对 baseTheme 做局部覆盖（例如只改 primary）
@@ -22,10 +22,10 @@ export type ComponentLibProviderProps = {
   children: React.ReactNode;
 };
 
-// ComponentLibProvider 是组件库推荐的顶层 Provider：
+// ZKitProvider 是组件库推荐的顶层 Provider：
 // - 同时提供 Theme 与 i18n
 // - 避免业务方在 App 里层层包裹多个 Provider
-export function ComponentLibProvider({
+export function ZKitProvider({
   baseTheme,
   theme,
   locale,
@@ -33,7 +33,7 @@ export function ComponentLibProvider({
   missingKeyPolicy,
   loading,
   children,
-}: ComponentLibProviderProps) {
+}: ZKitProviderProps) {
   return (
     <ThemeProvider baseTheme={baseTheme} theme={theme}>
       <I18nProvider locale={locale} messages={messages} missingKeyPolicy={missingKeyPolicy}>

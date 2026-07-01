@@ -241,8 +241,8 @@ export type {
 export { ThemeProvider } from './theme/ThemeProvider';
 export { useTheme } from './theme/useTheme';
 export type { Theme, ThemeOverride } from './theme/types';
-export { configureComponentLib } from './config';
-export type { ComponentLibConfig, ComponentLibI18nConfig } from './config';
+export { configureZKit } from './config';
+export type { ZKitConfig, ZKitI18nConfig } from './config';
 export {
   BUILTIN_I18N_LOCALES,
   DEFAULT_I18N_LOCALE,
@@ -259,8 +259,8 @@ export type {
   I18nTranslate,
   I18nTranslateParams,
 } from './i18n/types';
-export { ComponentLibProvider } from './ComponentLibProvider';
-export type { ComponentLibProviderProps } from './ComponentLibProvider';
+export { ZKitProvider } from './ZKitProvider';
+export type { ZKitProviderProps } from './ZKitProvider';
 export { pickerService, PickerServiceProvider } from './services/PickerService/index';
 export type {
   AddressPickerResult,

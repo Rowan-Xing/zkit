@@ -11,6 +11,7 @@ Radio 是三端一致的单选组件，适合互斥选项、设置项模式选�
 - 已选项默认再次点击不取消；筛选类场景需要清空时显式开启 `allowDeselect`
 - `size/tone/variant` 提供语义化外观，`colors/layout` 作为集中 escape hatch
 - 默认触控热区至少补到 `wp(44)`，小尺寸也保持可点性
+- 自定义 `layout.indicatorSize` 但未传 `layout.indicatorDotSize` 时，默认内点会按最终指示器尺寸等比缩放并取整
 
 ## RadioGroup
 
@@ -82,6 +83,8 @@ Radio 默认遵循单选控件直觉：点击已选项不会取消。需要筛�
 />
 ```
 
+只覆盖 `indicatorSize` 时，内置圆点尺寸会随最终指示器尺寸按比例取整；显式传入 `indicatorDotSize` 时仍以调用侧配置为准。Radio 外圈默认圆角会对 `indicatorSize / 2` 取整，减少 17、18 等小尺寸下的半像素圆角毛边。
+
 ## 自定义内容
 
 `children` 支持 render-prop。根节点本身就是可点击区域，子节点通常只读取状态做视觉变化，不需要再绑定一次点击。
@@ -148,7 +151,7 @@ Radio 透传 React Native `Pressable` 的常用属性和事件；组件自身固
 - `variant?: 'outline' | 'soft' | 'solid'`：选中态视觉样式，默认 `'outline'`。
 - `color?: string`：主色覆盖，支持主题 token、语义色或颜色字符串。
 - `colors?: RadioColors`：结构化颜色覆盖。
-- `layout?: RadioLayout`：结构化尺寸覆盖。
+- `layout?: RadioLayout`：结构化尺寸覆盖；自定义 `indicatorSize` 且未显式传 `indicatorDotSize` 时，圆点默认随最终尺寸缩放。
 - `duration?: number`：状态切换动画时长，默认 `170`。
 
 ### 内容

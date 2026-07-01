@@ -23,6 +23,7 @@ export const ACTION_DIALOG_DEFAULT_LAYOUT: Required<ActionDialogLayoutOptions> =
   width: 320,
   maxWidth: 380,
   contentPadding: 20,
+  contentMinHeight: 120,
   radius: 20,
 };
 
@@ -61,6 +62,10 @@ export function resolveLayout(layout: ActionDialogLayoutOptions | undefined): Re
     width: positiveNumber(layout?.width, ACTION_DIALOG_DEFAULT_LAYOUT.width),
     maxWidth: positiveNumber(layout?.maxWidth, ACTION_DIALOG_DEFAULT_LAYOUT.maxWidth),
     contentPadding: positiveNumber(layout?.contentPadding, ACTION_DIALOG_DEFAULT_LAYOUT.contentPadding),
+    contentMinHeight: positiveNumber(
+      layout?.contentMinHeight,
+      ACTION_DIALOG_DEFAULT_LAYOUT.contentMinHeight
+    ),
     radius: positiveNumber(layout?.radius, ACTION_DIALOG_DEFAULT_LAYOUT.radius),
   };
 }

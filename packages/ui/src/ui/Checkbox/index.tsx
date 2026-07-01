@@ -274,6 +274,7 @@ const SIZE_TOKENS = {
 const DISABLED_OPACITY = 0.48;
 const PRESSED_OPACITY = 0.86;
 const PRESSED_SCALE = 0.965;
+const CUSTOM_INDICATOR_ICON_SIZE_RATIO = 0.625;
 const VALUE_TIMING_DURATION = 170;
 const PRESS_IN_DURATION = 90;
 const PRESS_OUT_DURATION = 140;
@@ -438,9 +439,19 @@ function resolveCheckboxMetrics(
   layout: CheckboxLayout | undefined
 ): CheckboxMetrics {
   const token = SIZE_TOKENS[size] ?? SIZE_TOKENS.md;
-  const indicatorSize = resolvePositiveNumber(layout?.indicatorSize, wp(token.indicatorSize));
+  const tokenIndicatorSize = wp(token.indicatorSize);
+  const tokenIndicatorIconSize = wp(token.indicatorIconSize);
+  const hasCustomIndicatorSize = isPositiveNumber(layout?.indicatorSize);
+  const indicatorSize = resolvePositiveNumber(layout?.indicatorSize, tokenIndicatorSize);
+  const fallbackIconSize = hasCustomIndicatorSize
+    ? Math.max(wp(1), Math.round(indicatorSize * CUSTOM_INDICATOR_ICON_SIZE_RATIO))
+    : tokenIndicatorIconSize;
   const fallbackRadius =
-    shape === 'circle' ? indicatorSize / 2 : shape === 'square' ? 0 : wp(token.indicatorRadius);
+    shape === 'circle'
+      ? Math.round(indicatorSize / 2)
+      : shape === 'square'
+        ? 0
+        : wp(token.indicatorRadius);
 
   return {
     indicatorSize,
@@ -449,7 +460,7 @@ function resolveCheckboxMetrics(
       layout?.indicatorBorderWidth,
       wp(token.indicatorBorderWidth)
     ),
-    indicatorIconSize: resolvePositiveNumber(layout?.indicatorIconSize, wp(token.indicatorIconSize)),
+    indicatorIconSize: resolvePositiveNumber(layout?.indicatorIconSize, fallbackIconSize),
     gap: resolveNonNegativeNumber(layout?.gap, wp(token.gap)),
     minTouchTarget: resolvePositiveNumber(layout?.minTouchTarget, wp(44)),
     focusRingWidth: resolvePositiveNumber(layout?.focusRingWidth, wp(2)),
@@ -457,8 +468,12 @@ function resolveCheckboxMetrics(
   };
 }
 
+function isPositiveNumber(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
 function resolvePositiveNumber(value: number | undefined, fallback: number) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+  return isPositiveNumber(value) ? value : fallback;
 }
 
 function resolveNonNegativeNumber(value: number | undefined, fallback: number) {

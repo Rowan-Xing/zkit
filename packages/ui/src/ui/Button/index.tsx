@@ -4,6 +4,7 @@ import type {
   DimensionValue,
   GestureResponderEvent,
   Insets,
+  PressableStateCallbackType,
   StyleProp,
   TextStyle,
   ViewStyle,
@@ -201,6 +202,7 @@ const LOADING_TIMING = {
   easing: Easing.out(Easing.cubic),
   reduceMotion: ReduceMotion.System,
 } as const;
+const ANIMATED_EXIT_RESIDENCY_MS = LOADING_TIMING.duration + 40;
 
 const DISABLED_OPACITY = 0.52;
 const PRESSED_OPACITY = 0.82;
@@ -574,7 +576,7 @@ function resolveVisualColors({
 function resolvePressEffect(effect: ButtonPressEffect, interactionDisabled: boolean): ButtonPressEffect {
   if (interactionDisabled) return 'none';
   if (effect !== 'auto') return effect;
-  return 'scale-opacity';
+  return 'opacity';
 }
 
 function resolvePressEffectFlags(effect: ButtonPressEffect): PressEffectFlags {
@@ -837,41 +839,68 @@ function resolveWebCursorStyle(disabled: boolean): ViewStyle | undefined {
   return { cursor: disabled ? 'not-allowed' : 'pointer' } as ViewStyle;
 }
 
-function ButtonImpl(
-  {
-    variant = 'solid',
-    tone = 'primary',
-    size = 'md',
-    shape = 'rounded',
-    block = false,
-    disabled = false,
-    loading = false,
-    loadingMode = 'inline',
-    pressEffect = 'auto',
-    icon,
-    iconPlacement = 'start',
-    iconOnly = false,
-    color,
-    colors,
-    border,
-    layout,
-    gradient,
-    shadow = 'none',
-    children,
-    style,
-    contentStyle,
-    textStyle,
-    accessibilityLabel,
-    accessibilityState,
-    hitSlop,
-    onPress,
-    onPressIn,
-    onPressOut,
-    testID,
-    ...pressableProps
-  }: ButtonProps,
-  ref: React.ForwardedRef<ButtonRef>
-) {
+function requiresAnimatedPressEffect(effect: ButtonPressEffect | undefined) {
+  return (
+    effect === 'scale' ||
+    effect === 'scale-opacity' ||
+    effect === 'highlight' ||
+    effect === 'scale-highlight'
+  );
+}
+
+function shouldRequestAnimatedPressPath({
+  disabled,
+  pressEffect,
+}: {
+  disabled?: boolean;
+  pressEffect?: ButtonPressEffect;
+}) {
+  if (disabled) return false;
+  return requiresAnimatedPressEffect(pressEffect);
+}
+
+function useButtonFrame({
+  variant = 'solid',
+  tone = 'primary',
+  size = 'md',
+  shape = 'rounded',
+  block = false,
+  disabled = false,
+  loading = false,
+  icon,
+  iconPlacement = 'start',
+  iconOnly = false,
+  color,
+  colors,
+  border,
+  layout,
+  gradient,
+  shadow = 'none',
+  children,
+  textStyle,
+  accessibilityLabel,
+}: Pick<
+  ButtonProps,
+  | 'variant'
+  | 'tone'
+  | 'size'
+  | 'shape'
+  | 'block'
+  | 'disabled'
+  | 'loading'
+  | 'icon'
+  | 'iconPlacement'
+  | 'iconOnly'
+  | 'color'
+  | 'colors'
+  | 'border'
+  | 'layout'
+  | 'gradient'
+  | 'shadow'
+  | 'children'
+  | 'textStyle'
+  | 'accessibilityLabel'
+>) {
   const theme = useTheme();
   const scheme = useColorScheme();
   const { width: viewportWidth } = useWindowDimensions();
@@ -892,8 +921,6 @@ function ButtonImpl(
 
   const interactionDisabled = disabled || loading;
   const visualDisabled = disabled;
-  const resolvedLoadingMode = iconOnly ? 'overlay' : loadingMode;
-  const centeredLoading = resolvedLoadingMode !== 'inline';
 
   const visualColors = React.useMemo(
     () =>
@@ -1009,16 +1036,6 @@ function ButtonImpl(
   const hasText = resolvedText != null;
   const hasIcon = icon != null;
   const iconSize = layout?.iconSize ?? metrics.iconSize;
-  const loadingSize = React.useMemo(
-    () =>
-      resolveLoadingSize({
-        iconOnly,
-        layout,
-        metrics,
-        variant,
-      }),
-    [iconOnly, layout, metrics, variant]
-  );
   const contentGap = layout?.gap ?? metrics.gap;
   const iconBaseBoxStyle = React.useMemo(() => resolveIconBoxStyle(hasIcon, iconSize), [hasIcon, iconSize]);
   const iconPlacedBoxStyle = React.useMemo((): ViewStyle => {
@@ -1034,8 +1051,523 @@ function ButtonImpl(
     iconOnly && isPrimitiveTextChild(children) ? String(children) : undefined;
   const resolvedAccessibilityLabel = accessibilityLabel ?? inferredAccessibilityLabel;
 
+  return {
+    accentColor,
+    contentGap,
+    contentSizeStyle,
+    defaultHitSlop,
+    gradientCfg,
+    hasGradientBackground,
+    hasIcon,
+    hasText,
+    iconBaseBoxStyle,
+    iconPlacedBoxStyle,
+    iconSize,
+    interactionDisabled,
+    LinearGradientComponent,
+    metrics,
+    paddingStyle,
+    radiusStyle,
+    resolvedAccessibilityLabel,
+    resolvedText,
+    rootSizeStyle,
+    shadowStyle,
+    visualColors,
+    visualDisabled,
+    webCursorStyle,
+    borderStyle,
+  };
+}
+
+function ButtonStaticImpl(
+  {
+    variant = 'solid',
+    tone = 'primary',
+    size = 'md',
+    shape = 'rounded',
+    block = false,
+    disabled = false,
+    loading = false,
+    loadingMode: _loadingMode = 'inline',
+    pressEffect = 'auto',
+    icon,
+    iconPlacement = 'start',
+    iconOnly = false,
+    color,
+    colors,
+    border,
+    layout,
+    gradient,
+    shadow = 'none',
+    children,
+    style,
+    contentStyle,
+    textStyle,
+    accessibilityLabel,
+    accessibilityState,
+    hitSlop,
+    onPress,
+    testID,
+    ...pressableProps
+  }: ButtonProps,
+  ref: React.ForwardedRef<ButtonRef>
+) {
+  const frame = useButtonFrame({
+    accessibilityLabel,
+    block,
+    border,
+    children,
+    color,
+    colors,
+    disabled,
+    gradient,
+    icon,
+    iconOnly,
+    iconPlacement,
+    layout,
+    loading,
+    shadow,
+    shape,
+    size,
+    textStyle,
+    tone,
+    variant,
+  });
+  const {
+    borderStyle,
+    contentSizeStyle,
+    defaultHitSlop,
+    gradientCfg,
+    hasIcon,
+    iconBaseBoxStyle,
+    iconPlacedBoxStyle,
+    interactionDisabled,
+    LinearGradientComponent,
+    paddingStyle,
+    radiusStyle,
+    resolvedAccessibilityLabel,
+    resolvedText,
+    rootSizeStyle,
+    shadowStyle,
+    visualColors,
+    visualDisabled,
+    webCursorStyle,
+  } = frame;
+
+  const handlePress = React.useCallback(
+    (event: GestureResponderEvent) => {
+      if (interactionDisabled) return;
+      onPress?.(event);
+    },
+    [interactionDisabled, onPress]
+  );
+  const pressOpacityEnabled = !interactionDisabled && (pressEffect === 'auto' || pressEffect === 'opacity');
+  const rootStyle = React.useCallback(
+    ({ pressed }: PressableStateCallbackType) => [
+      styles.root,
+      rootSizeStyle,
+      radiusStyle,
+      shadowStyle,
+      visualDisabled ? styles.disabledRoot : null,
+      pressOpacityEnabled && pressed ? styles.pressedRoot : null,
+      webCursorStyle,
+      style,
+    ],
+    [
+      pressOpacityEnabled,
+      radiusStyle,
+      rootSizeStyle,
+      shadowStyle,
+      style,
+      visualDisabled,
+      webCursorStyle,
+    ]
+  );
+
+  return (
+    <Pressable
+      {...pressableProps}
+      ref={ref}
+      accessibilityLabel={resolvedAccessibilityLabel}
+      accessibilityRole="button"
+      accessibilityState={{
+        ...accessibilityState,
+        busy: Boolean(loading || accessibilityState?.busy),
+        disabled: Boolean(interactionDisabled || accessibilityState?.disabled),
+      }}
+      disabled={interactionDisabled}
+      hitSlop={hitSlop ?? defaultHitSlop}
+      onPress={handlePress}
+      style={rootStyle}
+      testID={testID}
+    >
+      <View
+        pointerEvents="none"
+        style={[
+          styles.content,
+          contentSizeStyle,
+          paddingStyle,
+          radiusStyle,
+          borderStyle,
+          { backgroundColor: visualColors.backgroundColor },
+          contentStyle,
+        ]}
+      >
+        {LinearGradientComponent && gradientCfg ? (
+          <LinearGradientComponent
+            pointerEvents="none"
+            colors={gradientCfg.colors}
+            start={gradientCfg.start}
+            end={gradientCfg.end}
+            style={[StyleSheet.absoluteFillObject, radiusStyle]}
+          />
+        ) : null}
+
+        {iconOnly ? (
+          (icon ?? resolvedText)
+        ) : (
+          <>
+            {icon && iconPlacement === 'start' ? (
+              <View style={[iconBaseBoxStyle, iconPlacedBoxStyle]}>{icon}</View>
+            ) : null}
+            {resolvedText}
+            {icon && iconPlacement === 'end' ? (
+              <View style={[iconBaseBoxStyle, iconPlacedBoxStyle]}>{icon}</View>
+            ) : null}
+          </>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+function ButtonPressAnimatedImpl(
+  {
+    variant = 'solid',
+    tone = 'primary',
+    size = 'md',
+    shape = 'rounded',
+    block = false,
+    disabled = false,
+    loading = false,
+    loadingMode: _loadingMode = 'inline',
+    pressEffect = 'auto',
+    icon,
+    iconPlacement = 'start',
+    iconOnly = false,
+    color,
+    colors,
+    border,
+    layout,
+    gradient,
+    shadow = 'none',
+    children,
+    style,
+    contentStyle,
+    textStyle,
+    accessibilityLabel,
+    accessibilityState,
+    hitSlop,
+    onPress,
+    onPressIn,
+    onPressOut,
+    testID,
+    ...pressableProps
+  }: ButtonProps,
+  ref: React.ForwardedRef<ButtonRef>
+) {
+  const frame = useButtonFrame({
+    accessibilityLabel,
+    block,
+    border,
+    children,
+    color,
+    colors,
+    disabled,
+    gradient,
+    icon,
+    iconOnly,
+    iconPlacement,
+    layout,
+    loading,
+    shadow,
+    shape,
+    size,
+    textStyle,
+    tone,
+    variant,
+  });
+  const {
+    accentColor,
+    borderStyle,
+    contentSizeStyle,
+    defaultHitSlop,
+    gradientCfg,
+    hasGradientBackground,
+    hasIcon,
+    iconBaseBoxStyle,
+    iconPlacedBoxStyle,
+    interactionDisabled,
+    LinearGradientComponent,
+    paddingStyle,
+    radiusStyle,
+    resolvedAccessibilityLabel,
+    resolvedText,
+    rootSizeStyle,
+    shadowStyle,
+    visualColors,
+    visualDisabled,
+    webCursorStyle,
+  } = frame;
+
   const pressSv = useSharedValue(0);
-  const loadingSv = useSharedValue(loading ? 1 : 0);
+  const resolvedPressEffect = React.useMemo(
+    () => resolvePressEffect(pressEffect, interactionDisabled),
+    [interactionDisabled, pressEffect]
+  );
+  const pressEffectFlags = React.useMemo(
+    () => resolvePressEffectFlags(resolvedPressEffect),
+    [resolvedPressEffect]
+  );
+  const pressHighlightEnabled = pressEffectFlags.highlight;
+  const pressOpacityEnabled = pressEffectFlags.opacity;
+  const pressScaleEnabled = pressEffectFlags.scale;
+  const pressOverlay = React.useMemo(
+    () =>
+      resolveOverlay({
+        accentColor,
+        colors,
+        hasGradientBackground,
+        variant,
+      }),
+    [accentColor, colors, hasGradientBackground, variant]
+  );
+
+  React.useEffect(() => {
+    if (interactionDisabled || resolvedPressEffect === 'none') {
+      pressSv.value = 0;
+    }
+  }, [interactionDisabled, pressSv, resolvedPressEffect]);
+
+  const rootAnimatedStyle = useAnimatedStyle(() => {
+    const baseOpacity = visualDisabled ? DISABLED_OPACITY : 1;
+    const scale = pressScaleEnabled
+      ? interpolate(pressSv.value, [0, 1], [1, PRESSED_SCALE])
+      : 1;
+    const opacity = pressOpacityEnabled
+      ? interpolate(pressSv.value, [0, 1], [baseOpacity, PRESSED_OPACITY])
+      : baseOpacity;
+
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  }, [pressOpacityEnabled, pressScaleEnabled, visualDisabled]);
+
+  const overlayAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = pressHighlightEnabled
+      ? interpolate(pressSv.value, [0, 1], [0, pressOverlay.strength])
+      : 0;
+    return { opacity };
+  }, [pressHighlightEnabled, pressOverlay.strength]);
+
+  const handlePress = React.useCallback(
+    (event: GestureResponderEvent) => {
+      if (interactionDisabled) return;
+      onPress?.(event);
+    },
+    [interactionDisabled, onPress]
+  );
+
+  const handlePressIn = React.useCallback(
+    (event: GestureResponderEvent) => {
+      if (!interactionDisabled && resolvedPressEffect !== 'none') {
+        pressSv.value = withTiming(1, PRESS_TIMING);
+      }
+      onPressIn?.(event);
+    },
+    [interactionDisabled, onPressIn, pressSv, resolvedPressEffect]
+  );
+
+  const handlePressOut = React.useCallback(
+    (event: GestureResponderEvent) => {
+      if (!interactionDisabled && resolvedPressEffect !== 'none') {
+        pressSv.value = withTiming(0, PRESS_TIMING);
+      }
+      onPressOut?.(event);
+    },
+    [interactionDisabled, onPressOut, pressSv, resolvedPressEffect]
+  );
+
+  return (
+    <AnimatedPressable
+      {...pressableProps}
+      ref={ref}
+      accessibilityLabel={resolvedAccessibilityLabel}
+      accessibilityRole="button"
+      accessibilityState={{
+        ...accessibilityState,
+        busy: Boolean(loading || accessibilityState?.busy),
+        disabled: Boolean(interactionDisabled || accessibilityState?.disabled),
+      }}
+      disabled={interactionDisabled}
+      hitSlop={hitSlop ?? defaultHitSlop}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.root, rootSizeStyle, radiusStyle, shadowStyle, rootAnimatedStyle, webCursorStyle, style]}
+      testID={testID}
+    >
+      <View
+        pointerEvents="none"
+        style={[
+          styles.content,
+          contentSizeStyle,
+          paddingStyle,
+          radiusStyle,
+          borderStyle,
+          { backgroundColor: visualColors.backgroundColor },
+          contentStyle,
+        ]}
+      >
+        {LinearGradientComponent && gradientCfg ? (
+          <LinearGradientComponent
+            pointerEvents="none"
+            colors={gradientCfg.colors}
+            start={gradientCfg.start}
+            end={gradientCfg.end}
+            style={[StyleSheet.absoluteFillObject, radiusStyle]}
+          />
+        ) : null}
+
+        {pressHighlightEnabled ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              radiusStyle,
+              { backgroundColor: pressOverlay.color },
+              overlayAnimatedStyle,
+            ]}
+          />
+        ) : null}
+
+        {iconOnly ? (
+          (icon ?? resolvedText)
+        ) : (
+          <>
+            {icon && iconPlacement === 'start' ? (
+              <View style={[iconBaseBoxStyle, iconPlacedBoxStyle]}>{icon}</View>
+            ) : null}
+            {resolvedText}
+            {icon && iconPlacement === 'end' ? (
+              <View style={[iconBaseBoxStyle, iconPlacedBoxStyle]}>{icon}</View>
+            ) : null}
+          </>
+        )}
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+function ButtonAnimatedImpl(
+  {
+    variant = 'solid',
+    tone = 'primary',
+    size = 'md',
+    shape = 'rounded',
+    block = false,
+    disabled = false,
+    loading = false,
+    loadingMode = 'inline',
+    pressEffect = 'auto',
+    icon,
+    iconPlacement = 'start',
+    iconOnly = false,
+    color,
+    colors,
+    border,
+    layout,
+    gradient,
+    shadow = 'none',
+    children,
+    style,
+    contentStyle,
+    textStyle,
+    accessibilityLabel,
+    accessibilityState,
+    hitSlop,
+    onPress,
+    onPressIn,
+    onPressOut,
+    testID,
+    ...pressableProps
+  }: ButtonProps,
+  ref: React.ForwardedRef<ButtonRef>
+) {
+  const resolvedLoadingMode = iconOnly ? 'overlay' : loadingMode;
+  const centeredLoading = resolvedLoadingMode !== 'inline';
+  const frame = useButtonFrame({
+    accessibilityLabel,
+    block,
+    border,
+    children,
+    color,
+    colors,
+    disabled,
+    gradient,
+    icon,
+    iconOnly,
+    iconPlacement,
+    layout,
+    loading,
+    shadow,
+    shape,
+    size,
+    textStyle,
+    tone,
+    variant,
+  });
+  const {
+    accentColor,
+    borderStyle,
+    contentGap,
+    contentSizeStyle,
+    defaultHitSlop,
+    gradientCfg,
+    hasGradientBackground,
+    hasIcon,
+    hasText,
+    iconBaseBoxStyle,
+    iconPlacedBoxStyle,
+    iconSize,
+    interactionDisabled,
+    LinearGradientComponent,
+    metrics,
+    paddingStyle,
+    radiusStyle,
+    resolvedAccessibilityLabel,
+    resolvedText,
+    rootSizeStyle,
+    shadowStyle,
+    visualColors,
+    visualDisabled,
+    webCursorStyle,
+  } = frame;
+
+  const loadingSize = React.useMemo(
+    () =>
+      resolveLoadingSize({
+        iconOnly,
+        layout,
+        metrics,
+        variant,
+      }),
+    [iconOnly, layout, metrics, variant]
+  );
+
+  const pressSv = useSharedValue(0);
+  const loadingSv = useSharedValue(0);
   const [spinnerMounted, setSpinnerMounted] = React.useState(loading);
   const hideSpinnerTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1075,15 +1607,24 @@ function ButtonImpl(
 
     if (loading) {
       setSpinnerMounted(true);
+      loadingSv.value = withTiming(1, LOADING_TIMING);
+      return () => {
+        if (hideSpinnerTimerRef.current) {
+          clearTimeout(hideSpinnerTimerRef.current);
+          hideSpinnerTimerRef.current = null;
+        }
+      };
     }
 
-    loadingSv.value = withTiming(loading ? 1 : 0, LOADING_TIMING);
-
-    if (!loading) {
-      hideSpinnerTimerRef.current = setTimeout(() => {
-        setSpinnerMounted(false);
-      }, LOADING_TIMING.duration);
+    if (!spinnerMounted) {
+      loadingSv.value = 0;
+      return undefined;
     }
+
+    loadingSv.value = withTiming(0, LOADING_TIMING);
+    hideSpinnerTimerRef.current = setTimeout(() => {
+      setSpinnerMounted(false);
+    }, LOADING_TIMING.duration);
 
     return () => {
       if (hideSpinnerTimerRef.current) {
@@ -1091,7 +1632,7 @@ function ButtonImpl(
         hideSpinnerTimerRef.current = null;
       }
     };
-  }, [loading, loadingSv]);
+  }, [loading, loadingSv, spinnerMounted]);
 
   const rootAnimatedStyle = useAnimatedStyle(() => {
     const baseOpacity = visualDisabled ? DISABLED_OPACITY : 1;
@@ -1311,6 +1852,48 @@ function ButtonImpl(
   );
 }
 
+const ButtonStaticWithRef = React.forwardRef<ButtonRef, ButtonProps>(ButtonStaticImpl);
+ButtonStaticWithRef.displayName = 'ButtonStatic';
+
+const ButtonPressAnimatedWithRef = React.forwardRef<ButtonRef, ButtonProps>(ButtonPressAnimatedImpl);
+ButtonPressAnimatedWithRef.displayName = 'ButtonPressAnimated';
+
+const ButtonAnimatedWithRef = React.forwardRef<ButtonRef, ButtonProps>(ButtonAnimatedImpl);
+ButtonAnimatedWithRef.displayName = 'ButtonLoadingAnimated';
+
+function ButtonImpl(props: ButtonProps, ref: React.ForwardedRef<ButtonRef>) {
+  const loadingRequested = Boolean(props.loading);
+  const animatedPressRequested = shouldRequestAnimatedPressPath(props);
+  const [retainLoadingAnimated, setRetainLoadingAnimated] = React.useState(loadingRequested);
+
+  React.useEffect(() => {
+    if (loadingRequested) {
+      setRetainLoadingAnimated(true);
+      return undefined;
+    }
+
+    if (!retainLoadingAnimated) return undefined;
+
+    const timer = setTimeout(() => {
+      setRetainLoadingAnimated(false);
+    }, ANIMATED_EXIT_RESIDENCY_MS);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [loadingRequested, retainLoadingAnimated]);
+
+  if (loadingRequested || retainLoadingAnimated) {
+    return <ButtonAnimatedWithRef {...props} ref={ref} />;
+  }
+
+  return animatedPressRequested ? (
+    <ButtonPressAnimatedWithRef {...props} ref={ref} />
+  ) : (
+    <ButtonStaticWithRef {...props} ref={ref} />
+  );
+}
+
 const ButtonWithRef = React.forwardRef<ButtonRef, ButtonProps>(ButtonImpl);
 ButtonWithRef.displayName = 'Button';
 
@@ -1342,6 +1925,12 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   root: {},
+  disabledRoot: {
+    opacity: DISABLED_OPACITY,
+  },
+  pressedRoot: {
+    opacity: PRESSED_OPACITY,
+  },
   spinnerBox: {
     alignItems: 'center',
     justifyContent: 'center',

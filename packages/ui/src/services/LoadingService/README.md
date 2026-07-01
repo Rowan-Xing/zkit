@@ -1,6 +1,6 @@
 # LoadingService
 
-全局加载 HUD 服务，用于短时阻塞、Promise 生命周期反馈和轻量结果态。`ComponentLibProvider` 已内置 `LoadingProvider`，普通业务入口只需要导入 `loading`。
+全局加载 HUD 服务，用于短时阻塞、Promise 生命周期反馈和轻量结果态。`ZKitProvider` 已内置 `LoadingProvider`，普通业务入口只需要导入 `loading`。
 
 ## 设计要点
 
@@ -9,7 +9,7 @@
 - `loading.promise()` 绑定异步任务，成功/失败结果只会更新当前仍活跃的 handle
 - `loading` 默认 15s 超时自动关闭，`success/error` 默认短暂停留后关闭
 - Android 不使用 `elevation` 或额外阴影层；iOS/Web 阴影跟随同一动画层，退出完成后卸载，避免残影
-- 默认文案来自 i18n，可通过 `ComponentLibProvider loading` 或 `LoadingProvider defaults` 覆盖
+- 默认文案来自 i18n，可通过 `ZKitProvider loading` 或 `LoadingProvider defaults` 覆盖
 
 ## 基础用法
 
@@ -88,7 +88,7 @@ loading.hide(); // 隐藏当前 HUD
 ## Provider 配置
 
 ```tsx
-<ComponentLibProvider
+<ZKitProvider
   loading={{
     loadingTimeout: 20000,
     successDuration: 1000,
@@ -104,7 +104,7 @@ loading.hide(); // 隐藏当前 HUD
   }}
 >
   <App />
-</ComponentLibProvider>
+</ZKitProvider>
 ```
 
 ## 关键类型

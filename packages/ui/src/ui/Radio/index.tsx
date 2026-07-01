@@ -72,6 +72,7 @@ export type RadioSlotProps = {
 
 type RadioMetrics = {
   indicatorSize: number;
+  indicatorRadius: number;
   indicatorDotSize: number;
   indicatorBorderWidth: number;
   gap: number;
@@ -233,12 +234,16 @@ const SIZE_TOKENS = {
   },
 } as const satisfies Record<
   RadioSize,
-  Omit<RadioMetrics, 'minTouchTarget' | 'focusRingWidth' | 'focusRingOffset'>
+  Omit<
+    RadioMetrics,
+    'indicatorRadius' | 'minTouchTarget' | 'focusRingWidth' | 'focusRingOffset'
+  >
 >;
 
 const DISABLED_OPACITY = 0.48;
 const PRESSED_OPACITY = 0.86;
 const PRESSED_SCALE = 0.965;
+const CUSTOM_INDICATOR_DOT_SIZE_RATIO = 0.45;
 const VALUE_TIMING_DURATION = 170;
 const PRESS_IN_DURATION = 90;
 const PRESS_OUT_DURATION = 140;
@@ -377,14 +382,18 @@ function resolveVariantColors(
 
 function resolveRadioMetrics(size: RadioSize, layout: RadioLayout | undefined): RadioMetrics {
   const token = SIZE_TOKENS[size] ?? SIZE_TOKENS.md;
-  const indicatorSize = resolvePositiveNumber(layout?.indicatorSize, wp(token.indicatorSize));
+  const tokenIndicatorSize = wp(token.indicatorSize);
+  const tokenIndicatorDotSize = wp(token.indicatorDotSize);
+  const hasCustomIndicatorSize = isPositiveNumber(layout?.indicatorSize);
+  const indicatorSize = resolvePositiveNumber(layout?.indicatorSize, tokenIndicatorSize);
+  const fallbackDotSize = hasCustomIndicatorSize
+    ? Math.max(wp(1), Math.round(indicatorSize * CUSTOM_INDICATOR_DOT_SIZE_RATIO))
+    : tokenIndicatorDotSize;
 
   return {
     indicatorSize,
-    indicatorDotSize: resolvePositiveNumber(
-      layout?.indicatorDotSize,
-      wp(token.indicatorDotSize)
-    ),
+    indicatorRadius: Math.round(indicatorSize / 2),
+    indicatorDotSize: resolvePositiveNumber(layout?.indicatorDotSize, fallbackDotSize),
     indicatorBorderWidth: resolvePositiveNumber(
       layout?.indicatorBorderWidth,
       wp(token.indicatorBorderWidth)
@@ -396,8 +405,12 @@ function resolveRadioMetrics(size: RadioSize, layout: RadioLayout | undefined): 
   };
 }
 
+function isPositiveNumber(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
 function resolvePositiveNumber(value: number | undefined, fallback: number) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+  return isPositiveNumber(value) ? value : fallback;
 }
 
 function resolveNonNegativeNumber(value: number | undefined, fallback: number) {
@@ -798,10 +811,10 @@ function RadioImpl(
     () => ({
       width: metrics.indicatorSize,
       height: metrics.indicatorSize,
-      borderRadius: metrics.indicatorSize / 2,
+      borderRadius: metrics.indicatorRadius,
       borderWidth: metrics.indicatorBorderWidth,
     }),
-    [metrics.indicatorBorderWidth, metrics.indicatorSize]
+    [metrics.indicatorBorderWidth, metrics.indicatorRadius, metrics.indicatorSize]
   );
 
   const indicatorNode = showIndicator ? (
@@ -823,7 +836,7 @@ function RadioImpl(
             bottom: -metrics.focusRingOffset,
             left: -metrics.focusRingOffset,
             right: -metrics.focusRingOffset,
-            borderRadius: metrics.indicatorSize / 2 + metrics.focusRingOffset,
+            borderRadius: metrics.indicatorRadius + metrics.focusRingOffset,
             borderWidth: metrics.focusRingWidth,
             borderColor: resolvedColors.focusRing,
           },

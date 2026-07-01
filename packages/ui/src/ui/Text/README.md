@@ -10,6 +10,8 @@
 - 默认使用 `getMaxFontSizeMultiplier()` 限制字体缩放上限，单次可用 `maxFontSizeMultiplier` 覆盖。
 - Android 默认关闭 `includeFontPadding`，用明确 lineHeight 保证 iOS / Android / Web 视觉高度更一致。
 - `color` 支持主题 token、语义色 token 和原生可解析颜色；无效颜色会回落到 `tone`。
+- `style.fontSize` 作为最终 escape hatch 覆盖字号时，如果没有显式 `lineHeight`，组件不会继续注入默认行高，会交给原生 Text 按字体度量排版。
+- 嵌套在 zkit `Text` 内部的 `Text`，未显式传入 `variant / size / lineHeight / style.fontSize / style.lineHeight` 时会继承父级排版。
 - 屏幕宽度变化时会重新计算排版尺寸，横竖屏和分屏场景不会卡在初始化尺寸。
 
 ## 基础用法
@@ -22,7 +24,7 @@ export function Demo() {
 }
 ```
 
-默认等价于：
+单独使用时默认等价于：
 
 - `variant="body"`
 - `tone="default"`
@@ -52,7 +54,7 @@ export function Demo() {
 }
 ```
 
-`variant` 只决定默认 `size / weight / fontFamily`，显式传入 `size`、`weight` 或 `style` 时会覆盖对应值。
+`variant` 只决定默认 `size / weight / fontFamily`，显式传入 `size`、`weight` 或 `style` 时会覆盖对应值。嵌套 `Text` 未显式声明排版时不会重新套用默认 `body`，以保持内联链接、强调文案和协议文字的字号稳定。
 
 ## 尺寸
 
@@ -88,6 +90,7 @@ export function Demo() {
 | `4xl` | `wp(36)` | `wp(44)` |
 
 传入数字 `size` 或 `lineHeight` 时，数字代表未缩放的设计像素，组件内部会统一转换。
+通过 `style.fontSize` 直接覆盖字号时，调用侧应传入已经计算好的原生字号；如果没有同时传入 `lineHeight` 或 `style.lineHeight`，组件会移除内置 token 行高，避免字号和行高不匹配。
 
 ## 颜色
 

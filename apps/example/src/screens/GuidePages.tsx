@@ -337,7 +337,7 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
   services: {
     title: 'Provider Services',
     description:
-      '服务层把 Toast、Loading、Picker、权限说明、图片预览和滑块验证挂到 ComponentLibProvider，业务用命令式 API 发起一次性流程。',
+      '服务层把 Toast、Loading、Picker、权限说明、图片预览和滑块验证挂到 ZKitProvider，业务用命令式 API 发起一次性流程。',
     blocks: [
       {
         title: '全局服务',
@@ -362,7 +362,7 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
   tools: {
     title: 'zkit-tools',
     description:
-      '工具库只放 UI 无关的基础能力，用来统一屏幕缩放、字体缩放、设备品牌、运行时配置和路由重复跳转守卫。',
+      '工具库只放 UI 无关的基础能力，用来统一屏幕缩放、字体缩放、设备品牌和路由重复跳转守卫。',
     blocks: [
       {
         title: '尺寸与无障碍',
@@ -375,12 +375,11 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
         title: '运行时与路由',
         items: [
           'getDeviceBrand 归一化设备品牌，Web 或未知运行时稳定返回 unknown。',
-          'tryGetRuntimeString 读取运行时配置，缺少 provider 时可给 fallback。',
           'createRouterGuard 拦截短时间重复跳转，减少业务页面误触造成的导航抖动。',
         ],
       },
     ],
-    api: ['wp', 'sp', 'getDeviceBrand', 'getMaxFontSizeMultiplier', 'tryGetRuntimeString', 'createRouterGuard'],
+    api: ['wp', 'sp', 'getDeviceBrand', 'getMaxFontSizeMultiplier', 'createRouterGuard'],
     snippet: `import { wp, sp, createRouterGuard } from 'zkit-tools';\n\nconst gap = wp(12);\nconst titleSize = sp(18);\nconst guard = createRouterGuard({ router, lockMs: 700 });`,
   },
 };
@@ -677,7 +676,7 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
   services: {
     title: 'Provider Services',
     description:
-      'Provider services mount toast, loading, picker, permission purpose, image preview, and captcha flows under ComponentLibProvider for command-style app usage.',
+      'Provider services mount toast, loading, picker, permission purpose, image preview, and captcha flows under ZKitProvider for command-style app usage.',
     blocks: [
       {
         title: 'Global services',
@@ -702,7 +701,7 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
   tools: {
     title: 'zkit-tools',
     description:
-      'The tools package stays UI-free and standardizes screen scaling, font scaling, device brand, runtime config, and duplicate navigation guarding.',
+      'The tools package stays UI-free and standardizes screen scaling, font scaling, device brand, and duplicate navigation guarding.',
     blocks: [
       {
         title: 'Scale and accessibility',
@@ -715,12 +714,11 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
         title: 'Runtime and routing',
         items: [
           'getDeviceBrand normalizes brand values and falls back predictably on Web or unknown runtimes.',
-          'tryGetRuntimeString reads runtime config with an optional fallback.',
           'createRouterGuard blocks rapid duplicate navigation to reduce accidental route jitter.',
         ],
       },
     ],
-    api: ['wp', 'sp', 'getDeviceBrand', 'getMaxFontSizeMultiplier', 'tryGetRuntimeString', 'createRouterGuard'],
+    api: ['wp', 'sp', 'getDeviceBrand', 'getMaxFontSizeMultiplier', 'createRouterGuard'],
     snippet: `import { wp, sp, createRouterGuard } from 'zkit-tools';\n\nconst gap = wp(12);\nconst titleSize = sp(18);\nconst guard = createRouterGuard({ router, lockMs: 700 });`,
   },
 };

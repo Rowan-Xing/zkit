@@ -5,7 +5,7 @@
 - `ActionDialog`：声明式组件，支持 `open/defaultOpen/onOpenChange`
 - `actionDialog`：全局命令式服务，适合路由守卫、请求确认、跨组件业务流程
 
-`ComponentLibProvider` 已内置 `ActionDialogProvider`；只有单独使用 `actionDialog` 服务时才需要确认 Provider 已挂载。
+`ZKitProvider` 已内置 `ActionDialogProvider`；只有单独使用 `actionDialog` 服务时才需要确认 Provider 已挂载。
 
 ## 设计取舍
 
@@ -123,7 +123,7 @@ actionDialog.open({
 | `keyboard.avoid` | 键盘出现时避让，默认 `true` |
 | `hostMode` | `'modal' \| 'inline'`，声明式默认 `modal` |
 | `motion` | `'none' \| 'fade' \| 'scale'`，默认 `fade` |
-| `layout` | `width/maxWidth/contentPadding/radius`，设计尺寸会通过 `wp(...)` 换算 |
+| `layout` | `width/maxWidth/contentPadding/contentMinHeight/radius`，设计尺寸会通过 `wp(...)` 换算 |
 | `colors/labels` | 颜色与文案 escape hatch |
 
 ### `actionDialog`

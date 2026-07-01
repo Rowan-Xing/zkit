@@ -4,16 +4,16 @@
 
 ## 前置条件
 
-确保应用根组件已包裹 `ComponentLibProvider`（已内置 `PickerServiceProvider`）：
+确保应用根组件已包裹 `ZKitProvider`（已内置 `PickerServiceProvider`）：
 
 ```tsx
-import { ComponentLibProvider } from 'zkit-ui';
+import { ZKitProvider } from 'zkit-ui';
 
 export default function App() {
   return (
-    <ComponentLibProvider>
+    <ZKitProvider>
       {/* 你的应用内容 */}
-    </ComponentLibProvider>
+    </ZKitProvider>
   );
 }
 ```

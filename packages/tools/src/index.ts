@@ -54,23 +54,3 @@ export type {
   RouterLike,
   RouterMethod,
 } from './navigation/routerGuard';
-
-export {
-  configureRuntimeConfig,
-  getRuntimeConfig,
-  getRuntimeString,
-  getRuntimeValue,
-  hasRuntimeValue,
-  requireRuntimeString,
-  resetRuntimeConfig,
-  tryGetRuntimeConfig,
-  tryGetRuntimeString,
-} from './config/runtimeConfig';
-export type {
-  RuntimeConfig,
-  RuntimeConfigError,
-  RuntimeConfigErrorCode,
-  RuntimeConfigPrimitive,
-  RuntimeConfigSource,
-  RuntimeConfigValue,
-} from './config/runtimeConfig';

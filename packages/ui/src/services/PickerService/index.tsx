@@ -221,7 +221,7 @@ const initialState: PickerState = {
 
 /**
  * 选择器服务 Provider
- * @description 需要在应用根组件中包裹，已内置于 ComponentLibProvider
+ * @description 需要在应用根组件中包裹，已内置于 ZKitProvider
  */
 export function PickerServiceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<PickerState>(initialState);

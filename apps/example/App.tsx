@@ -4,7 +4,7 @@ import * as React from 'react';
 import { StatusBar, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ComponentLibProvider } from 'zkit-ui';
+import { ZKitProvider } from 'zkit-ui';
 
 import { RootWorkspace } from './src/screens/RootWorkspace';
 import { exampleMessages, resolveExampleLocale } from './src/i18n';
@@ -22,7 +22,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <ComponentLibProvider locale={locale} messages={exampleMessages[locale]} theme={theme}>
+        <ZKitProvider locale={locale} messages={exampleMessages[locale]} theme={theme}>
           <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
           <RootWorkspace
             locale={locale}
@@ -30,7 +30,7 @@ export default function App() {
             onLocaleChange={setLocale}
             onThemePresetChange={setThemePreset}
           />
-        </ComponentLibProvider>
+        </ZKitProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

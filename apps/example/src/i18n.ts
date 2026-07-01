@@ -601,7 +601,7 @@ const enUS = {
 
   'example.services.eyebrow': 'Services',
   'example.services.title': 'Provider-backed actions',
-  'example.services.subtitle': 'Global overlays and command APIs mounted by ComponentLibProvider',
+  'example.services.subtitle': 'Global overlays and command APIs mounted by ZKitProvider',
   'example.services.toastTitle': 'Toast',
   'example.services.toastSubtitle': 'success / warning / error / info',
   'example.services.toastSaved': 'Saved with toast',
@@ -617,13 +617,9 @@ const enUS = {
 
   'example.tools.eyebrow': 'Tools',
   'example.tools.title': 'Runtime utilities',
-  'example.tools.subtitle': 'Screen scale, font scale, device brand, env, and router guard',
+  'example.tools.subtitle': 'Screen scale, font scale, device brand, and router guard',
   'example.tools.phoneBrand': 'Phone brand',
   'example.tools.fontCap': 'Font cap',
-  'example.tools.runtimeEnv': 'Runtime env',
-  'example.tools.config': 'Config',
-  'example.tools.typedAccess': 'typed access',
-  'example.tools.providerMissing': 'provider missing',
 
   'example.linked.backA11y': 'Back to playground',
   'example.linked.selected': 'Selected: {label}',
@@ -1122,7 +1118,7 @@ const zhCN = {
 
   'example.services.eyebrow': '服务',
   'example.services.title': 'Provider 服务',
-  'example.services.subtitle': '全局浮层与命令式 API，由 ComponentLibProvider 统一挂载',
+  'example.services.subtitle': '全局浮层与命令式 API，由 ZKitProvider 统一挂载',
   'example.services.toastTitle': '轻提示',
   'example.services.toastSubtitle': '成功 · 警告 · 错误 · 信息',
   'example.services.toastSaved': '已保存',
@@ -1138,13 +1134,9 @@ const zhCN = {
 
   'example.tools.eyebrow': '工具',
   'example.tools.title': '运行时工具',
-  'example.tools.subtitle': '屏幕缩放、字体上限、设备品牌、环境变量与路由防抖',
+  'example.tools.subtitle': '屏幕缩放、字体上限、设备品牌与路由防抖',
   'example.tools.phoneBrand': '手机品牌',
   'example.tools.fontCap': '字体上限',
-  'example.tools.runtimeEnv': '运行环境',
-  'example.tools.config': '配置',
-  'example.tools.typedAccess': '类型化读取',
-  'example.tools.providerMissing': 'Provider 缺失',
 
   'example.linked.backA11y': '返回示例首页',
   'example.linked.selected': '已选：{label}',
