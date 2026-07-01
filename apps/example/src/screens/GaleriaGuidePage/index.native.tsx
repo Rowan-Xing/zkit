@@ -1,9 +1,11 @@
 import * as React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Image, PixelRatio, View } from 'react-native';
+import { wp } from 'zkit-tools';
 import { Text, useTheme } from 'zkit-ui';
 
 import { TabScreenShell } from '../TabScreenShell';
-import { galeriaDemoItems } from './data';
+import { type GaleriaDemoItem, galeriaDemoItems } from './data';
 import { styles } from './styles.native';
 
 const flowerVideoUri = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
@@ -15,8 +17,6 @@ const galeriaNativeItems = galeriaDemoItems.map((item) => {
     poster: item.type === 'video' ? previewUri : undefined,
     type: item.type,
     url: item.type === 'video' ? flowerVideoUri : previewUri,
-    width: item.width,
-    height: item.height,
   };
 });
 
@@ -35,6 +35,19 @@ const { Galeria } = require('zkit-galeria/react-native') as {
   };
 };
 
+function displaySizeFor(item: GaleriaDemoItem) {
+  const pixelRatio = PixelRatio.get();
+  const rawWidth = item.width / pixelRatio;
+  const rawHeight = item.height / pixelRatio;
+  const maxWidth = wp(224);
+  const scale = Math.min(maxWidth / Math.max(1, rawWidth), 1);
+
+  return {
+    width: Math.max(1, Math.round(rawWidth * scale)),
+    height: Math.max(1, Math.round(rawHeight * scale)),
+  };
+}
+
 export function GaleriaGuidePage() {
   const theme = useTheme();
 
@@ -49,23 +62,41 @@ export function GaleriaGuidePage() {
       </View>
 
       <Galeria items={galeriaNativeItems} theme="dark">
-        <View style={styles.grid}>
+        <View style={styles.messageList}>
           {galeriaDemoItems.map((item, index) => (
             <View
               key={item.id}
               style={[
-                styles.card,
-                item.tall ? styles.cardTall : null,
-                { backgroundColor: theme.colors.secondary },
+                styles.messageRow,
+                index % 2 === 0 ? styles.messageRowOther : styles.messageRowSelf,
               ]}
             >
-              <Galeria.Image edgeToEdge index={index} style={StyleSheet.absoluteFill}>
-                <Image resizeMode="cover" source={item.previewSource} style={styles.image} />
-              </Galeria.Image>
-              <View pointerEvents="none" style={styles.badge}>
-                <Text numberOfLines={1} style={styles.badgeText}>
-                  {item.type === 'video' ? 'VIDEO' : item.label}
-                </Text>
+              <View style={styles.imageContainer}>
+                <Galeria.Image edgeToEdge index={index}>
+                  <ExpoImage
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                    priority="high"
+                    recyclingKey={item.id}
+                    source={item.previewSource}
+                    style={[
+                      styles.image,
+                      displaySizeFor(item),
+                      { backgroundColor: theme.colors.secondary },
+                    ]}
+                    transition={0}
+                  />
+                </Galeria.Image>
+                {item.type === 'video' ? (
+                  <View pointerEvents="none" style={styles.playBadge}>
+                    <Text style={styles.playBadgeText}>VIDEO</Text>
+                  </View>
+                ) : null}
+                <View pointerEvents="none" style={styles.badge}>
+                  <Text numberOfLines={1} style={styles.badgeText}>
+                    {item.label}
+                  </Text>
+                </View>
               </View>
             </View>
           ))}
