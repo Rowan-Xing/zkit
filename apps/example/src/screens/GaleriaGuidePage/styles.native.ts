@@ -5,8 +5,8 @@ export const styles = StyleSheet.create({
   badge: {
     backgroundColor: 'rgba(17, 24, 39, 0.68)',
     borderRadius: wp(7),
-    bottom: wp(18),
-    left: wp(18),
+    bottom: wp(10),
+    left: wp(10),
     maxWidth: '82%',
     paddingHorizontal: wp(9),
     paddingVertical: wp(7),
@@ -17,6 +17,24 @@ export const styles = StyleSheet.create({
     fontSize: wp(12),
     fontWeight: '800',
     lineHeight: wp(13),
+  },
+  galleryCard: {
+    borderRadius: wp(8),
+    height: wp(176),
+    overflow: 'hidden',
+    width: '48.5%',
+  },
+  galleryCardTall: {
+    height: wp(362),
+  },
+  galleryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(10),
+  },
+  galleryImage: {
+    height: '100%',
+    width: '100%',
   },
   eyebrow: {
     fontSize: wp(12),
@@ -29,40 +47,24 @@ export const styles = StyleSheet.create({
     gap: wp(8),
     marginBottom: wp(18),
   },
-  image: {
+  rendererButton: {
+    alignItems: 'center',
     borderRadius: wp(8),
+    borderWidth: StyleSheet.hairlineWidth,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: wp(38),
+    paddingHorizontal: wp(12),
   },
-  imageContainer: {
-    paddingHorizontal: wp(8),
-    paddingVertical: wp(8),
-    position: 'relative',
+  rendererButtonText: {
+    fontSize: wp(13),
+    fontWeight: '800',
+    lineHeight: wp(16),
   },
-  messageList: {
+  rendererSwitch: {
+    flexDirection: 'row',
     gap: wp(8),
-  },
-  messageRow: {
-    width: '100%',
-  },
-  messageRowOther: {
-    alignItems: 'flex-start',
-  },
-  messageRowSelf: {
-    alignItems: 'flex-end',
-  },
-  playBadge: {
-    backgroundColor: 'rgba(17, 24, 39, 0.72)',
-    borderRadius: wp(7),
-    left: wp(18),
-    paddingHorizontal: wp(8),
-    paddingVertical: wp(6),
-    position: 'absolute',
-    top: wp(18),
-  },
-  playBadgeText: {
-    color: '#FFFFFF',
-    fontSize: wp(11),
-    fontWeight: '900',
-    lineHeight: wp(12),
+    marginBottom: wp(16),
   },
   subtitle: {
     fontSize: wp(14),
