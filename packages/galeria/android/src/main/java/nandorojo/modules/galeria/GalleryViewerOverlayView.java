@@ -316,19 +316,19 @@ public final class GalleryViewerOverlayView extends FrameLayout implements Galle
         GalleryMediaItem item = items.get(currentIndex);
         String anchorKey = GallerySharedElementNames.forItem(galleryId, item);
         ImageView sourceView = GallerySourceViewRegistry.find(anchorKey);
+        GallerySharedElementState sourceState = GalleryLayoutSupport.captureImageViewState(sourceView);
         applySourcePlaceholderIfNeeded(pageView, currentIndex);
         pageView.prepareForOpenTransition();
         pageView.setMediaHidden(true);
 
-        GallerySharedElementState sourceState = GalleryLayoutSupport.captureImageViewState(sourceView);
         Drawable fallbackDrawable = sourceState != null ? sourceState.getDrawable() : null;
         RectF overlayBounds = GalleryLayoutSupport.viewBoundsOnScreen(this);
-        GallerySharedElementState effectivePageState = resolvedPageState != null
+        GallerySharedElementState effectivePageState = usableSharedElementState(resolvedPageState)
                 ? resolvedPageState
                 : pageView.sharedElementState();
-        GallerySharedElementGeometry targetGeometry = effectivePageState != null
+        GallerySharedElementGeometry targetGeometry = usableSharedElementState(effectivePageState)
                 ? effectivePageState.getGeometry()
-                : pageView.defaultTransitionGeometry(overlayBounds, fallbackDrawable);
+                : defaultOpenGeometryFromSource(sourceState, overlayBounds, pageView, fallbackDrawable);
 
         transitionController.performOpenTransition(
                 sourceView,
@@ -398,6 +398,38 @@ public final class GalleryViewerOverlayView extends FrameLayout implements Galle
             return pageView;
         }
         return pagerAdapter.findActiveView();
+    }
+
+    @NonNull
+    private GallerySharedElementGeometry defaultOpenGeometryFromSource(
+            @Nullable GallerySharedElementState sourceState,
+            @NonNull RectF overlayBounds,
+            @NonNull GalleryViewerPageView pageView,
+            @Nullable Drawable fallbackDrawable
+    ) {
+        if (sourceState != null) {
+            RectF sourceContent = sourceState.getGeometry().getContentFrameInVisibleBounds();
+            if (sourceContent.width() > 1f && sourceContent.height() > 1f) {
+                return GalleryLayoutSupport.defaultGeometryForAspectRatio(
+                        sourceContent.width(),
+                        sourceContent.height(),
+                        overlayBounds
+                );
+            }
+        }
+        return pageView.defaultTransitionGeometry(overlayBounds, fallbackDrawable);
+    }
+
+    private boolean usableSharedElementState(@Nullable GallerySharedElementState state) {
+        if (state == null) {
+            return false;
+        }
+        RectF visibleFrame = state.getGeometry().getVisibleFrameInWindow();
+        RectF contentFrame = state.getGeometry().getContentFrameInVisibleBounds();
+        return visibleFrame.width() > 1f
+                && visibleFrame.height() > 1f
+                && contentFrame.width() > 1f
+                && contentFrame.height() > 1f;
     }
 
     private void syncCurrentIndexFromPager() {
@@ -522,7 +554,7 @@ public final class GalleryViewerOverlayView extends FrameLayout implements Galle
         if (sourceView == null) {
             return;
         }
-        Drawable sourceDrawable = GalleryLayoutSupport.cloneDrawable(sourceView.getDrawable(), sourceView);
+        Drawable sourceDrawable = GalleryLayoutSupport.transitionDrawableForImageView(sourceView);
         pageView.setImagePlaceholderIfEmpty(sourceDrawable);
     }
 

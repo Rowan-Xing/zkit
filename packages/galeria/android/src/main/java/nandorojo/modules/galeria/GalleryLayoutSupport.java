@@ -1,7 +1,11 @@
 package nandorojo.modules.galeria;
 
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.widget.ImageView;
@@ -12,6 +16,8 @@ import androidx.annotation.Nullable;
 import com.github.chrisbanes.photoview.PhotoView;
 
 public final class GalleryLayoutSupport {
+    private static final int MAX_TRANSITION_BITMAP_SIDE = 2048;
+
     private GalleryLayoutSupport() {
     }
 
@@ -29,18 +35,22 @@ public final class GalleryLayoutSupport {
         if (drawable == null || imageView.getWidth() <= 0 || imageView.getHeight() <= 0) {
             return null;
         }
-        Drawable transitionDrawable = cloneDrawable(drawable, imageView);
-        if (transitionDrawable == null) {
-            return null;
-        }
 
         RectF imageBoundsInWindow = viewBoundsOnScreen(imageView);
         RectF clippingFrame = clippingFrameInWindow != null
                 ? new RectF(clippingFrameInWindow)
-                : new RectF(imageBoundsInWindow);
+                : visibleBoundsOnScreen(imageView);
+        if (clippingFrame.isEmpty()) {
+            clippingFrame = new RectF(imageBoundsInWindow);
+        }
 
         RectF contentFrameInView = resolveDisplayedContentFrame(imageView, drawable);
         if (contentFrameInView == null || contentFrameInView.isEmpty()) {
+            return null;
+        }
+
+        Drawable transitionDrawable = transitionDrawableForImageView(imageView);
+        if (transitionDrawable == null) {
             return null;
         }
 
@@ -80,6 +90,23 @@ public final class GalleryLayoutSupport {
         );
     }
 
+    @NonNull
+    public static RectF visibleBoundsOnScreen(@NonNull View view) {
+        Rect localVisibleRect = new Rect();
+        if (!view.getLocalVisibleRect(localVisibleRect) || localVisibleRect.isEmpty()) {
+            return viewBoundsOnScreen(view);
+        }
+
+        int[] location = new int[2];
+        view.getLocationOnScreen(location);
+        return new RectF(
+                location[0] + localVisibleRect.left,
+                location[1] + localVisibleRect.top,
+                location[0] + localVisibleRect.right,
+                location[1] + localVisibleRect.bottom
+        );
+    }
+
     @Nullable
     public static Drawable cloneDrawable(@Nullable Drawable drawable, @NonNull View view) {
         if (drawable == null) {
@@ -92,9 +119,90 @@ public final class GalleryLayoutSupport {
         return constantState.newDrawable(view.getResources()).mutate();
     }
 
+    @Nullable
+    public static Drawable transitionDrawableForImageView(@Nullable ImageView imageView) {
+        if (imageView == null) {
+            return null;
+        }
+        Drawable draweeActualDrawable = resolveDraweeActualDrawable(imageView);
+        if (draweeActualDrawable != null) {
+            Drawable clonedActualDrawable = cloneDrawableFromConstantState(draweeActualDrawable, imageView);
+            if (clonedActualDrawable != null) {
+                return clonedActualDrawable;
+            }
+            Drawable bitmapCopy = bitmapDrawableCopy(draweeActualDrawable, imageView);
+            if (bitmapCopy != null) {
+                return bitmapCopy;
+            }
+        }
+        if (isDraweeRootDrawable(imageView.getDrawable())) {
+            return null;
+        }
+        return cloneDrawable(imageView.getDrawable(), imageView);
+    }
+
+    @Nullable
+    private static Drawable cloneDrawableFromConstantState(@Nullable Drawable drawable, @NonNull View view) {
+        if (drawable == null) {
+            return null;
+        }
+        Drawable.ConstantState constantState = drawable.getConstantState();
+        if (constantState == null) {
+            return null;
+        }
+        return constantState.newDrawable(view.getResources()).mutate();
+    }
+
+    @Nullable
+    private static Drawable bitmapDrawableCopy(@NonNull Drawable drawable, @NonNull View view) {
+        int intrinsicWidth = drawable.getIntrinsicWidth();
+        int intrinsicHeight = drawable.getIntrinsicHeight();
+        if (intrinsicWidth <= 0 || intrinsicHeight <= 0) {
+            Rect bounds = drawable.getBounds();
+            intrinsicWidth = bounds.width();
+            intrinsicHeight = bounds.height();
+        }
+        if (intrinsicWidth <= 0 || intrinsicHeight <= 0) {
+            return null;
+        }
+
+        float scale = Math.min(
+                1f,
+                MAX_TRANSITION_BITMAP_SIDE / Math.max((float) intrinsicWidth, (float) intrinsicHeight)
+        );
+        int bitmapWidth = Math.max(1, Math.round(intrinsicWidth * scale));
+        int bitmapHeight = Math.max(1, Math.round(intrinsicHeight * scale));
+
+        Bitmap bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Rect oldBounds = new Rect(drawable.getBounds());
+        drawable.setBounds(0, 0, bitmapWidth, bitmapHeight);
+        drawable.draw(canvas);
+        drawable.setBounds(oldBounds);
+        return new BitmapDrawable(view.getResources(), bitmap);
+    }
+
     @NonNull
     public static GallerySharedElementGeometry defaultGeometryFor(@NonNull Drawable drawable, @NonNull RectF containerBounds) {
         RectF visibleFrame = aspectFitRect(drawable, containerBounds);
+        return new GallerySharedElementGeometry(
+                visibleFrame,
+                new RectF(0f, 0f, visibleFrame.width(), visibleFrame.height())
+        );
+    }
+
+    @NonNull
+    public static GallerySharedElementGeometry defaultGeometryForAspectRatio(float width, float height, @NonNull RectF containerBounds) {
+        float safeWidth = Math.max(1f, width);
+        float safeHeight = Math.max(1f, height);
+        float widthScale = containerBounds.width() / safeWidth;
+        float heightScale = containerBounds.height() / safeHeight;
+        float scale = Math.min(widthScale, heightScale);
+        float targetWidth = safeWidth * scale;
+        float targetHeight = safeHeight * scale;
+        float left = containerBounds.left + (containerBounds.width() - targetWidth) * 0.5f;
+        float top = containerBounds.top + (containerBounds.height() - targetHeight) * 0.5f;
+        RectF visibleFrame = new RectF(left, top, left + targetWidth, top + targetHeight);
         return new GallerySharedElementGeometry(
                 visibleFrame,
                 new RectF(0f, 0f, visibleFrame.width(), visibleFrame.height())
@@ -127,6 +235,11 @@ public final class GalleryLayoutSupport {
             if (displayRect != null && !displayRect.isEmpty()) {
                 return new RectF(displayRect);
             }
+        }
+
+        RectF draweeContentFrame = resolveDraweeActualContentFrame(imageView);
+        if (draweeContentFrame != null && !draweeContentFrame.isEmpty()) {
+            return draweeContentFrame;
         }
 
         int intrinsicWidth = drawable.getIntrinsicWidth();
@@ -188,5 +301,108 @@ public final class GalleryLayoutSupport {
         float width = intrinsicWidth * scale;
         float height = intrinsicHeight * scale;
         return new RectF(dx, dy, dx + width, dy + height);
+    }
+
+    @Nullable
+    private static RectF resolveDraweeActualContentFrame(@NonNull ImageView imageView) {
+        try {
+            Object hierarchy = imageView.getClass().getMethod("getHierarchy").invoke(imageView);
+            if (hierarchy == null) {
+                return null;
+            }
+            RectF bounds = new RectF();
+            hierarchy.getClass().getMethod("getActualImageBounds", RectF.class).invoke(hierarchy, bounds);
+            if (bounds.width() <= 1f || bounds.height() <= 1f) {
+                return null;
+            }
+            return bounds;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private static Drawable resolveDraweeActualDrawable(@NonNull ImageView imageView) {
+        try {
+            Object hierarchy = imageView.getClass().getMethod("getHierarchy").invoke(imageView);
+            if (hierarchy == null) {
+                return null;
+            }
+            Object hasImage = hierarchy.getClass().getMethod("hasImage").invoke(hierarchy);
+            if (!(hasImage instanceof Boolean) || !((Boolean) hasImage)) {
+                return null;
+            }
+            java.lang.reflect.Field actualImageWrapperField = hierarchy.getClass().getDeclaredField("mActualImageWrapper");
+            actualImageWrapperField.setAccessible(true);
+            Object actualImageWrapper = actualImageWrapperField.get(hierarchy);
+            if (actualImageWrapper == null) {
+                return null;
+            }
+            Object actualDrawable = actualImageWrapper.getClass().getMethod("getDrawable").invoke(actualImageWrapper);
+            if (actualDrawable instanceof Drawable) {
+                return (Drawable) actualDrawable;
+            }
+        } catch (Exception ignored) {
+        }
+
+        return findPositiveIntrinsicLeafDrawable(
+                imageView.getDrawable(),
+                new java.util.IdentityHashMap<>(),
+                0
+        );
+    }
+
+    @Nullable
+    private static Drawable findPositiveIntrinsicLeafDrawable(
+            @Nullable Drawable drawable,
+            @NonNull java.util.IdentityHashMap<Drawable, Boolean> visited,
+            int depth
+    ) {
+        if (drawable == null || depth > 12 || visited.containsKey(drawable)) {
+            return null;
+        }
+        visited.put(drawable, true);
+
+        if (!isDraweeWrapperDrawable(drawable)
+                && drawable.getIntrinsicWidth() > 0
+                && drawable.getIntrinsicHeight() > 0) {
+            return drawable;
+        }
+
+        Drawable current = drawable.getCurrent();
+        if (current != null && current != drawable) {
+            Drawable found = findPositiveIntrinsicLeafDrawable(current, visited, depth + 1);
+            if (found != null) {
+                return found;
+            }
+        }
+
+        try {
+            Object count = drawable.getClass().getMethod("getNumberOfLayers").invoke(drawable);
+            if (count instanceof Integer) {
+                for (int i = ((Integer) count) - 1; i >= 0; i--) {
+                    Object layer = drawable.getClass().getMethod("getDrawable", int.class).invoke(drawable, i);
+                    if (layer instanceof Drawable) {
+                        Drawable found = findPositiveIntrinsicLeafDrawable((Drawable) layer, visited, depth + 1);
+                        if (found != null) {
+                            return found;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return null;
+    }
+
+    private static boolean isDraweeRootDrawable(@Nullable Drawable drawable) {
+        return drawable != null
+                && "com.facebook.drawee.generic.RootDrawable".equals(drawable.getClass().getName());
+    }
+
+    private static boolean isDraweeWrapperDrawable(@NonNull Drawable drawable) {
+        String className = drawable.getClass().getName();
+        return className.startsWith("com.facebook.drawee.");
     }
 }
