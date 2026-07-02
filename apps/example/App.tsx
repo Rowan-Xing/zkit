@@ -4,7 +4,7 @@ import * as React from 'react';
 import { StatusBar, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ZKitProvider } from 'zkit-ui';
+import { ZKitProvider } from 'zkit-ui/provider';
 
 import { RootWorkspace } from './src/screens/RootWorkspace';
 import { exampleMessages, resolveExampleLocale } from './src/i18n';

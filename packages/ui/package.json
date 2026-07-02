@@ -1,11 +1,171 @@
 {
   "name": "zkit-ui",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "source": "src/index.ts",
   "react-native": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "react-native": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./all": {
+      "types": "./dist/all.d.ts",
+      "react-native": "./dist/all.js",
+      "default": "./dist/all.js"
+    },
+    "./provider": {
+      "types": "./dist/ZKitProvider.d.ts",
+      "react-native": "./dist/ZKitProvider.js",
+      "default": "./dist/ZKitProvider.js"
+    },
+    "./core-provider": {
+      "types": "./dist/ZKitCoreProvider.d.ts",
+      "react-native": "./dist/ZKitCoreProvider.js",
+      "default": "./dist/ZKitCoreProvider.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "react-native": "./dist/config.js",
+      "default": "./dist/config.js"
+    },
+    "./theme/*": {
+      "types": "./dist/theme/*.d.ts",
+      "react-native": "./dist/theme/*.js",
+      "default": "./dist/theme/*.js"
+    },
+    "./i18n/locales": {
+      "types": "./dist/i18n/locales/index.d.ts",
+      "react-native": "./dist/i18n/locales/index.js",
+      "default": "./dist/i18n/locales/index.js"
+    },
+    "./i18n/locales/*": {
+      "types": "./dist/i18n/locales/*.d.ts",
+      "react-native": "./dist/i18n/locales/*.js",
+      "default": "./dist/i18n/locales/*.js"
+    },
+    "./i18n/*": {
+      "types": "./dist/i18n/*.d.ts",
+      "react-native": "./dist/i18n/*.js",
+      "default": "./dist/i18n/*.js"
+    },
+    "./accordion": {
+      "types": "./dist/ui/Accordion/index.d.ts",
+      "react-native": "./dist/ui/Accordion/index.js",
+      "default": "./dist/ui/Accordion/index.js"
+    },
+    "./address-cascader": {
+      "types": "./dist/ui/AddressCascader/index.d.ts",
+      "react-native": "./dist/ui/AddressCascader/index.js",
+      "default": "./dist/ui/AddressCascader/index.js"
+    },
+    "./between-time": {
+      "types": "./dist/ui/BetweenTime/index.d.ts",
+      "react-native": "./dist/ui/BetweenTime/index.js",
+      "default": "./dist/ui/BetweenTime/index.js"
+    },
+    "./button": {
+      "types": "./dist/ui/Button/index.d.ts",
+      "react-native": "./dist/ui/Button/index.js",
+      "default": "./dist/ui/Button/index.js"
+    },
+    "./checkbox": {
+      "types": "./dist/ui/Checkbox/index.d.ts",
+      "react-native": "./dist/ui/Checkbox/index.js",
+      "default": "./dist/ui/Checkbox/index.js"
+    },
+    "./date-picker": {
+      "types": "./dist/ui/DatePicker/index.d.ts",
+      "react-native": "./dist/ui/DatePicker/index.js",
+      "default": "./dist/ui/DatePicker/index.js"
+    },
+    "./linked-scroll": {
+      "types": "./dist/ui/LinkedScroll/index.d.ts",
+      "react-native": "./dist/ui/LinkedScroll/index.js",
+      "default": "./dist/ui/LinkedScroll/index.js"
+    },
+    "./loading-spinner": {
+      "types": "./dist/ui/LoadingSpinner/index.d.ts",
+      "react-native": "./dist/ui/LoadingSpinner/index.js",
+      "default": "./dist/ui/LoadingSpinner/index.js"
+    },
+    "./picker": {
+      "types": "./dist/ui/Picker/index.d.ts",
+      "react-native": "./dist/ui/Picker/index.js",
+      "default": "./dist/ui/Picker/index.js"
+    },
+    "./radio": {
+      "types": "./dist/ui/Radio/index.d.ts",
+      "react-native": "./dist/ui/Radio/index.js",
+      "default": "./dist/ui/Radio/index.js"
+    },
+    "./sheet": {
+      "types": "./dist/ui/Sheet/index.d.ts",
+      "react-native": "./dist/ui/Sheet/index.js",
+      "default": "./dist/ui/Sheet/index.js"
+    },
+    "./slider-captcha": {
+      "types": "./dist/ui/SliderCaptcha/index.d.ts",
+      "react-native": "./dist/ui/SliderCaptcha/index.js",
+      "default": "./dist/ui/SliderCaptcha/index.js"
+    },
+    "./switch": {
+      "types": "./dist/ui/Switch/index.d.ts",
+      "react-native": "./dist/ui/Switch/index.js",
+      "default": "./dist/ui/Switch/index.js"
+    },
+    "./text": {
+      "types": "./dist/ui/Text/index.d.ts",
+      "react-native": "./dist/ui/Text/index.js",
+      "default": "./dist/ui/Text/index.js"
+    },
+    "./text-input": {
+      "types": "./dist/ui/TextInput/index.d.ts",
+      "react-native": "./dist/ui/TextInput/index.js",
+      "default": "./dist/ui/TextInput/index.js"
+    },
+    "./wheel-column": {
+      "types": "./dist/ui/WheelColumn/index.d.ts",
+      "react-native": "./dist/ui/WheelColumn/index.js",
+      "default": "./dist/ui/WheelColumn/index.js"
+    },
+    "./action-dialog": {
+      "types": "./dist/services/ActionDialogService/index.d.ts",
+      "react-native": "./dist/services/ActionDialogService/index.js",
+      "default": "./dist/services/ActionDialogService/index.js"
+    },
+    "./image-preview": {
+      "types": "./dist/services/ImagePreviewService/index.d.ts",
+      "react-native": "./dist/services/ImagePreviewService/index.js",
+      "default": "./dist/services/ImagePreviewService/index.js"
+    },
+    "./loading": {
+      "types": "./dist/services/LoadingService/index.d.ts",
+      "react-native": "./dist/services/LoadingService/index.js",
+      "default": "./dist/services/LoadingService/index.js"
+    },
+    "./permission-purpose-dialog": {
+      "types": "./dist/services/PermissionPurposeDialogService/index.d.ts",
+      "react-native": "./dist/services/PermissionPurposeDialogService/index.js",
+      "default": "./dist/services/PermissionPurposeDialogService/index.js"
+    },
+    "./picker-service": {
+      "types": "./dist/services/PickerService/index.d.ts",
+      "react-native": "./dist/services/PickerService/index.js",
+      "default": "./dist/services/PickerService/index.js"
+    },
+    "./toast": {
+      "types": "./dist/services/CardToastService/index.d.ts",
+      "react-native": "./dist/services/CardToastService/index.js",
+      "default": "./dist/services/CardToastService/index.js"
+    },
+    "./assets/*": "./dist/assets/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Concur-max/zkit.git",
@@ -28,6 +188,8 @@
   },
   "scripts": {
     "build": "node scripts/build.cjs",
+    "verify:entrypoints": "node scripts/verify-entrypoints.cjs",
+    "verify": "pnpm run build && pnpm run verify:entrypoints",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm run build"

@@ -14,7 +14,7 @@
 ## 基础用法
 
 ```tsx
-import { loading } from 'zkit-ui';
+import { loading } from 'zkit-ui/loading';
 
 const handle = loading.show('正在保存');
 

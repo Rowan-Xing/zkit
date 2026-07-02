@@ -1,5 +1,21 @@
 # zkit-ui
 
+## 2.0.0
+
+### Major Changes
+
+- 3c90764: Refactor Accordion state management and replace `onValueChange` with the `value/defaultValue/onChange` API.
+- Redesign zkit-ui entrypoints around explicit dependency boundaries.
+
+  - `zkit-ui` now exports only lightweight core APIs: theme, i18n, config, and `ZKitCoreProvider`.
+  - Full service mounting stays available from `zkit-ui/provider`.
+  - Component and service APIs are exposed through stable short subpath entrypoints such as `zkit-ui/text`, `zkit-ui/button`, and `zkit-ui/toast`.
+  - The previous full barrel is available explicitly as `zkit-ui/all` for showcase and migration-only scenarios.
+
+### Minor Changes
+
+- c864ec0: Refactor Button internals, add `loadingMode`, and add typed `onPressIn` / `onPressOut` passthrough alongside the built-in press feedback.
+
 ## 1.0.6
 
 ### Patch Changes

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { Text, useTheme } from 'zkit-ui';
+import { useTheme } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 
 import { styles } from '../styles';
 

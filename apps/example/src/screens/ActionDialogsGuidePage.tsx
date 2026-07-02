@@ -1,21 +1,20 @@
 import * as React from 'react';
 import { View } from 'react-native';
+import { useI18n, useTheme } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 import {
   ActionDialog,
-  Button,
-  Text,
-  TextInput,
   actionDialog,
-  loading,
-  toast,
-  useI18n,
-  useTheme,
   type ActionDialogFooterLayout,
   type ActionDialogHandle,
   type ActionDialogRef,
   type ActionDialogResult,
   type ActionDialogSnapshot,
-} from 'zkit-ui';
+} from 'zkit-ui/action-dialog';
+import { loading } from 'zkit-ui/loading';
+import { toast } from 'zkit-ui/toast';
+import { Button } from 'zkit-ui/button';
+import { TextInput } from 'zkit-ui/text-input';
 import { wp } from 'zkit-tools';
 
 import { Section } from '../components/Section';

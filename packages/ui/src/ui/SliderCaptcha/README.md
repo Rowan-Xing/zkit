@@ -19,7 +19,7 @@
 
 ```tsx
 import * as React from 'react';
-import { SliderCaptcha, type SliderCaptchaChallenge } from 'zkit-ui';
+import { SliderCaptcha, type SliderCaptchaChallenge } from 'zkit-ui/slider-captcha';
 
 type LoginCaptchaChallenge = SliderCaptchaChallenge & {
   nonceStr: string;

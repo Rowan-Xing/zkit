@@ -16,7 +16,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, useI18n, useTheme } from 'zkit-ui';
+import { useI18n, useTheme } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 import { wp } from 'zkit-tools';
 
 import { renderIcon, type FeatherIconName } from '../demoUtils';

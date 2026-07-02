@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import * as React from 'react';
 import { wp } from 'zkit-tools';
-import type { PickerValue } from 'zkit-ui';
+import type { PickerValue } from 'zkit-ui/picker';
 
 export type FeatherIconName = keyof typeof Feather.glyphMap;
 

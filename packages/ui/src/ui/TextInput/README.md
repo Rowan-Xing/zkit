@@ -17,7 +17,7 @@
 
 ```tsx
 import * as React from 'react';
-import { TextInput } from 'zkit-ui';
+import { TextInput } from 'zkit-ui/text-input';
 
 export function Demo() {
   const [value, setValue] = React.useState('');
@@ -36,7 +36,7 @@ export function Demo() {
 ## 原生薄封装
 
 ```tsx
-import { TextInputPrimitive } from 'zkit-ui';
+import { TextInputPrimitive } from 'zkit-ui/text-input';
 import { wp } from 'zkit-tools';
 
 export function Demo() {
@@ -54,7 +54,7 @@ export function Demo() {
 ## 非受控
 
 ```tsx
-import { TextInput } from 'zkit-ui';
+import { TextInput } from 'zkit-ui/text-input';
 
 export function Demo() {
   return (
@@ -72,7 +72,7 @@ export function Demo() {
 ## 描述、错误和计数
 
 ```tsx
-import { TextInput } from 'zkit-ui';
+import { TextInput } from 'zkit-ui/text-input';
 
 export function Demo() {
   return (
@@ -95,7 +95,7 @@ export function Demo() {
 ## 前后缀与清除按钮
 
 ```tsx
-import { TextInput } from 'zkit-ui';
+import { TextInput } from 'zkit-ui/text-input';
 
 export function Demo() {
   return (
@@ -116,7 +116,7 @@ export function Demo() {
 ## 外观
 
 ```tsx
-import { TextInput } from 'zkit-ui';
+import { TextInput } from 'zkit-ui/text-input';
 import { wp } from 'zkit-tools';
 
 export function Demo() {

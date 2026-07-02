@@ -7,7 +7,7 @@
 确保应用根组件已包裹 `ZKitProvider`（已内置 `PickerServiceProvider`）：
 
 ```tsx
-import { ZKitProvider } from 'zkit-ui';
+import { ZKitProvider } from 'zkit-ui/provider';
 
 export default function App() {
   return (
@@ -21,7 +21,7 @@ export default function App() {
 ## 使用方式
 
 ```tsx
-import { pickerService } from 'zkit-ui';
+import { pickerService } from 'zkit-ui/picker-service';
 ```
 
 ### 通用选择器

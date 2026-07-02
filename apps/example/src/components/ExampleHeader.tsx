@@ -2,7 +2,8 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text, useI18n, useTheme } from 'zkit-ui';
+import { useI18n, useTheme } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 import { wp } from 'zkit-tools';
 
 import { styles } from '../styles';

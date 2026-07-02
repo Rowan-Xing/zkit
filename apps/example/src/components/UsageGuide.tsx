@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { Text, useI18n, useTheme } from 'zkit-ui';
+import { useI18n, useTheme } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 import { wp } from 'zkit-tools';
 
 export type UsageGuideBlock = {

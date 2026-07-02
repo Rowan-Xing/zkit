@@ -6,7 +6,9 @@
 
 ```tsx
 import * as React from 'react';
-import { Button, Sheet, Text } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
+import { Button } from 'zkit-ui/button';
+import { Sheet } from 'zkit-ui/sheet';
 
 export function Demo() {
   const [open, setOpen] = React.useState(false);

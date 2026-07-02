@@ -5,7 +5,7 @@
  *   支持按权限自动填充默认文案，也支持完全自定义。
  * @example
  * ```tsx
- * import { permissionPurposeDialog } from 'zkit-ui';
+ * import { permissionPurposeDialog } from 'zkit-ui/permission-purpose-dialog';
  *
  * // 展示说明
  * const purpose = permissionPurposeDialog.show({ permission: 'location' });

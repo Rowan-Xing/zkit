@@ -17,7 +17,8 @@ Radio 是三端一致的单选组件，适合互斥选项、设置项模式选�
 
 ```tsx
 import * as React from 'react';
-import { Radio, RadioGroup, Text } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
+import { Radio, RadioGroup } from 'zkit-ui/radio';
 import { wp } from 'zkit-tools';
 
 type Density = 'compact' | 'comfortable' | 'spacious';

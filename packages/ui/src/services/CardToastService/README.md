@@ -5,7 +5,7 @@
 `ZKitProvider` 已内置 `ToastProvider`。如果单独接入，需要把 `ToastProvider` 放在应用根部。
 
 ```tsx
-import { ToastProvider } from 'zkit-ui';
+import { ToastProvider } from 'zkit-ui/toast';
 
 export function App() {
   return <ToastProvider>{/* app */}</ToastProvider>;
@@ -24,7 +24,7 @@ export function App() {
 ## 使用方式
 
 ```ts
-import { toast } from 'zkit-ui';
+import { toast } from 'zkit-ui/toast';
 
 toast.success('保存成功');
 toast.error('网络错误', {

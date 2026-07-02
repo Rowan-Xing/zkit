@@ -17,7 +17,7 @@
 ## 声明式用法
 
 ```tsx
-import { ImagePreview } from 'zkit-ui';
+import { ImagePreview } from 'zkit-ui/image-preview';
 
 <ImagePreview
   images={[
@@ -36,7 +36,7 @@ import { ImagePreview } from 'zkit-ui';
 `ZKitProvider` 已内置 `ImagePreviewProvider`。如果没有使用统一 Provider，需要在应用根部单独挂载。
 
 ```tsx
-import { imagePreview } from 'zkit-ui';
+import { imagePreview } from 'zkit-ui/image-preview';
 
 const handle = imagePreview.open({
   images,

@@ -1,13 +1,11 @@
 import * as React from 'react';
-import {
-  SliderCaptcha,
-  loading,
-  permissionPurposeDialog,
-  pickerService,
-  toast,
-  useI18n,
-  type PickerValue,
-} from 'zkit-ui';
+import { useI18n } from 'zkit-ui';
+import { loading } from 'zkit-ui/loading';
+import { permissionPurposeDialog } from 'zkit-ui/permission-purpose-dialog';
+import { pickerService } from 'zkit-ui/picker-service';
+import { toast } from 'zkit-ui/toast';
+import { SliderCaptcha } from 'zkit-ui/slider-captcha';
+import type { PickerValue } from 'zkit-ui/picker';
 import { createRouterGuard } from 'zkit-tools';
 
 import { UsageGuide, type UsageGuideProps } from '../components/UsageGuide';
@@ -68,7 +66,7 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
       },
     ],
     api: ['Text', 'variant', 'size', 'weight', 'tone', 'truncate', 'LoadingSpinner', 'size', 'color'],
-    snippet: `import { Text, LoadingSpinner } from 'zkit-ui';\nimport { wp } from 'zkit-tools';\n\n<Text variant="title" weight="bold">Title</Text>\n<Text tone="muted" truncate={2}>Body copy</Text>\n<LoadingSpinner size={wp(24)} color="#1F5EFF" />`,
+    snippet: `import { Text } from 'zkit-ui/text';\nimport { LoadingSpinner } from 'zkit-ui/loading-spinner';\nimport { wp } from 'zkit-tools';\n\n<Text variant="title" weight="bold">Title</Text>\n<Text tone="muted" truncate={2}>Body copy</Text>\n<LoadingSpinner size={wp(24)} color="#1F5EFF" />`,
   },
   button: {
     title: 'Button',
@@ -93,7 +91,7 @@ const zhGuides: Record<GuideKey, UsageGuideProps> = {
       },
     ],
     api: ['variant', 'tone', 'size', 'shape', 'block', 'loading', 'icon', 'iconOnly', 'layout', 'colors'],
-    snippet: `import { Button } from 'zkit-ui';\n\n<Button variant="solid" tone="primary">Primary</Button>\n<Button variant="outline" tone="danger">Danger</Button>\n<Button loading loadingMode="overlay">Saving</Button>`,
+    snippet: `import { Button } from 'zkit-ui/button';\n\n<Button variant="solid" tone="primary">Primary</Button>\n<Button variant="outline" tone="danger">Danger</Button>\n<Button loading loadingMode="overlay">Saving</Button>`,
   },
   textInput: {
     title: 'TextInput',
@@ -407,7 +405,7 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
       },
     ],
     api: ['Text', 'variant', 'size', 'weight', 'tone', 'truncate', 'LoadingSpinner', 'size', 'color'],
-    snippet: `import { Text, LoadingSpinner } from 'zkit-ui';\nimport { wp } from 'zkit-tools';\n\n<Text variant="title" weight="bold">Title</Text>\n<Text tone="muted" truncate={2}>Body copy</Text>\n<LoadingSpinner size={wp(24)} color="#1F5EFF" />`,
+    snippet: `import { Text } from 'zkit-ui/text';\nimport { LoadingSpinner } from 'zkit-ui/loading-spinner';\nimport { wp } from 'zkit-tools';\n\n<Text variant="title" weight="bold">Title</Text>\n<Text tone="muted" truncate={2}>Body copy</Text>\n<LoadingSpinner size={wp(24)} color="#1F5EFF" />`,
   },
   button: {
     title: 'Button',
@@ -432,7 +430,7 @@ const enGuides: Record<GuideKey, UsageGuideProps> = {
       },
     ],
     api: ['variant', 'tone', 'size', 'shape', 'block', 'loading', 'icon', 'iconOnly', 'layout', 'colors'],
-    snippet: `import { Button } from 'zkit-ui';\n\n<Button variant="solid" tone="primary">Primary</Button>\n<Button variant="outline" tone="danger">Danger</Button>\n<Button loading loadingMode="overlay">Saving</Button>`,
+    snippet: `import { Button } from 'zkit-ui/button';\n\n<Button variant="solid" tone="primary">Primary</Button>\n<Button variant="outline" tone="danger">Danger</Button>\n<Button loading loadingMode="overlay">Saving</Button>`,
   },
   textInput: {
     title: 'TextInput',

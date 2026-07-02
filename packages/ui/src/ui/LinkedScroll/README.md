@@ -8,7 +8,8 @@
 
 ```tsx
 import { View } from 'react-native';
-import { LinkedScroll, Text } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
+import { LinkedScroll } from 'zkit-ui/linked-scroll';
 import { wp } from 'zkit-tools';
 
 const items = [

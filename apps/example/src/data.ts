@@ -1,7 +1,9 @@
 import type {
   LinkedScrollItem as UILinkedScrollItem,
+} from 'zkit-ui/linked-scroll';
+import type {
   SliderCaptchaChallenge,
-} from 'zkit-ui';
+} from 'zkit-ui/slider-captcha';
 
 export type Density = 'compact' | 'comfortable' | 'spacious';
 

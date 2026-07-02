@@ -14,7 +14,7 @@
 ## 基础用法
 
 ```tsx
-import { WheelColumn, type WheelColumnOption } from 'zkit-ui';
+import { WheelColumn, type WheelColumnOption } from 'zkit-ui/wheel-column';
 import { wp } from 'zkit-tools';
 
 const options: WheelColumnOption[] = [

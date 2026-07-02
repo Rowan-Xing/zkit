@@ -14,8 +14,11 @@
 在 workspace 内通过 `workspace:*` 引用即可（本仓库已采用 pnpm workspace）。
 
 ```ts
-import { Button } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
+import { Button } from 'zkit-ui/button';
 ```
+
+`zkit-ui` 根入口只导出轻量核心（Theme、i18n、ZKitCoreProvider）。具体组件与服务使用显式子入口，例如 `zkit-ui/button`、`zkit-ui/toast`。需要完整历史 barrel 时使用 `zkit-ui/all`，但业务代码不应默认使用它。
 
 ## 主题（Theme）
 
@@ -28,22 +31,28 @@ import { Button } from 'zkit-ui';
 
 默认主题在 [defaultTheme.ts](src/theme/defaultTheme.ts)。
 
-### 推荐用法：统一 Provider（主题 + i18n + 全局浮层）
+### 推荐用法：核心 Provider（主题 + i18n）
 
 ```tsx
-import { ZKitProvider } from 'zkit-ui';
+import { ZKitCoreProvider } from 'zkit-ui';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ZKitProvider
+    <ZKitCoreProvider
       theme={{ colors: { primary: '#2563EB' } }}
       messages={{ 'button.ok': '确定' }}
       missingKeyPolicy="throw"
     >
       {children}
-    </ZKitProvider>
+    </ZKitCoreProvider>
   );
 }
+```
+
+如果应用确实需要 Toast、Loading、Picker、Dialog、PermissionPurpose、ImagePreview 等全局服务，使用完整 Provider：
+
+```tsx
+import { ZKitProvider } from 'zkit-ui/provider';
 ```
 
 ### 单独使用 ThemeProvider
@@ -87,7 +96,8 @@ configureZKit({
 ### 使用
 
 ```tsx
-import { I18nProvider, Text, useI18n } from 'zkit-ui';
+import { I18nProvider, useI18n } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 
 function Demo() {
   const { t } = useI18n();
@@ -120,13 +130,13 @@ function Demo() {
 
 ```tsx
 import * as React from 'react';
+import { Text } from 'zkit-ui/text';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  Text,
-} from 'zkit-ui';
+} from 'zkit-ui/accordion';
 
 export function DemoAccordion() {
   const [openItem, setOpenItem] = React.useState<string | null>('item-1');
@@ -157,7 +167,9 @@ export function DemoAccordion() {
 
 ```tsx
 import * as React from 'react';
-import { Button, Sheet, Text } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
+import { Button } from 'zkit-ui/button';
+import { Sheet } from 'zkit-ui/sheet';
 
 export function DemoSheet() {
   const [open, setOpen] = React.useState(false);
@@ -182,7 +194,7 @@ export function DemoSheet() {
 ### ImagePreview 用法
 
 ```tsx
-import { ImagePreview, imagePreview } from 'zkit-ui';
+import { ImagePreview, imagePreview } from 'zkit-ui/image-preview';
 
 <ImagePreview
   images={images}
@@ -201,7 +213,9 @@ imagePreview.open({ images, index: 0 });
 
 - 组件放在 `src/ui/`（一组件一文件为主；复杂组件可拆同名子文件）
 - 业务无关的工具放在 `src/`（例如 `theme/`、`i18n/`）
-- 所有对外导出集中在 [src/index.ts](src/index.ts)
+- 根入口集中在 [src/index.ts](src/index.ts)，只放轻量核心 API
+- 全量兼容入口集中在 [src/all.ts](src/all.ts)，仅用于显式全量导入场景
+- 新增组件必须提供 `zkit-ui/<component>` 子入口，并按需加入 `zkit-ui/all`
   - 新增组件必须同时导出组件与 props type
   - 不对外导出内部私有工具（除非确定是稳定 API）
 

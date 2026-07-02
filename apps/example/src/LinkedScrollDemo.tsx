@@ -2,13 +2,12 @@ import * as React from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { wp } from 'zkit-tools';
+import { useI18n, useTheme } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 import {
   LinkedScroll,
-  Text,
-  useI18n,
-  useTheme,
   type LinkedScrollSectionRenderContext,
-} from 'zkit-ui';
+} from 'zkit-ui/linked-scroll';
 
 import {
   linkedFallbackData,

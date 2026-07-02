@@ -7,7 +7,7 @@
 确保应用根组件已包裹 `ZKitProvider`（已内置 `PermissionPurposeDialogProvider`）：
 
 ```tsx
-import { ZKitProvider } from 'zkit-ui';
+import { ZKitProvider } from 'zkit-ui/provider';
 
 export default function App() {
   return (
@@ -21,7 +21,7 @@ export default function App() {
 ## 使用方式
 
 ```tsx
-import { permissionPurposeDialog } from 'zkit-ui';
+import { permissionPurposeDialog } from 'zkit-ui/permission-purpose-dialog';
 
 // 展示说明（与系统权限框同时出现）
 const purpose = permissionPurposeDialog.show({

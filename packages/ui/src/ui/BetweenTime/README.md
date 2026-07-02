@@ -11,7 +11,7 @@ BetweenTime 是一个高性能的时间区间选择器组件：
 ## 基础用法
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 import { Text } from 'react-native';
 
 export function Demo() {
@@ -31,7 +31,7 @@ export function Demo() {
 ## 精度控制：type
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -83,7 +83,7 @@ export function Demo() {
 ## 时间范围限制：start / end
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -106,7 +106,7 @@ export function Demo() {
 ## 快捷选择：quickDate
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -131,7 +131,7 @@ export function Demo() {
 ## 自定义格式：format
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -163,7 +163,7 @@ export function Demo() {
 ## 受控模式
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   const [value, setValue] = React.useState<string[]>(['2024-01-01', '2024-12-31']);
@@ -192,7 +192,7 @@ export function Demo() {
 ## 非受控模式
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -209,7 +209,7 @@ export function Demo() {
 ## 懒加载：lazyContent
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -230,7 +230,7 @@ export function Demo() {
 ## 自定义弹窗高度：drawerSize
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 import { wp } from 'zkit-tools';
 
 export function Demo() {
@@ -245,7 +245,7 @@ export function Demo() {
 ## 自定义单位名称：cellUnits
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -267,7 +267,7 @@ export function Demo() {
 ## 禁用状态：disabled
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   return (
@@ -281,7 +281,7 @@ export function Demo() {
 ## 格式同步到值：formatSyncValue
 
 ```tsx
-import { BetweenTime } from 'zkit-ui';
+import { BetweenTime } from 'zkit-ui/between-time';
 
 export function Demo() {
   const [value, setValue] = React.useState<string[]>([]);

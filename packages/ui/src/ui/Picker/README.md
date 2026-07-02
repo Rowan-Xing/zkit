@@ -11,7 +11,8 @@
 
 ```tsx
 import * as React from 'react';
-import { Picker, Text } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
+import { Picker } from 'zkit-ui/picker';
 
 const options = [
   { value: 'design', label: 'Design' },

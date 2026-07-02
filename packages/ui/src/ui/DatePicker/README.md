@@ -13,7 +13,8 @@ DatePicker 是日期语义组件，底层复用 Picker 的三端滚轮与 Sheet 
 
 ```tsx
 import * as React from 'react';
-import { Button, DatePicker } from 'zkit-ui';
+import { Button } from 'zkit-ui/button';
+import { DatePicker } from 'zkit-ui/date-picker';
 
 export function Demo() {
   const [value, setValue] = React.useState<string | null>(null);

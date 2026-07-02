@@ -6,13 +6,13 @@
 
 ```tsx
 import * as React from 'react';
+import { Text } from 'zkit-ui/text';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  Text,
-} from 'zkit-ui';
+} from 'zkit-ui/accordion';
 
 export function DemoAccordion() {
   const [value, setValue] = React.useState<string | null>('profile');

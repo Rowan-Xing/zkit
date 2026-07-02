@@ -3,7 +3,7 @@
  * @description 提供 pick、pickDate、pickAddress、pickBetweenTime 等方法
  * @example
  * ```tsx
- * import { pickerService } from 'zkit-ui';
+ * import { pickerService } from 'zkit-ui/picker-service';
  *
  * const result = await pickerService.pick({ options: [...], value: 'id' });
  * const date = await pickerService.pickDate({ value: '2024-01-01' });

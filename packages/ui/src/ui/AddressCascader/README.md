@@ -9,7 +9,8 @@ AddressCascader 是一个省/市/区（县）三级联动选择组件。
 ## 基础用法
 
 ```tsx
-import { AddressCascader, Button } from 'zkit-ui';
+import { AddressCascader } from 'zkit-ui/address-cascader';
+import { Button } from 'zkit-ui/button';
 
 export function Demo() {
   const [value, setValue] = React.useState(['110000', '110100', '110101']);
@@ -28,7 +29,8 @@ export function Demo() {
 `list` 的数据结构沿用 Picker 的树结构：每个节点包含 `value/text/children`。
 
 ```tsx
-import { AddressCascader, Button } from 'zkit-ui';
+import { AddressCascader } from 'zkit-ui/address-cascader';
+import { Button } from 'zkit-ui/button';
 
 const list = [
   {

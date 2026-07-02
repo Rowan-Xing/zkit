@@ -17,7 +17,7 @@
 ## 基础用法
 
 ```tsx
-import { Text } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 
 export function Demo() {
   return <Text>默认正文</Text>;
@@ -35,7 +35,7 @@ export function Demo() {
 ## 排版语义
 
 ```tsx
-import { Text } from 'zkit-ui';
+import { Text } from 'zkit-ui/text';
 
 export function Demo() {
   return (

@@ -38,7 +38,7 @@ import {
   type PickerValue,
   type SheetPlacement,
   type SheetRef,
-} from 'zkit-ui';
+} from 'zkit-ui/all';
 
 import {
   linkedFallbackData,
