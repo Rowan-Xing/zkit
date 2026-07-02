@@ -40,7 +40,8 @@
     "ios",
     "src",
     "scripts",
-    "README.md"
+    "README.md",
+    "README-EN.md"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
