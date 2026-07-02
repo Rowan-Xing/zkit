@@ -379,10 +379,16 @@ public final class GalleryViewerOverlayView extends FrameLayout implements Galle
         String anchorKey = GallerySharedElementNames.forItem(galleryId, item);
         ImageView targetView = GallerySourceViewRegistry.find(anchorKey);
         GallerySharedElementState targetState = GalleryLayoutSupport.captureImageViewState(targetView);
+        GallerySharedElementGeometry targetGeometry = targetState != null
+                ? targetState.getGeometry()
+                : GalleryLayoutSupport.captureImageViewGeometry(
+                        targetView,
+                        pageState != null ? pageState.getDrawable() : null
+                );
 
         transitionController.performCloseTransition(
                 pageState,
-                targetState != null ? targetState.getGeometry() : null,
+                targetGeometry,
                 targetView,
                 () -> {
                     restoreHiddenActiveSourceView();

@@ -1,5 +1,6 @@
 package nandorojo.modules.galeria;
 
+import android.view.View;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -19,6 +20,30 @@ public final class GallerySourceViewRegistry {
 
     public static synchronized void register(@NonNull String key, @NonNull ImageView imageView) {
         cleanupLocked();
+        if (!hasUsableGeometry(imageView)) {
+            ImageView existingImageView = resolveMappedViewLocked(key);
+            boolean keepExisting = existingImageView != null
+                    && existingImageView != imageView
+                    && hasUsableGeometry(existingImageView);
+            clearMappingsForViewLocked(imageView);
+            if (keepExisting) {
+                SOURCE_VIEWS.put(key, new WeakReference<>(existingImageView));
+                return;
+            }
+            SOURCE_VIEWS.remove(key);
+            return;
+        }
+
+        ImageView previousImageView = resolveMappedViewLocked(key);
+        if (!isPreferredSourceView(imageView)
+                && previousImageView != null
+                && previousImageView != imageView
+                && isPreferredSourceView(previousImageView)) {
+            clearMappingsForViewLocked(imageView);
+            SOURCE_VIEWS.put(key, new WeakReference<>(previousImageView));
+            return;
+        }
+
         clearMappingsForViewLocked(imageView);
         SOURCE_VIEWS.put(key, new WeakReference<>(imageView));
         ViewCompat.setTransitionName(imageView, key);
@@ -40,7 +65,30 @@ public final class GallerySourceViewRegistry {
             SOURCE_VIEWS.remove(key);
             return null;
         }
+        if (!hasUsableGeometry(imageView)) {
+            SOURCE_VIEWS.remove(key);
+            return null;
+        }
         return imageView;
+    }
+
+    @Nullable
+    private static ImageView resolveMappedViewLocked(@NonNull String key) {
+        WeakReference<ImageView> reference = SOURCE_VIEWS.get(key);
+        return reference != null ? reference.get() : null;
+    }
+
+    private static boolean hasUsableGeometry(@Nullable ImageView imageView) {
+        return imageView != null
+                && imageView.isAttachedToWindow()
+                && imageView.getWidth() > 0
+                && imageView.getHeight() > 0;
+    }
+
+    private static boolean isPreferredSourceView(@Nullable ImageView imageView) {
+        return hasUsableGeometry(imageView)
+                && imageView.getVisibility() == View.VISIBLE
+                && imageView.isShown();
     }
 
     private static void clearMappingsForViewLocked(@NonNull ImageView imageView) {

@@ -36,8 +36,16 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     val onIndexChange by EventDispatcher()
 
     private var sourceImageView: ImageView? = null
+    private var observedSourceImageView: ImageView? = null
+    private var sourceImageLayoutListener: View.OnLayoutChangeListener? = null
+    private var sourceImageAttachListener: View.OnAttachStateChangeListener? = null
     private var overlayView: GalleryViewerOverlayView? = null
     private var overlayBackCallback: OnBackPressedCallback? = null
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        bindSourceImageView()
+    }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         for (i in 0 until childCount) {
@@ -75,15 +83,17 @@ class GaleriaView(context: Context) : ViewGroup(context) {
 
         val previousSourceImageView = sourceImageView
         if (previousSourceImageView != null && previousSourceImageView !== imageView) {
-            GallerySourceViewRegistry.unregisterView(previousSourceImageView)
+            clearSourceImageObserver()
+            if (!isSourceImageViewUsable(previousSourceImageView)) {
+                GallerySourceViewRegistry.unregisterView(previousSourceImageView)
+            }
         }
 
         sourceImageView = imageView
-        val transitionName = transitionNameForIndex(initialIndex)
-        GallerySourceViewRegistry.register(transitionName, imageView)
         imageView.setOnClickListener {
             openViewer(imageView)
         }
+        registerSourceImageViewWhenReady(imageView)
     }
 
     private fun openViewer(sourceView: ImageView) {
@@ -99,7 +109,8 @@ class GaleriaView(context: Context) : ViewGroup(context) {
         val overlayHost = activity.window.decorView as? ViewGroup
             ?: activity.findViewById<ViewGroup>(android.R.id.content)
             ?: return
-        GallerySourceViewRegistry.register(transitionNameForItem(mediaItems[safeIndex]), sourceView)
+        val sourceKey = transitionNameForItem(mediaItems[safeIndex])
+        GallerySourceViewRegistry.register(sourceKey, sourceView)
         val overlay = GalleryViewerOverlayView(
             activity,
             mediaItems,
@@ -154,20 +165,123 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     }
 
     private fun findImageView(view: View): ImageView? {
-        if (view is ImageView) {
-            return view
-        }
-        if (view !is ViewGroup) {
-            return null
-        }
-        for (i in 0 until view.childCount) {
-            val child = view.getChildAt(i)
-            val found = findImageView(child)
-            if (found != null) {
-                return found
+        var bestImageView: ImageView? = null
+        var bestScore = Int.MIN_VALUE
+
+        fun visit(candidate: View) {
+            if (candidate is ImageView) {
+                val score = sourceImageViewScore(candidate)
+                if (score > bestScore) {
+                    bestImageView = candidate
+                    bestScore = score
+                }
+            }
+            if (candidate is ViewGroup) {
+                for (i in 0 until candidate.childCount) {
+                    visit(candidate.getChildAt(i))
+                }
             }
         }
-        return null
+
+        visit(view)
+        return bestImageView
+    }
+
+    private fun registerSourceImageViewWhenReady(imageView: ImageView) {
+        val transitionName = transitionNameForIndex(initialIndex)
+        if (isSourceImageViewUsable(imageView)) {
+            clearSourceImageObserver(imageView)
+            GallerySourceViewRegistry.register(transitionName, imageView)
+            return
+        }
+
+        observeSourceImageView(imageView)
+    }
+
+    private fun observeSourceImageView(imageView: ImageView) {
+        if (observedSourceImageView === imageView && sourceImageLayoutListener != null) {
+            return
+        }
+
+        clearSourceImageObserver()
+        observedSourceImageView = imageView
+        val layoutListener = View.OnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
+            val observed = view as? ImageView ?: return@OnLayoutChangeListener
+            if (sourceImageView !== observed) {
+                clearSourceImageObserver(observed)
+                return@OnLayoutChangeListener
+            }
+            if (isSourceImageViewUsable(observed)) {
+                registerSourceImageViewWhenReady(observed)
+            }
+        }
+        val attachListener = object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(view: View) {
+                val observed = view as? ImageView ?: return
+                if (sourceImageView !== observed) {
+                    clearSourceImageObserver(observed)
+                    return
+                }
+                registerSourceImageViewWhenReady(observed)
+            }
+
+            override fun onViewDetachedFromWindow(view: View) = Unit
+        }
+        sourceImageLayoutListener = layoutListener
+        sourceImageAttachListener = attachListener
+        imageView.addOnLayoutChangeListener(layoutListener)
+        imageView.addOnAttachStateChangeListener(attachListener)
+        imageView.post {
+            if (sourceImageView !== imageView) {
+                return@post
+            }
+            if (isSourceImageViewUsable(imageView)) {
+                registerSourceImageViewWhenReady(imageView)
+            }
+        }
+    }
+
+    private fun isSourceImageViewUsable(imageView: ImageView): Boolean {
+        return imageView.isAttachedToWindow && imageView.width > 0 && imageView.height > 0
+    }
+
+    private fun sourceImageViewScore(imageView: ImageView): Int {
+        var score = 0
+        if (imageView.isAttachedToWindow) {
+            score += 16
+        }
+        if (imageView.width > 0 && imageView.height > 0) {
+            score += 16
+        }
+        if (imageView.visibility == View.VISIBLE) {
+            score += 16
+        }
+        if (imageView.isShown) {
+            score += 16
+        }
+        if (imageView.drawable != null) {
+            score += 8
+        }
+        if (imageView === sourceImageView) {
+            score += 1
+        }
+        return score
+    }
+
+    private fun clearSourceImageObserver(imageView: ImageView? = null) {
+        val observed = observedSourceImageView ?: return
+        if (imageView != null && observed !== imageView) {
+            return
+        }
+        sourceImageLayoutListener?.let { listener ->
+            observed.removeOnLayoutChangeListener(listener)
+        }
+        sourceImageAttachListener?.let { listener ->
+            observed.removeOnAttachStateChangeListener(listener)
+        }
+        sourceImageLayoutListener = null
+        sourceImageAttachListener = null
+        observedSourceImageView = null
     }
 
     private fun getActivity(context: Context): Activity? {
@@ -182,6 +296,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     }
 
     private fun unregisterSourceImageView() {
+        clearSourceImageObserver()
         sourceImageView?.let { imageView ->
             GallerySourceViewRegistry.unregisterView(imageView)
         }

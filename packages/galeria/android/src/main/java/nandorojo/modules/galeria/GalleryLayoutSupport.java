@@ -78,6 +78,48 @@ public final class GalleryLayoutSupport {
         );
     }
 
+    @Nullable
+    public static GallerySharedElementGeometry captureImageViewGeometry(@Nullable ImageView imageView, @Nullable Drawable geometryDrawable) {
+        if (imageView == null || imageView.getWidth() <= 0 || imageView.getHeight() <= 0) {
+            return null;
+        }
+
+        RectF imageBoundsInWindow = viewBoundsOnScreen(imageView);
+        RectF clippingFrame = visibleBoundsOnScreen(imageView);
+        if (clippingFrame.isEmpty()) {
+            clippingFrame = new RectF(imageBoundsInWindow);
+        }
+
+        RectF contentFrameInView = null;
+        Drawable drawable = geometryDrawable != null ? geometryDrawable : imageView.getDrawable();
+        if (drawable != null) {
+            contentFrameInView = resolveDisplayedContentFrame(imageView, drawable);
+        }
+        if (contentFrameInView == null || contentFrameInView.isEmpty()) {
+            contentFrameInView = new RectF(0f, 0f, imageView.getWidth(), imageView.getHeight());
+        }
+
+        RectF contentFrameInWindow = new RectF(contentFrameInView);
+        int[] location = new int[2];
+        imageView.getLocationOnScreen(location);
+        contentFrameInWindow.offset(location[0], location[1]);
+
+        RectF visibleFrameInWindow = new RectF();
+        boolean intersects = visibleFrameInWindow.setIntersect(clippingFrame, contentFrameInWindow);
+        if (!intersects || visibleFrameInWindow.isEmpty()) {
+            visibleFrameInWindow = new RectF(clippingFrame);
+        }
+
+        RectF contentFrameInVisibleBounds = new RectF(
+                contentFrameInWindow.left - visibleFrameInWindow.left,
+                contentFrameInWindow.top - visibleFrameInWindow.top,
+                contentFrameInWindow.right - visibleFrameInWindow.left,
+                contentFrameInWindow.bottom - visibleFrameInWindow.top
+        );
+
+        return new GallerySharedElementGeometry(visibleFrameInWindow, contentFrameInVisibleBounds);
+    }
+
     @NonNull
     public static RectF viewBoundsOnScreen(@NonNull View view) {
         int[] location = new int[2];
