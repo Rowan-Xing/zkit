@@ -1,5 +1,11 @@
 # zkit-ui
 
+## 2.0.1
+
+### Patch Changes
+
+- Lazily build DatePicker month and day options to avoid blocking the UI thread when opening large date ranges.
+
 ## 2.0.0
 
 ### Major Changes
