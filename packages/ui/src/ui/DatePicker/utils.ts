@@ -51,6 +51,18 @@ type BuildOptionsConfig = {
   isDateDisabled?: DatePickerProps['isDateDisabled'];
 };
 
+export type DatePickerOptionChildrenResolver = (
+  option: DatePickerOption,
+  index: number,
+  path: DatePickerOption[]
+) => readonly DatePickerOption[] | undefined;
+
+export type DatePickerOptionDisabledResolver = (
+  option: DatePickerOption,
+  index: number,
+  path: DatePickerOption[]
+) => boolean;
+
 function pad2(n: number) {
   return String(n).padStart(2, '0');
 }
@@ -261,11 +273,6 @@ function buildMonths(year: number, config: BuildOptionsConfig) {
         : false
     );
 
-    if (precision === 'day') {
-      option.children = buildDays(year, month, config);
-      option.disabled = option.children.length > 0 && option.children.every((child) => child.disabled);
-    }
-
     months.push(option);
   }
 
@@ -286,15 +293,79 @@ export function buildDatePickerOptions(config: BuildOptionsConfig) {
         : false
     );
 
-    if (precision !== 'year') {
-      option.children = buildMonths(year, config);
-      option.disabled = option.children.length > 0 && option.children.every((child) => child.disabled);
-    }
-
     years.push(option);
   }
 
   return years;
+}
+
+export function createDatePickerOptionChildrenResolver(
+  config: BuildOptionsConfig
+): DatePickerOptionChildrenResolver {
+  const cache = new Map<string, DatePickerOption[]>();
+
+  return (option) => {
+    if (option.column === 'year' && config.precision !== 'year') {
+      const key = `months:${option.year}`;
+      const cached = cache.get(key);
+      if (cached) return cached;
+
+      const months = buildMonths(option.year, config);
+      cache.set(key, months);
+      return months;
+    }
+
+    if (option.column === 'month' && config.precision === 'day' && option.month != null) {
+      const key = `days:${option.year}-${option.month}`;
+      const cached = cache.get(key);
+      if (cached) return cached;
+
+      const days = buildDays(option.year, option.month, config);
+      cache.set(key, days);
+      return days;
+    }
+
+    return [];
+  };
+}
+
+function getOptionPathKey(option: DatePickerOption) {
+  return `${option.column}:${option.year}-${option.month ?? 0}-${option.day ?? 0}`;
+}
+
+export function createDatePickerOptionDisabledResolver(
+  config: BuildOptionsConfig,
+  getOptionChildren: DatePickerOptionChildrenResolver
+): DatePickerOptionDisabledResolver {
+  const cache = new Map<string, boolean>();
+
+  const resolveOption = (
+    option: DatePickerOption,
+    index: number,
+    path: DatePickerOption[]
+  ): boolean => {
+    const key = getOptionPathKey(option);
+    const cached = cache.get(key);
+    if (cached != null) return cached;
+
+    let disabled = false;
+
+    if (option.column === config.precision) {
+      disabled =
+        option.disabled ??
+        resolveDisabled(optionDate(option), option, option.column, config.precision, config.isDateDisabled);
+    } else if (config.isDateDisabled) {
+      const children = getOptionChildren(option, index, path) ?? [];
+      disabled =
+        children.length > 0 &&
+        children.every((child, childIndex) => resolveOption(child, childIndex, [...path, child]));
+    }
+
+    cache.set(key, disabled);
+    return disabled;
+  };
+
+  return resolveOption;
 }
 
 function numberValues(values: PickerSelection<DatePickerOption>['values']) {
@@ -348,11 +419,16 @@ export function createDatePickerSelection(
   };
 }
 
-function findOptionPath(options: DatePickerOption[], values: number[]) {
+function findOptionPath(
+  options: DatePickerOption[],
+  values: number[],
+  getOptionChildren?: DatePickerOptionChildrenResolver
+) {
   const items: DatePickerOption[] = [];
   const columns: DatePickerOption[][] = [];
   const indices: number[] = [];
   let current = options;
+  let path: DatePickerOption[] = [];
 
   for (const value of values) {
     columns.push(current);
@@ -364,7 +440,9 @@ function findOptionPath(options: DatePickerOption[], values: number[]) {
 
     items.push(item);
     indices.push(index);
-    current = Array.isArray(item.children) ? item.children : [];
+    const nextPath = [...path, item];
+    current = [...(getOptionChildren?.(item, index, nextPath) ?? item.children ?? [])];
+    path = nextPath;
   }
 
   return { items, columns, indices };
@@ -374,10 +452,11 @@ export function createDatePickerSelectionFromDate(
   date: Dayjs,
   precision: DatePickerPrecision,
   options: DatePickerOption[],
-  labelFormat?: DatePickerLabelFormat
+  labelFormat?: DatePickerLabelFormat,
+  getOptionChildren?: DatePickerOptionChildrenResolver
 ): DatePickerSelection {
   const values = pathFromDate(date, precision);
-  const { items, columns, indices } = findOptionPath(options, values);
+  const { items, columns, indices } = findOptionPath(options, values, getOptionChildren);
   const labels = values.map((value, index) => (index === 0 ? String(value) : pad2(value)));
   const base: DatePickerSelection = {
     value: formatDatePickerValue(date, precision),

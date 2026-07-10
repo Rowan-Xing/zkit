@@ -10,6 +10,8 @@ import {
 import { useI18n } from '../../i18n/useI18n';
 import {
   buildDatePickerOptions,
+  createDatePickerOptionChildrenResolver,
+  createDatePickerOptionDisabledResolver,
   createDatePickerSelection,
   createDatePickerSelectionFromDate,
   DATE_PICKER_COLUMNS,
@@ -138,9 +140,18 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   const committedValue = isValueControlled ? valueProp : innerValue;
 
   const bounds = React.useMemo(() => resolveDatePickerBounds(min, max), [max, min]);
-  const options = React.useMemo(
-    () => buildDatePickerOptions({ bounds, precision, isDateDisabled }),
+  const optionConfig = React.useMemo(
+    () => ({ bounds, precision, isDateDisabled }),
     [bounds, isDateDisabled, precision]
+  );
+  const options = React.useMemo(() => buildDatePickerOptions(optionConfig), [optionConfig]);
+  const getDateOptionChildren = React.useMemo(
+    () => createDatePickerOptionChildrenResolver(optionConfig),
+    [optionConfig]
+  );
+  const isDateOptionDisabled = React.useMemo(
+    () => createDatePickerOptionDisabledResolver(optionConfig, getDateOptionChildren),
+    [getDateOptionChildren, optionConfig]
   );
   const committedDate = React.useMemo(
     () => resolveCommittedDate(committedValue, bounds, precision),
@@ -154,9 +165,15 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   const committedSelection = React.useMemo(
     () =>
       committedDate
-        ? createDatePickerSelectionFromDate(committedDate, precision, options, labelFormat)
+        ? createDatePickerSelectionFromDate(
+            committedDate,
+            precision,
+            options,
+            labelFormat,
+            getDateOptionChildren
+          )
         : null,
-    [committedDate, labelFormat, options, precision]
+    [committedDate, getDateOptionChildren, labelFormat, options, precision]
   );
 
   const resolveSelection = React.useCallback(
@@ -281,6 +298,8 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
       emptyText={emptyText}
       formatLabel={formatPickerLabel}
       renderColumnHeader={handleRenderColumnHeader}
+      getOptionChildren={getDateOptionChildren}
+      isOptionDisabled={isDateOptionDisabled}
       maxColumns={getColumnCount(precision)}
       lazyContent={lazyContent}
       sheetHeight={sheetHeight}
