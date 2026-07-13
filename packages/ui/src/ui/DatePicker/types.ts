@@ -104,8 +104,6 @@ export type DatePickerProps = {
   renderColumnHeader?: (context: DatePickerColumnHeaderContext) => React.ReactNode;
 
   lazyContent?: boolean;
-  /** Keep native wheels mounted while closed to make repeated opens immediate. */
-  keepMounted?: boolean;
   sheetHeight?: number | 'auto';
   disabled?: boolean;
 

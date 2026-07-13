@@ -596,13 +596,6 @@ const enUS = {
   'example.pickers.workflow': 'Workflow',
   'example.pickers.monthPrecision': 'Month precision',
   'example.pickers.monthLabel': 'DatePicker / month',
-  'example.pickers.largeRangeTitle': 'Large-range date picker performance',
-  'example.pickers.largeRangeCaption': '1900-01-01 to 2100-12-31 · test an empty first open and reopening a selected value',
-  'example.pickers.largeEmptyLabel': 'Empty value · first open',
-  'example.pickers.largeSelectedLabel': 'Selected value · reopen',
-  'example.pickers.largeServiceLabel': 'Service on-demand reusable host',
-  'example.pickers.currentResult': 'Current result: {value}',
-  'example.pickers.notSelected': 'Not selected',
 
   'example.services.eyebrow': 'Services',
   'example.services.title': 'Provider-backed actions',
@@ -1118,13 +1111,6 @@ const zhCN = {
   'example.pickers.workflow': '工作流',
   'example.pickers.monthPrecision': '月份精度',
   'example.pickers.monthLabel': 'DatePicker / 月份',
-  'example.pickers.largeRangeTitle': '大范围日期选择器性能测试',
-  'example.pickers.largeRangeCaption': '1900-01-01 至 2100-12-31 · 测试空值首次打开与已选值再次打开',
-  'example.pickers.largeEmptyLabel': '空值 · 首次打开',
-  'example.pickers.largeSelectedLabel': '已选值 · 再次打开',
-  'example.pickers.largeServiceLabel': 'Service 按需复用宿主',
-  'example.pickers.currentResult': '当前结果：{value}',
-  'example.pickers.notSelected': '未选择',
 
   'example.services.eyebrow': '服务',
   'example.services.title': 'Provider 服务',
@@ -1248,13 +1234,6 @@ const zhTW = {
   'example.workflow.designTokens': '設計 / 權杖',
   'example.range.select': '選擇區間',
   'example.pickers.language': '語言',
-  'example.pickers.largeRangeTitle': '大範圍日期選擇器效能測試',
-  'example.pickers.largeRangeCaption': '1900-01-01 至 2100-12-31 · 測試空值首次開啟與已選值再次開啟',
-  'example.pickers.largeEmptyLabel': '空值 · 首次開啟',
-  'example.pickers.largeSelectedLabel': '已選值 · 再次開啟',
-  'example.pickers.largeServiceLabel': 'Service 按需複用宿主',
-  'example.pickers.currentResult': '目前結果：{value}',
-  'example.pickers.notSelected': '未選擇',
 } satisfies Record<keyof typeof enUS, string>;
 
 const ja = {
@@ -1340,13 +1319,6 @@ const ja = {
   'example.workflow.designTokens': 'デザイン / トークン',
   'example.range.select': '範囲を選択',
   'example.pickers.language': '言語',
-  'example.pickers.largeRangeTitle': '広範囲 DatePicker パフォーマンステスト',
-  'example.pickers.largeRangeCaption': '1900-01-01〜2100-12-31 · 空値での初回表示と選択済み値での再表示をテスト',
-  'example.pickers.largeEmptyLabel': '空値 · 初回表示',
-  'example.pickers.largeSelectedLabel': '選択済み · 再表示',
-  'example.pickers.largeServiceLabel': 'Service オンデマンド再利用ホスト',
-  'example.pickers.currentResult': '現在の結果: {value}',
-  'example.pickers.notSelected': '未選択',
 } satisfies Record<keyof typeof enUS, string>;
 
 const de = {
@@ -1432,13 +1404,6 @@ const de = {
   'example.workflow.designTokens': 'Design / Tokens',
   'example.range.select': 'Zeitraum wählen',
   'example.pickers.language': 'Sprache',
-  'example.pickers.largeRangeTitle': 'DatePicker-Performance mit großem Bereich',
-  'example.pickers.largeRangeCaption': '1900-01-01 bis 2100-12-31 · erster Start ohne Wert und erneutes Öffnen mit Auswahl testen',
-  'example.pickers.largeEmptyLabel': 'Ohne Wert · erster Start',
-  'example.pickers.largeSelectedLabel': 'Ausgewählt · erneut öffnen',
-  'example.pickers.largeServiceLabel': 'Wiederverwendbarer Service-Host bei Bedarf',
-  'example.pickers.currentResult': 'Aktuelles Ergebnis: {value}',
-  'example.pickers.notSelected': 'Nicht ausgewählt',
 } satisfies Record<keyof typeof enUS, string>;
 
 export const exampleMessages: Record<ExampleLocale, I18nMessages> = {

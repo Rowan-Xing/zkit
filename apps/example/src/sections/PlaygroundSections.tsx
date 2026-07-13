@@ -28,7 +28,6 @@ import {
   Text,
   TextInput,
   imagePreview,
-  pickerService,
   toast,
   useI18n,
   useTheme,
@@ -2425,21 +2424,6 @@ export const PickersSection = React.memo(function PickersSection({
   const { t } = useI18n();
   const [month, setMonth] = React.useState('2026-04');
   const [monthLabel, setMonthLabel] = React.useState('2026-04');
-  const [largeEmptyDate, setLargeEmptyDate] = React.useState('');
-  // Day 31 makes month/day cascade resets (especially February) easy to verify.
-  const [largeSelectedDate, setLargeSelectedDate] = React.useState('1988-08-31');
-  const [largeServiceDate, setLargeServiceDate] = React.useState('');
-  const handleLargeServiceDate = React.useCallback(async () => {
-    const result = await pickerService.pickDate({
-      value: largeServiceDate || null,
-      min: '1900-01-01',
-      max: '2100-12-31',
-      defaultPickerValue: '1990-01-01',
-      title: t('example.pickers.largeServiceLabel'),
-    });
-
-    if (result) setLargeServiceDate(result.value);
-  }, [largeServiceDate, t]);
   const languageOptions = React.useMemo(
     () => [
       { value: 'zh-CN', label: t('example.language.zhCN') },
@@ -2479,57 +2463,6 @@ export const PickersSection = React.memo(function PickersSection({
       subtitle={t('example.pickers.subtitle')}
     >
       <View style={styles.fieldStack}>
-        <FormDemoBlock
-          title={t('example.pickers.largeRangeTitle')}
-          caption={t('example.pickers.largeRangeCaption')}
-        >
-          <DatePicker
-            value={largeEmptyDate || null}
-            onChange={setLargeEmptyDate}
-            min="1900-01-01"
-            max="2100-12-31"
-            defaultPickerValue="1990-01-01"
-            title={t('example.pickers.largeEmptyLabel')}
-          >
-            {({ label }) => (
-              <FieldTrigger
-                iconName="calendar"
-                label={t('example.pickers.largeEmptyLabel')}
-                value={t('example.pickers.currentResult', {
-                  value: label || t('example.pickers.notSelected'),
-                })}
-              />
-            )}
-          </DatePicker>
-
-          <DatePicker
-            value={largeSelectedDate}
-            onChange={setLargeSelectedDate}
-            min="1900-01-01"
-            max="2100-12-31"
-            title={t('example.pickers.largeSelectedLabel')}
-          >
-            {({ label }) => (
-              <FieldTrigger
-                iconName="calendar"
-                label={t('example.pickers.largeSelectedLabel')}
-                value={t('example.pickers.currentResult', {
-                  value: label || largeSelectedDate,
-                })}
-              />
-            )}
-          </DatePicker>
-
-          <FieldTrigger
-            iconName="calendar"
-            label={t('example.pickers.largeServiceLabel')}
-            value={t('example.pickers.currentResult', {
-              value: largeServiceDate || t('example.pickers.notSelected'),
-            })}
-            onPress={handleLargeServiceDate}
-          />
-        </FormDemoBlock>
-
         <Picker
           options={languageOptions}
           value={language}

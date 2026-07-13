@@ -1,6 +1,6 @@
 {
   "name": "zkit-ui",
-  "version": "2.0.2",
+  "version": "2.0.1",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -178,8 +178,6 @@
   "files": [
     "dist",
     "src",
-    "android",
-    "!android/build",
     "ios",
     "react-native.config.js",
     "zkit-ui.podspec",
@@ -197,7 +195,6 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@lodev09/react-native-true-sheet": "workspace:*",
     "@vant/area-data": "^2.1.0",
     "dayjs": "^1.11.13",
     "react-native-toast-message": "^2.3.3",
@@ -205,6 +202,7 @@
   },
   "peerDependencies": {
     "@expo/vector-icons": "*",
+    "@lodev09/react-native-true-sheet": "*",
     "@shopify/flash-list": "*",
     "expo-image": "*",
     "expo-linear-gradient": "*",
@@ -220,6 +218,7 @@
   },
   "devDependencies": {
     "@expo/vector-icons": "^15.1.1",
+    "@lodev09/react-native-true-sheet": "workspace:*",
     "@shopify/flash-list": "^2.3.1",
     "@types/react": "~19.1.17",
     "dayjs": "^1.11.13",
@@ -236,12 +235,5 @@
     "react-native-worklets": "0.5.1",
     "sonner-native": "^0.22.2",
     "typescript": "~5.9.3"
-  },
-  "bundleDependencies": [
-    "@lodev09/react-native-true-sheet"
-  ],
-  "description": "私有 React Native 组件库（Monorepo workspace 包），用于沉淀可复用 UI / 交互 / tokens。",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }

@@ -123,7 +123,6 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
     columnLabels,
     renderColumnHeader,
     lazyContent = true,
-    keepMounted = false,
     sheetHeight = 'auto',
     disabled = false,
     onCancel,
@@ -165,7 +164,7 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
   const pickerValue = React.useMemo(() => pathFromDate(pickerDate, precision), [pickerDate, precision]);
   const committedSelection = React.useMemo(
     () =>
-      typeof children === 'function' && committedDate
+      committedDate
         ? createDatePickerSelectionFromDate(
             committedDate,
             precision,
@@ -174,7 +173,7 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
             getDateOptionChildren
           )
         : null,
-    [children, committedDate, getDateOptionChildren, labelFormat, options, precision]
+    [committedDate, getDateOptionChildren, labelFormat, options, precision]
   );
 
   const resolveSelection = React.useCallback(
@@ -303,7 +302,6 @@ export const DatePicker = React.forwardRef<DatePickerHandle, DatePickerProps>(fu
       isOptionDisabled={isDateOptionDisabled}
       maxColumns={getColumnCount(precision)}
       lazyContent={lazyContent}
-      keepMounted={keepMounted}
       sheetHeight={sheetHeight}
       disabled={disabled}
       onCancel={onCancel}

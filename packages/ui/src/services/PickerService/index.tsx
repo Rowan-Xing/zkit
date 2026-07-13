@@ -228,11 +228,6 @@ export function PickerServiceProvider({ children }: { children: React.ReactNode 
   const activeRequestRef = React.useRef<PickerRequest | null>(null);
   const queuedRequestsRef = React.useRef<PickerRequest[]>([]);
   const settledRequestIdsRef = React.useRef(new Set<string>());
-  // The service date host is created only after the first real date request.
-  // Keeping the last options lets that already-used host stay warm for later
-  // calls without imposing startup work or resident views on apps that never
-  // use the date picker.
-  const lastDateOptionsRef = React.useRef<PickDateOptions | null>(null);
   activeRequestRef.current = state.activeRequest;
   queuedRequestsRef.current = state.queuedRequests;
 
@@ -354,16 +349,6 @@ export function PickerServiceProvider({ children }: { children: React.ReactNode 
 
   const activeRequest = state.activeRequest;
   const activeRequestId = activeRequest?.id;
-  const activeDateRequest = activeRequest?.type === 'date' ? activeRequest : null;
-  const activeDateOptions = activeDateRequest?.options;
-  React.useEffect(() => {
-    if (activeDateOptions) lastDateOptionsRef.current = activeDateOptions;
-  }, [activeDateOptions]);
-  const hostedDateOptions = activeDateOptions ?? lastDateOptionsRef.current;
-  const activeDateValue =
-    hostedDateOptions?.value !== undefined
-      ? hostedDateOptions.value
-      : (hostedDateOptions?.defaultValue ?? null);
 
   return (
     <>
@@ -381,19 +366,16 @@ export function PickerServiceProvider({ children }: { children: React.ReactNode 
           }}
         />
       )}
-      {hostedDateOptions && (
+      {activeRequest?.type === 'date' && (
         <DatePicker
-          {...hostedDateOptions}
-          value={activeDateValue}
-          defaultValue={undefined}
-          open={activeDateRequest != null && state.open}
-          keepMounted
-          lazyContent={false}
+          key={activeRequest.id}
+          {...activeRequest.options}
+          open={state.open}
           onOpenChange={handleOpenChange}
           onConfirm={handleDateConfirm}
           onCancel={handleCancel}
           onDismissComplete={() => {
-            if (activeDateRequest) handleDismissComplete(activeDateRequest.id);
+            if (activeRequestId) handleDismissComplete(activeRequestId);
           }}
         />
       )}

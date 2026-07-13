@@ -55,7 +55,6 @@ export type NativeBottomSheetRef = {
 export type NativeBottomSheetProps = {
   open?: boolean;
   defaultOpen?: boolean;
-  keepMounted?: boolean;
   onOpenChange?: (open: boolean, details: NativeBottomSheetOpenChangeDetails) => void;
   onOpenComplete?: (payload: SheetDetentChangePayload) => void;
   onCloseComplete?: (details: NativeBottomSheetCloseCompleteDetails) => void;
@@ -225,7 +224,6 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     {
       open: openProp,
       defaultOpen = false,
-      keepMounted = false,
       onOpenChange,
       onOpenComplete,
       onCloseComplete,
@@ -261,17 +259,6 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     const isOpenControlled = openProp !== undefined;
     const [innerOpen, setInnerOpen] = React.useState(defaultOpen);
     const isOpen = isOpenControlled ? !!openProp : innerOpen;
-    const backdropConfig = React.useMemo(() => resolveBackdrop(backdrop), [backdrop]);
-    // iOS system sheet dimming is the only backdrop path that can coexist with
-    // a retained native host without leaving a transparent Modal window above
-    // the application while closed. Preserve explicit color/opacity/tap
-    // semantics by falling back to the normal lifecycle for custom backdrops.
-    const hasVisibleCustomIOSBackdrop =
-      Platform.OS === 'ios' &&
-      backdropConfig.visible &&
-      backdrop != null &&
-      typeof backdrop === 'object';
-    const effectiveKeepMounted = keepMounted && !hasVisibleCustomIOSBackdrop;
     const { semantic: semanticDetents, native: nativeDetents } = React.useMemo(
       () => normalizeDetents(detents),
       [detents]
@@ -282,14 +269,10 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     const initialDetentIndex = controlledDetentIndex ?? defaultIndex;
     const [currentDetentIndex, setCurrentDetentIndex] = React.useState(initialDetentIndex);
     const [sheetState, setSheetState] = React.useState<SheetState>(isOpen ? 'opening' : 'closed');
-    const [shellMounted, setShellMounted] = React.useState(isOpen || effectiveKeepMounted);
+    const [shellMounted, setShellMounted] = React.useState(isOpen);
 
     const nativeRef = React.useRef<TrueSheet>(null);
-    // `open` can already be true when the native bottom implementation first
-    // mounts (for example, when switching a Sheet from right to bottom). The
-    // native presentation has not started at that point, so it must remain
-    // idle until the effect below actually calls `present()`.
-    const phaseRef = React.useRef<NativePhase>('idle');
+    const phaseRef = React.useRef<NativePhase>(isOpen ? 'presenting' : 'idle');
     const pendingDismissRef = React.useRef(false);
     const activeLifecycleRef = React.useRef(isOpen);
     const isOpenRef = React.useRef(isOpen);
@@ -299,10 +282,8 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     const presentAnimatedRef = React.useRef(true);
     const dismissAnimatedRef = React.useRef(true);
     const closeReasonRef = React.useRef<SheetCloseReason>('system');
-    // A persistent transparent Modal would intercept touches while the sheet is
-    // closed. Persistent sheets use TrueSheet's native dimming layer instead.
-    const usesManualBackdrop =
-      Platform.OS === 'ios' && backdropConfig.visible && !effectiveKeepMounted;
+    const backdropConfig = React.useMemo(() => resolveBackdrop(backdrop), [backdrop]);
+    const usesManualBackdrop = Platform.OS === 'ios' && backdropConfig.visible;
     const backdropOpacity = React.useRef(
       new Animated.Value(usesManualBackdrop && isOpen ? backdropConfig.opacity : 0)
     ).current;
@@ -334,25 +315,11 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     }, [controlledDetentIndex, isOpen, shellMounted]);
 
     React.useEffect(() => {
-      if (effectiveKeepMounted) {
-        if (!shellMounted) setShellMounted(true);
-        return;
-      }
-
-      if (!isOpen && shellMounted && phaseRef.current === 'idle') {
-        setShellMounted(false);
-      }
-    }, [effectiveKeepMounted, isOpen, shellMounted]);
-
-    React.useEffect(() => {
-      if (!isOpen || !shellMounted || sheetState === 'closing') return undefined;
+      if (!isOpen || !shellMounted) return undefined;
 
       const rafId = requestAnimationFrame(() => {
         if (!isOpenRef.current) return;
-        // A state update while present() is in flight must not enqueue a second
-        // native presentation. Returning to `closed` after a dismiss changes
-        // sheetState and lets a still-requested open run again from `idle`.
-        if (phaseRef.current !== 'idle') return;
+        if (phaseRef.current !== 'idle' && phaseRef.current !== 'presenting') return;
 
         const sheet = nativeRef.current;
         if (!sheet) return;
@@ -363,7 +330,6 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
         );
 
         pendingDismissRef.current = false;
-        activeLifecycleRef.current = true;
         phaseRef.current = 'presenting';
         setSheetState('opening');
         setCurrentDetentIndex(targetIndex);
@@ -371,7 +337,7 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
       });
 
       return () => cancelAnimationFrame(rafId);
-    }, [controlledDetentIndex, isOpen, nativeDetents.length, sheetState, shellMounted]);
+    }, [controlledDetentIndex, isOpen, nativeDetents.length, shellMounted]);
 
     React.useEffect(() => {
       if (controlledDetentIndex == null) return;
@@ -384,12 +350,7 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     }, [controlledDetentIndex, isOpen]);
 
     React.useEffect(() => {
-      if (!usesManualBackdrop) {
-        backdropOpacity.stopAnimation();
-        backdropOpacity.setValue(0);
-        setManualBackdropMounted(false);
-        return;
-      }
+      if (!usesManualBackdrop) return;
 
       backdropOpacity.stopAnimation();
 
@@ -463,7 +424,7 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
           emitOpenChange(false, closeReasonRef.current, currentDetentIndexRef.current);
         }
 
-        if (!effectiveKeepMounted) setShellMounted(false);
+        setShellMounted(false);
 
         if (activeLifecycleRef.current) {
           activeLifecycleRef.current = false;
@@ -473,7 +434,7 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
           });
         }
       },
-      [effectiveKeepMounted, emitOpenChange, isOpenControlled, onCloseComplete]
+      [emitOpenChange, isOpenControlled, onCloseComplete]
     );
 
     function requestDismiss(reason: SheetCloseReason) {
@@ -638,7 +599,6 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
         testID={testID}
         accessibilityLabel={accessibilityLabel}
         detents={nativeDetents}
-        keepContentMounted={effectiveKeepMounted}
         dimmed={backdropConfig.visible && !usesManualBackdrop}
         dimmedDetentIndex={0}
         dismissible={!disabled && dismissible}
@@ -673,12 +633,7 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
       </TrueSheet>
     );
 
-    if (
-      !shellMounted ||
-      (!effectiveKeepMounted && !isOpen && sheetState === 'closed')
-    ) {
-      return null;
-    }
+    if (!shellMounted) return null;
 
     if (usesManualBackdrop) {
       return (

@@ -90,7 +90,6 @@ export function Demo() {
 | columnLabels | `Partial<Record<'year' \| 'month' \| 'day', string>>` | i18n | 列头文案 |
 | renderColumnHeader | `(context) => ReactNode` | - | 自定义列头 |
 | lazyContent | `boolean` | `true` | 延迟挂载滚轮内容 |
-| keepMounted | `boolean` | `false` | 该 DatePicker 实际挂载后，在 iOS / Android 关闭时保留 Sheet 与滚轮；不会触发应用启动预热 |
 | sheetHeight | `number \| 'auto'` | `'auto'` | 弹层高度 |
 | disabled | `boolean` | `false` | 禁用打开和交互 |
 | onCancel | `() => void` | - | 取消事件 |

@@ -189,7 +189,7 @@ export function DemoSheet() {
 }
 ```
 
-`Sheet` 使用 `open/defaultOpen/onOpenChange` 状态模型。iOS / Android 的 `placement="bottom"` 会使用原生 TrueSheet；H5 bottom 与 `top/left/right` 一样使用 Reanimated 自绘路径。底部档位通过根级 `detents/detentIndex/defaultDetentIndex/onDetentChange` 管理，`nativeProps` 只作为原生底部的高级逃生口。补丁版 TrueSheet 已内嵌在 `zkit-ui` 发布包中，业务项目不应再直接安装同名依赖，以免产生重复原生模块。
+`Sheet` 使用 `open/defaultOpen/onOpenChange` 状态模型。iOS / Android 的 `placement="bottom"` 会使用原生 TrueSheet；H5 bottom 与 `top/left/right` 一样使用 Reanimated 自绘路径。底部档位通过根级 `detents/detentIndex/defaultDetentIndex/onDetentChange` 管理，`nativeProps` 只作为原生底部的高级逃生口。
 
 ### ImagePreview 用法
 
