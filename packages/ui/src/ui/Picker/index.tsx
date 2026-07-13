@@ -213,6 +213,11 @@ function normalizeMaxColumns(maxColumns: number | undefined) {
   return clampNumber(Math.round(maxColumns), 1, MAX_COLUMNS_LIMIT);
 }
 
+function isSameOptionPath<TOption>(left: TOption[] | undefined, right: TOption[]) {
+  if (!left || left.length !== right.length) return false;
+  return left.every((item, index) => Object.is(item, right[index]));
+}
+
 export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picker<TOption>(
   {
     options,
@@ -238,6 +243,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     getOptionChildren,
     isOptionDisabled,
     lazyContent = true,
+    keepMounted = false,
     sheetHeight = 'auto',
     disabled = false,
     onCancel,
@@ -266,8 +272,13 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const isOpenControlled = openProp !== undefined;
   const [innerOpen, setInnerOpen] = React.useState(!!defaultOpen);
   const visible = isOpenControlled ? !!openProp : innerOpen;
+  const [contentMounted, setContentMounted] = React.useState(
+    () => keepMounted || !lazyContent || visible
+  );
   const wheelsRef = React.useRef<Array<WheelColumnHandle | null>>([]);
   const confirmingRef = React.useRef(false);
+  const draftResetBeforeOpenRef = React.useRef(false);
+  const previousVisibleRef = React.useRef(visible);
 
   const resolveFromValue = React.useCallback(
     (nextValue: PickerValue | undefined) =>
@@ -289,20 +300,46 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const initialDraft = React.useMemo(() => resolveFromValue(value), [resolveFromValue, value]);
   const [{ columns: draftColumns, indices: draftIndices, values: draftValues, labels: draftLabels, items: draftItems }, setDraft] =
     React.useState<PickerCascadeState<TOption>>(initialDraft);
+  const draftSourceRef = React.useRef({ resolveFromValue, value });
 
   React.useEffect(() => {
+    const previousSource = draftSourceRef.current;
+    if (
+      previousSource.resolveFromValue === resolveFromValue &&
+      Object.is(previousSource.value, value)
+    ) {
+      return;
+    }
+
+    draftSourceRef.current = { resolveFromValue, value };
     setDraft(resolveFromValue(value));
   }, [resolveFromValue, value]);
 
   React.useEffect(() => {
-    if (!visible) return;
-    setDraft(resolveFromValue(value));
-  }, [resolveFromValue, value, visible]);
+    const wasVisible = previousVisibleRef.current;
+    previousVisibleRef.current = visible;
+    if (!visible || wasVisible) return;
+
+    if (draftResetBeforeOpenRef.current) {
+      draftResetBeforeOpenRef.current = false;
+    } else {
+      setDraft(resolveFromValue(value));
+    }
+
+    if (lazyContent) setContentMounted(true);
+  }, [lazyContent, resolveFromValue, value, visible]);
+
+  React.useEffect(() => {
+    if (keepMounted || !lazyContent) setContentMounted(true);
+  }, [keepMounted, lazyContent]);
 
   const committedSelection = React.useMemo<PickerSelection<TOption>>(() => {
+    if (children == null) {
+      return createSelection(createEmptyCascadeState<TOption>(), value);
+    }
     const state = value === undefined ? createEmptyCascadeState<TOption>() : resolveFromValue(value);
     return createSelection(state, value);
-  }, [createSelection, resolveFromValue, value]);
+  }, [children, createSelection, resolveFromValue, value]);
 
   const draftState = React.useMemo<PickerCascadeState<TOption>>(
     () => ({
@@ -335,11 +372,13 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const openPicker = React.useCallback(() => {
     if (disabled) return;
 
-    setDraft(resolveFromValue(value));
     if (!visible) {
+      draftResetBeforeOpenRef.current = true;
+      setDraft(resolveFromValue(value));
+      if (lazyContent) setContentMounted(true);
       setPickerOpen(true);
     }
-  }, [disabled, resolveFromValue, setPickerOpen, value, visible]);
+  }, [disabled, lazyContent, resolveFromValue, setPickerOpen, value, visible]);
 
   React.useImperativeHandle(
     ref,
@@ -357,10 +396,53 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
   const columnWidth = React.useMemo(() => (screenW - wp(32)) / columnsCount, [columnsCount, screenW]);
   const confirmDisabled = disabled || !draftSelection.isComplete;
   const transparentSurface = React.useMemo(() => transparentizeColor(theme.colors.surface), [theme.colors.surface]);
+  const shouldRenderContent = contentMounted || visible;
+  const parentPathsRef = React.useRef<TOption[][]>([]);
+  const parentPaths = React.useMemo(
+    () => {
+      const previousPaths = parentPathsRef.current;
+      const nextPaths = Array.from({ length: columnsCount }, (_, columnIndex) => {
+        const nextPath = draftItems.slice(0, columnIndex);
+        return isSameOptionPath(previousPaths[columnIndex], nextPath)
+          ? (previousPaths[columnIndex] as TOption[])
+          : nextPath;
+      });
+      parentPathsRef.current = nextPaths;
+      return nextPaths;
+    },
+    [columnsCount, draftItems]
+  );
 
   React.useEffect(() => {
     wheelsRef.current.length = columnsCount;
   }, [columnsCount]);
+
+  const draftIndicesRef = React.useRef(draftIndices);
+  draftIndicesRef.current = draftIndices;
+  const syncRenderedWheelPositions = React.useCallback(() => {
+    const indices = draftIndicesRef.current;
+    for (let index = 0; index < indices.length; index += 1) {
+      wheelsRef.current[index]?.scrollToIndex(indices[index] ?? 0, false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!visible) return undefined;
+
+    // A retained TrueSheet reparents its mounted content when presentation
+    // starts. Re-apply native wheel positions one frame after that reparent;
+    // commands issued while the content is detached can otherwise be visually
+    // reset even though the controlled selectedIndex is already correct.
+    let positionFrame: number | null = null;
+    const presentationFrame = requestAnimationFrame(() => {
+      positionFrame = requestAnimationFrame(syncRenderedWheelPositions);
+    });
+
+    return () => {
+      cancelAnimationFrame(presentationFrame);
+      if (positionFrame != null) cancelAnimationFrame(positionFrame);
+    };
+  }, [visible]);
 
   const emitDraftChange = React.useCallback(
     (nextState: PickerCascadeState<TOption>) => {
@@ -374,10 +456,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     const settledIndices = await Promise.all(
       Array.from({ length: effectiveMaxColumns }, async (_, columnIndex) => {
         const wheel = wheelsRef.current[columnIndex];
-        if (Platform.OS === 'ios') {
-          return wheel?.syncCurrentSelection();
-        }
-        return wheel?.settleToNearest(false);
+        return wheel?.syncCurrentSelection();
       })
     );
 
@@ -388,9 +467,12 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     for (let columnIndex = 0; columnIndex < effectiveMaxColumns; columnIndex += 1) {
       if (!currentOptions.length) break;
 
+      const settledIndex = settledIndices[columnIndex];
+      const draftIndex = draftIndices[columnIndex] ?? 0;
+
       const safeIndex = findNearestEnabledIndex(
         currentOptions,
-        settledIndices[columnIndex] ?? draftIndices[columnIndex] ?? 0,
+        settledIndex ?? draftIndex,
         path,
         accessors
       );
@@ -403,16 +485,22 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
       desiredValues[columnIndex] = resolveOptionValue(item, safeIndex, nextPath, accessors);
       currentOptions = resolveOptionChildren(item, safeIndex, nextPath, accessors);
       path = nextPath;
+
+      // Native wheels can report a newly settled parent before their debounced
+      // JS onChange has reset the descendants. Preserve that changed column,
+      // then stop consuming physical child positions from the old cascade.
+      // resolveCascade will fill every following column from its first enabled
+      // option, matching the normal year -> month/day and month -> day reset.
+      if (settledIndex != null && safeIndex !== draftIndex) break;
     }
 
     const nextState = resolveCascade(options, desiredValues, accessors, effectiveMaxColumns);
+    // Keep the physical wheels and cascade state in the same turn. Deferring
+    // this until the next frame lets a fast confirm read stale native centers.
+    for (let i = 0; i < nextState.indices.length; i += 1) {
+      wheelsRef.current[i]?.scrollToIndex(nextState.indices[i] ?? 0, false);
+    }
     setDraft(nextState);
-
-    requestAnimationFrame(() => {
-      for (let i = 0; i < nextState.indices.length; i += 1) {
-        wheelsRef.current[i]?.scrollToIndex(nextState.indices[i] ?? 0, false);
-      }
-    });
 
     return nextState;
   }, [accessors, draftIndices, effectiveMaxColumns, options]);
@@ -439,13 +527,13 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
       nextDesired.length = columnIndex + 1;
 
       const nextState = resolveCascade(options, nextDesired, accessors, effectiveMaxColumns);
+      // Reset every descendant immediately to the first enabled item under the
+      // new parent path. This is usually month/day 1, but correctly respects
+      // min/max bounds and custom disabled dates.
+      for (let i = columnIndex + 1; i < nextState.indices.length; i += 1) {
+        wheelsRef.current[i]?.scrollToIndex(nextState.indices[i] ?? 0, false);
+      }
       setDraft(nextState);
-
-      requestAnimationFrame(() => {
-        for (let i = columnIndex + 1; i < nextState.indices.length; i += 1) {
-          wheelsRef.current[i]?.scrollToIndex(nextState.indices[i] ?? 0, false);
-        }
-      });
 
       emitDraftChange(nextState);
     },
@@ -462,7 +550,15 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     confirmingRef.current = true;
 
     try {
-      const syncedState = await syncDraftFromWheels();
+      let syncedState: PickerCascadeState<TOption>;
+      try {
+        syncedState = await syncDraftFromWheels();
+      } catch {
+        // A native wheel only resolves after an explicit request-id ack. If
+        // the UI thread/bridge is too busy to acknowledge, keep the picker open
+        // instead of committing a cached (and potentially stale) date.
+        return;
+      }
       const selection = createSelection(syncedState);
       if (!selection.isComplete) return;
 
@@ -484,6 +580,11 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     }
     setPickerOpen(nextOpen);
   }, [onCancel, setPickerOpen, visible]);
+
+  const handleSheetDismissComplete = React.useCallback(() => {
+    if (lazyContent && !keepMounted) setContentMounted(false);
+    onDismissComplete?.();
+  }, [keepMounted, lazyContent, onDismissComplete]);
 
   const triggerContext = React.useMemo<PickerTriggerContext<TOption>>(
     () => ({
@@ -507,8 +608,10 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
     <Sheet
       placement="bottom"
       open={visible}
+      keepMounted={keepMounted}
       onOpenChange={handleSheetOpenChange}
-      onCloseComplete={onDismissComplete}
+      onOpenComplete={syncRenderedWheelPositions}
+      onCloseComplete={handleSheetDismissComplete}
       detents={detents}
       backgroundColor={theme.colors.surface}
       handle={false}
@@ -533,7 +636,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
           </Text>
         </View>
 
-        {draftColumns.length > 0 ? (
+        {shouldRenderContent && draftColumns.length > 0 ? (
           <View style={styles.pickerArea}>
             {renderColumnHeader && (
               <View style={styles.columnLabelsRow}>
@@ -567,7 +670,7 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
                     key={`column-${columnIndex}-${columnsCount}`}
                     options={columnOptions}
                     columnIndex={columnIndex}
-                    parentPath={draftItems.slice(0, columnIndex)}
+                    parentPath={parentPaths[columnIndex] ?? []}
                     accessors={accessors}
                     selectedIndex={Math.max(0, draftIndices[columnIndex] ?? 0)}
                     onIndexChange={handleWheelIndexChange}
@@ -590,22 +693,24 @@ export const Picker = React.forwardRef<PickerHandle, PickerProps>(function Picke
               )}
             </View>
           </View>
-        ) : (
+        ) : shouldRenderContent ? (
           <View style={styles.emptyState}>
             <Text tone="muted" align="center">
               {emptyText ?? t('picker.empty')}
             </Text>
           </View>
-        )}
+        ) : null}
 
-        <PickerActionBar
-          cancelText={cancelText ?? t('picker.cancel')}
-          confirmText={confirmText ?? t('picker.confirm')}
-          onCancel={handleCancel}
-          onConfirm={handleConfirm}
-          disabled={disabled}
-          confirmDisabled={confirmDisabled}
-        />
+        {shouldRenderContent ? (
+          <PickerActionBar
+            cancelText={cancelText ?? t('picker.cancel')}
+            confirmText={confirmText ?? t('picker.confirm')}
+            onCancel={handleCancel}
+            onConfirm={handleConfirm}
+            disabled={disabled}
+            confirmDisabled={confirmDisabled}
+          />
+        ) : null}
       </View>
     </Sheet>
   );

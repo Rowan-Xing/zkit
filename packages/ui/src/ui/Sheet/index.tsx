@@ -291,6 +291,7 @@ const SheetRoot = React.forwardRef<SheetRef, SheetProps>(function Sheet(
     placement = 'bottom',
     open: openProp,
     defaultOpen = false,
+    keepMounted = false,
     onOpenChange,
     onOpenComplete,
     onCloseComplete,
@@ -939,6 +940,7 @@ const SheetRoot = React.forwardRef<SheetRef, SheetProps>(function Sheet(
       <NativeBottomSheet
         ref={nativeBottomRef}
         open={isOpen}
+        keepMounted={keepMounted}
         onOpenChange={handleBottomOpenChange}
         onOpenComplete={(payload) => {
           requestedDetentIndexRef.current = payload.index;

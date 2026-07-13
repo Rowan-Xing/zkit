@@ -29,6 +29,7 @@ type ManagedNativeProps =
   | 'detents'
   | 'initialDetentIndex'
   | 'initialDetentAnimated'
+  | 'keepContentMounted'
   | 'dimmed'
   | 'dimmedDetentIndex'
   | 'dismissible'
@@ -143,6 +144,12 @@ export type SheetProps = {
   placement?: SheetPlacement;
   open?: boolean;
   defaultOpen?: boolean;
+  /**
+   * Keep native sheet content mounted while closed for latency-sensitive reuse.
+   * On iOS, a visible custom backdrop object keeps its exact visual/tap semantics
+   * and therefore uses the normal unmounted lifecycle.
+   */
+  keepMounted?: boolean;
   onOpenChange?: (open: boolean, details: SheetOpenChangeDetails) => void;
   onOpenComplete?: (details: SheetOpenCompleteDetails) => void;
   onCloseComplete?: (details: SheetCloseCompleteDetails) => void;

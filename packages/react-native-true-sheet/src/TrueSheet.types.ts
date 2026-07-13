@@ -300,6 +300,18 @@ export interface TrueSheetProps extends ViewProps {
   initialDetentAnimated?: boolean;
 
   /**
+   * Keeps the native content container mounted before the first presentation
+   * and after the sheet is dismissed. This avoids remounting expensive content
+   * each time the sheet is presented.
+   *
+   * Changing this prop at runtime is supported. Disabling it restores lazy
+   * cleanup once the sheet is no longer presenting or presented.
+   *
+   * @default false
+   */
+  keepContentMounted?: boolean;
+
+  /**
    * The detent index that the sheet should start to dim the background.
    * This is ignored if `dimmed` is set to `false`.
    *

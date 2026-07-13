@@ -1,7 +1,9 @@
 module.exports = {
   dependency: {
     platforms: {
-      android: null,
+      android: {
+        sourceDir: './android',
+      },
       ios: {
         podspecPath: 'zkit-ui.podspec',
       },

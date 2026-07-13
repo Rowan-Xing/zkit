@@ -12,3 +12,4 @@ yarn-error.log*
 apps/example/ios/
 apps/example/android/
 packages/react-native-true-sheet/android/build/
+packages/ui/android/build/

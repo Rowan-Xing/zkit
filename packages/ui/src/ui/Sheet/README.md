@@ -56,6 +56,8 @@ export function Demo() {
 
 需要透传原生 TrueSheet 的少量高级能力时，使用 `nativeProps`。这个 escape hatch 只会在 iOS / Android 的底部方向生效。
 
+对打开延迟敏感、且会反复展示重内容的底部弹层可主动启用 `keepMounted`。它只会在该 Sheet 已经实际挂载后保留 iOS / Android 原生内容树，不会在应用启动时自动预热；Web 和非底部方向仍按原生命周期挂载。iOS 若同时传入可见的自定义 `backdrop` 对象，会优先保证自定义颜色、透明度和点击语义并恢复普通卸载生命周期。所需的补丁版 `@lodev09/react-native-true-sheet@3.10.0` 已物理内嵌在 `zkit-ui` 发布包中，业务项目无需再单独安装 TrueSheet。
+
 ## 自绘方向
 
 - H5 的 `bottom` 和所有平台的 `top` / `left` / `right` 使用 `Modal + Reanimated + Gesture Handler`，位移、遮罩和拖拽回弹都在 UI 线程路径上。

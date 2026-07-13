@@ -14,7 +14,7 @@
     "validate": "pnpm build && pnpm --filter zkit-ui verify:entrypoints && pnpm typecheck && pnpm check:deprecated",
     "changeset": "changeset",
     "version:packages": "changeset version",
-    "release:packages": "changeset publish",
+    "release:packages": "npm_config_node_linker=hoisted changeset publish",
     "example:start": "pnpm --filter @zkit/example start",
     "example:ios": "pnpm --filter @zkit/example ios",
     "example:ios:device": "pnpm --filter @zkit/example ios:device",

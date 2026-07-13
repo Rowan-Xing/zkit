@@ -168,6 +168,7 @@ type PickerSelection<TOption = PickerOption> = {
 | `renderColumnHeader` | `(context) => ReactNode` | - | 自定义列标题 |
 | `maxColumns` | `number` | `5` | 最多渲染列数，内部限制 1-8 |
 | `lazyContent` | `boolean` | `true` | 打开时再挂载滚轮内容，关闭后卸载 |
+| `keepMounted` | `boolean` | `false` | 该 Picker 实际挂载后，在 iOS / Android 关闭时保留 Sheet 与滚轮；不会触发应用启动预热 |
 | `sheetHeight` | `number \| 'auto'` | `'auto'` | 底部弹层高度；数字按 RN dp 解释 |
 | `disabled` | `boolean` | `false` | 禁用打开、滚动和按钮 |
 | `onCancel` | `() => void` | - | 取消或点背景关闭时触发 |

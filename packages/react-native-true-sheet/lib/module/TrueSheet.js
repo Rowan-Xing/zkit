@@ -21,6 +21,7 @@ export class TrueSheet extends PureComponent {
   backHandlerSubscription = null;
   isPresented = false;
   isSheetVisible = true;
+  hasActivePresentation = false;
 
   /**
    * Map of sheet names against their instances.
@@ -41,8 +42,9 @@ export class TrueSheet extends PureComponent {
     this.nativeRef = /*#__PURE__*/createRef();
     this.validateDetents();
 
-    // Lazy load by default, except when initialDetentIndex is set (for auto-presentation)
-    const shouldRenderImmediately = props.initialDetentIndex !== undefined && props.initialDetentIndex >= 0;
+    // Lazy load by default, except when explicitly retained or auto-presented.
+    const shouldRenderImmediately = props.keepContentMounted === true || props.initialDetentIndex !== undefined && props.initialDetentIndex >= 0;
+    this.hasActivePresentation = props.initialDetentIndex !== undefined && props.initialDetentIndex >= 0;
     this.state = {
       shouldRenderNativeView: shouldRenderImmediately
     };
@@ -193,9 +195,11 @@ export class TrueSheet extends PureComponent {
     this.props.onDetentChange?.(event);
   }
   onWillPresent(event) {
+    this.hasActivePresentation = true;
     this.props.onWillPresent?.(event);
   }
   onDidPresent(event) {
+    this.hasActivePresentation = true;
     this.isPresented = true;
     if (Platform.OS === 'android') {
       this.backHandlerSubscription?.remove();
@@ -207,19 +211,24 @@ export class TrueSheet extends PureComponent {
     this.props.onWillDismiss?.(event);
   }
   onDidDismiss(event) {
+    this.hasActivePresentation = false;
     this.isPresented = false;
     this.isSheetVisible = true;
     this.backHandlerSubscription?.remove();
     this.backHandlerSubscription = null;
 
-    // Clean up native view after dismiss for lazy loading.
-    // Skip unmount if a present is in progress to avoid race condition.
-    if (!this.isPresenting) {
-      this.setState({
-        shouldRenderNativeView: false
-      });
-    }
+    this.unmountContentIfIdle();
     this.props.onDidDismiss?.(event);
+  }
+  unmountContentIfIdle() {
+    this.setState(currentState => {
+      if (!currentState.shouldRenderNativeView || this.props.keepContentMounted === true || this.isPresenting || this.isPresented || this.hasActivePresentation) {
+        return null;
+      }
+      return {
+        shouldRenderNativeView: false
+      };
+    });
   }
   onMount(event) {
     // Resolve the mount promise if waiting
@@ -273,18 +282,27 @@ export class TrueSheet extends PureComponent {
       throw new Error(`TrueSheet: present index (${index}) is out of bounds. detents array has ${detentsLength} item(s)`);
     }
     this.isPresenting = true;
-
-    // Lazy load: render native view if not already rendered
-    if (!this.state.shouldRenderNativeView) {
-      await new Promise(resolve => {
-        this.presentationResolver = resolve;
-        this.setState({
-          shouldRenderNativeView: true
+    this.hasActivePresentation = true;
+    let presentationRequested = false;
+    try {
+      // Lazy load: render native view if not already rendered
+      if (!this.state.shouldRenderNativeView) {
+        await new Promise(resolve => {
+          this.presentationResolver = resolve;
+          this.setState({
+            shouldRenderNativeView: true
+          });
         });
-      });
+      }
+      await TrueSheetModule?.presentByRef(this.handle, index, animated);
+      presentationRequested = true;
+    } finally {
+      this.isPresenting = false;
+      if (!presentationRequested) {
+        this.hasActivePresentation = false;
+        this.unmountContentIfIdle();
+      }
     }
-    await TrueSheetModule?.presentByRef(this.handle, index, animated);
-    this.isPresenting = false;
   }
 
   /**
@@ -321,6 +339,17 @@ export class TrueSheet extends PureComponent {
     if (prevProps.detents !== this.props.detents) {
       this.validateDetents();
     }
+    if (prevProps.keepContentMounted !== this.props.keepContentMounted) {
+      if (this.props.keepContentMounted === true) {
+        if (!this.state.shouldRenderNativeView) {
+          this.setState({
+            shouldRenderNativeView: true
+          });
+        }
+      } else {
+        this.unmountContentIfIdle();
+      }
+    }
   }
   componentWillUnmount() {
     this.unregisterInstance();
@@ -339,6 +368,7 @@ export class TrueSheet extends PureComponent {
       dimmed = true,
       initialDetentIndex = -1,
       initialDetentAnimated = true,
+      keepContentMounted: _keepContentMounted = false,
       dimmedDetentIndex,
       backgroundBlur,
       blurOptions,

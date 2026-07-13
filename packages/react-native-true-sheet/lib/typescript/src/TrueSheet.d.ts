@@ -11,6 +11,7 @@ export declare class TrueSheet extends PureComponent<TrueSheetProps, TrueSheetSt
     private backHandlerSubscription;
     private isPresented;
     private isSheetVisible;
+    private hasActivePresentation;
     /**
      * Map of sheet names against their instances.
      */
@@ -74,6 +75,7 @@ export declare class TrueSheet extends PureComponent<TrueSheetProps, TrueSheetSt
     private onDidPresent;
     private onWillDismiss;
     private onDidDismiss;
+    private unmountContentIfIdle;
     private onMount;
     private onDragBegin;
     private onDragChange;

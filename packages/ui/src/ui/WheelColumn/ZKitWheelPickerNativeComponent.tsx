@@ -16,6 +16,7 @@ export type ZKitWheelPickerValue = string | number;
 export type ZKitWheelPickerItem = {
   label: string;
   value: ZKitWheelPickerValue;
+  disabled?: boolean;
   textColor?: ColorValue;
   testID?: string;
 };
@@ -23,23 +24,31 @@ export type ZKitWheelPickerItem = {
 export type ZKitWheelPickerChangeEvent = {
   newIndex: number;
   newValue: ZKitWheelPickerValue | null;
+  syncRequestId?: number;
 };
 
 export type ZKitWheelPickerProps = ViewProps & {
   items: ZKitWheelPickerItem[];
   selectedIndex: number;
+  disabled?: boolean;
   color?: ColorValue;
+  itemColor?: ColorValue;
+  disabledColor?: ColorValue;
   fontFamily?: string;
   fontSize?: number;
   fontStyle?: string;
   fontWeight?: string;
+  maxFontSizeMultiplier?: number;
   numberOfLines?: number;
   rowHeight?: number;
   onChange?: (event: NativeSyntheticEvent<ZKitWheelPickerChangeEvent>) => void;
 };
 
-const NativeZKitWheelPicker =
-  Platform.OS === 'ios' ? requireNativeComponent<ZKitWheelPickerProps>(COMPONENT_NAME) : null;
+const nativeViewManagerAvailable =
+  Platform.OS !== 'web' && UIManager.getViewManagerConfig(COMPONENT_NAME) != null;
+const NativeZKitWheelPicker = nativeViewManagerAvailable
+  ? requireNativeComponent<ZKitWheelPickerProps>(COMPONENT_NAME)
+  : null;
 
 type NativeRef = React.ComponentRef<NonNullable<typeof NativeZKitWheelPicker>>;
 
@@ -47,15 +56,19 @@ export const ZKitWheelPicker = React.forwardRef<NativeRef, ZKitWheelPickerProps>
   props,
   ref
 ) {
-  if (Platform.OS !== 'ios' || NativeZKitWheelPicker == null) {
+  if (!nativeViewManagerAvailable || NativeZKitWheelPicker == null) {
     return null;
   }
 
   return <NativeZKitWheelPicker {...props} ref={ref} />;
 });
 
-export function syncZKitWheelPickerCurrentSelection(target: unknown) {
-  if (Platform.OS !== 'ios') return false;
+export function isZKitWheelPickerNativeAvailable() {
+  return nativeViewManagerAvailable;
+}
+
+export function syncZKitWheelPickerCurrentSelection(target: unknown, requestId: number) {
+  if (!nativeViewManagerAvailable) return false;
 
   const command = UIManager.getViewManagerConfig(COMPONENT_NAME)?.Commands?.syncCurrentSelection;
   const handle = findNodeHandle(target as never);
@@ -63,6 +76,19 @@ export function syncZKitWheelPickerCurrentSelection(target: unknown) {
     return false;
   }
 
-  UIManager.dispatchViewManagerCommand(handle, command, []);
+  UIManager.dispatchViewManagerCommand(handle, command, [requestId]);
+  return true;
+}
+
+export function scrollZKitWheelPickerToIndex(target: unknown, index: number, animated: boolean) {
+  if (!nativeViewManagerAvailable) return false;
+
+  const command = UIManager.getViewManagerConfig(COMPONENT_NAME)?.Commands?.scrollToIndex;
+  const handle = findNodeHandle(target as never);
+  if (command == null || handle == null) {
+    return false;
+  }
+
+  UIManager.dispatchViewManagerCommand(handle, command, [index, animated]);
   return true;
 }

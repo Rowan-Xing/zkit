@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
   Platform,
   StyleSheet,
+  Text as NativeText,
   View,
   type AccessibilityActionEvent,
   type ColorValue,
@@ -21,6 +22,8 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { getMaxFontSizeMultiplier, sp, wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import {
+  isZKitWheelPickerNativeAvailable,
+  scrollZKitWheelPickerToIndex,
   ZKitWheelPicker,
   syncZKitWheelPickerCurrentSelection,
   type ZKitWheelPickerChangeEvent,
@@ -29,9 +32,9 @@ export { WHEEL_SELECTION_BACKGROUND_COLOR } from './constants';
 
 export const WHEEL_VISIBLE_ITEMS = 5;
 
-// iOS 走系统 UIPickerView，Android/Web 走自绘 transform 路径。
+// iOS 走系统 UIPickerView，Android 走 RecyclerView，Web/无原生模块时走自绘 transform 路径。
 // 这些尺寸是当前 app 端多轮调校后的稳定观感，保留为默认公共规格。
-const IOS_CONFIRM_SYNC_TIMEOUT_MS = 64;
+const NATIVE_SYNC_ACK_TIMEOUT_MS = 1000;
 const IOS_NATIVE_PICKER_HEIGHT = wp(260);
 const IOS_NATIVE_PICKER_ROW_HEIGHT = wp(50);
 const IOS_NATIVE_PICKER_FONT_SIZE = sp(22);
@@ -57,6 +60,15 @@ const RELEASE_LOCK_DISTANCE_ITEMS = 0.1;
 const RELEASE_LOCK_MAX_VELOCITY = 380;
 const MAX_FLING_ITEMS = 7;
 const ANDROID_VELOCITY_WINDOW_MS = 90;
+
+// Web 与未集成原生模块的 Android fallback 使用 transform 驱动。这里只保留
+// 选中项两侧固定数量的行，避免大数据列一次挂载数百个 View/Text。
+// 半径同时覆盖 5 个可见项、最大 7 项惯性距离，以及额外的拖动缓冲。
+const VIRTUAL_WINDOW_RADIUS = 12;
+const VIRTUAL_WINDOW_SIZE = VIRTUAL_WINDOW_RADIUS * 2 + 1;
+const VIRTUALIZATION_THRESHOLD = VIRTUAL_WINDOW_SIZE;
+const VIRTUAL_WINDOW_RECENTER_STEP = 4;
+const USE_NATIVE_WHEEL_PICKER = isZKitWheelPickerNativeAvailable();
 
 const SNAP_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
@@ -85,6 +97,12 @@ export type WheelColumnHandle = {
   scrollToValue: (value: WheelColumnValue, animated?: boolean) => void;
   settleToNearest: (animated?: boolean) => number;
   syncCurrentSelection: () => Promise<number>;
+};
+
+type NativeSyncRequest = {
+  requestId: number;
+  resolve: (index: number) => void;
+  reject: (error: Error) => void;
 };
 
 type NativeViewProps = Omit<ViewProps, 'children' | 'style' | 'onChange'>;
@@ -252,6 +270,56 @@ function resolveWebInteractionStyle(disabled: boolean): StyleProp<ViewStyle> {
   } as unknown as ViewStyle;
 }
 
+type WheelItemProps = {
+  item: WheelColumnOption;
+  selected: boolean;
+  maxFontSizeMultiplier: number | undefined;
+  numberOfLines: number;
+  itemTextColor: ColorValue;
+  selectedTextColor: ColorValue;
+  disabledTextColor: ColorValue;
+  itemTextStyle: StyleProp<TextStyle>;
+  selectedItemTextStyle: StyleProp<TextStyle>;
+  disabledItemTextStyle: StyleProp<TextStyle>;
+};
+
+const WheelItem = React.memo(function WheelItem({
+  item,
+  selected,
+  maxFontSizeMultiplier,
+  numberOfLines,
+  itemTextColor,
+  selectedTextColor,
+  disabledTextColor,
+  itemTextStyle,
+  selectedItemTextStyle,
+  disabledItemTextStyle,
+}: WheelItemProps) {
+  return (
+    <View style={styles.itemContainer}>
+      <NativeText
+        accessibilityLabel={item.accessibilityLabel ?? item.label}
+        maxFontSizeMultiplier={maxFontSizeMultiplier}
+        numberOfLines={numberOfLines}
+        style={[
+          styles.itemText,
+          { color: itemTextColor },
+          itemTextStyle,
+          selected && [styles.itemTextSelected, { color: selectedTextColor }, selectedItemTextStyle],
+          item.disabled && [
+            styles.itemTextDisabled,
+            { color: disabledTextColor },
+            disabledItemTextStyle,
+          ],
+        ]}
+        testID={item.testID}
+      >
+        {item.label}
+      </NativeText>
+    </View>
+  );
+});
+
 const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(function WheelColumn(
   {
     options,
@@ -287,6 +355,28 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   const maxIndex = Math.max(0, options.length - 1);
   const maxOffset = indexToOffset(maxIndex);
   const displayIndex = resolveDisplayIndex(options, resolvedValue);
+  const [renderCenterIndex, setRenderCenterIndex] = React.useState(displayIndex);
+  const renderCenterIndexRef = React.useRef(displayIndex);
+  const previousWindowDisplayIndexRef = React.useRef(displayIndex);
+  const effectiveRenderCenterIndex =
+    previousWindowDisplayIndexRef.current === displayIndex ? renderCenterIndex : displayIndex;
+  const virtualRange = React.useMemo(() => {
+    if (USE_NATIVE_WHEEL_PICKER || options.length <= VIRTUALIZATION_THRESHOLD) {
+      return {
+        startIndex: 0,
+        endIndex: options.length,
+      };
+    }
+
+    const maxStartIndex = Math.max(0, options.length - VIRTUAL_WINDOW_SIZE);
+    const startIndex = clampNumber(effectiveRenderCenterIndex - VIRTUAL_WINDOW_RADIUS, 0, maxStartIndex);
+    const endIndex = Math.min(options.length, startIndex + VIRTUAL_WINDOW_SIZE);
+
+    return {
+      startIndex,
+      endIndex,
+    };
+  }, [effectiveRenderCenterIndex, options.length]);
   const offsetY = useSharedValue(indexToOffset(displayIndex));
   const dragStartOffset = useSharedValue(indexToOffset(displayIndex));
   const isUserInteracting = useSharedValue(false);
@@ -295,11 +385,26 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   const iosSelectedIndexRef = React.useRef(displayIndex);
   const iosSettleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const iosSyncTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const iosSyncResolverRef = React.useRef<((index: number) => void) | null>(null);
+  const nativeSyncSequenceRef = React.useRef(0);
+  const nativeSyncRequestRef = React.useRef<NativeSyncRequest | null>(null);
   const [iosSelectedIndex, setIosSelectedIndex] = React.useState(displayIndex);
 
   const selectedValueRef = React.useRef<WheelColumnValue | null | undefined>(resolvedValue);
   const displayIndexRef = React.useRef(displayIndex);
+  const controlledValueRef = React.useRef<WheelColumnValue | null | undefined>(resolvedValue);
+  const controlledDisplayIndexRef = React.useRef(displayIndex);
+  const isControlledRef = React.useRef(isControlled);
+  const maxIndexRef = React.useRef(maxIndex);
+  const controlledNativeReconcileFrameRef = React.useRef<number | null>(null);
+
+  // Keep the committed, prop-derived selection separate from the optimistic
+  // native selection refs. Native events update selectedValueRef/displayIndexRef
+  // before a controlled parent has accepted the change; these refs remain the
+  // source of truth if that parent deliberately does not write the value back.
+  controlledValueRef.current = resolvedValue;
+  controlledDisplayIndexRef.current = displayIndex;
+  isControlledRef.current = isControlled;
+  maxIndexRef.current = maxIndex;
 
   const flattenedItemTextStyle = React.useMemo(() => StyleSheet.flatten(itemTextStyle) ?? {}, [itemTextStyle]);
   const flattenedSelectedItemTextStyle = React.useMemo(
@@ -353,15 +458,46 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     [maxIndex, options]
   );
 
-  const resolveIOSSyncRequest = React.useCallback(
-    (index: number) => {
-      const resolver = iosSyncResolverRef.current;
-      if (!resolver) return;
-      iosSyncResolverRef.current = null;
+  const recenterVirtualWindow = React.useCallback(
+    (index: number, force = false) => {
+      if (USE_NATIVE_WHEEL_PICKER || options.length <= VIRTUALIZATION_THRESHOLD) return;
+      const nextCenterIndex = clampNumber(Math.round(index), 0, maxIndex);
+      if (
+        !force &&
+        Math.abs(nextCenterIndex - renderCenterIndexRef.current) < VIRTUAL_WINDOW_RECENTER_STEP
+      ) {
+        return;
+      }
+
+      renderCenterIndexRef.current = nextCenterIndex;
+      setRenderCenterIndex(nextCenterIndex);
+    },
+    [maxIndex, options.length]
+  );
+
+  const resolveNativeSyncRequest = React.useCallback(
+    (requestId: number, index: number) => {
+      const request = nativeSyncRequestRef.current;
+      if (!request || request.requestId !== requestId) return false;
+
+      nativeSyncRequestRef.current = null;
       clearIOSSyncTimer();
-      resolver(resolveSelectableIndex(index));
+      request.resolve(resolveSelectableIndex(index));
+      return true;
     },
     [clearIOSSyncTimer, resolveSelectableIndex]
+  );
+
+  const rejectNativeSyncRequest = React.useCallback(
+    (message: string) => {
+      const request = nativeSyncRequestRef.current;
+      if (!request) return;
+
+      nativeSyncRequestRef.current = null;
+      clearIOSSyncTimer();
+      request.reject(new Error(`[zkit-ui][WheelColumn] ${message}`));
+    },
+    [clearIOSSyncTimer]
   );
 
   const syncIOSSelectedIndex = React.useCallback(
@@ -372,6 +508,50 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
       return nextIndex;
     },
     [maxIndex]
+  );
+
+  const clearControlledNativeReconcile = React.useCallback(() => {
+    if (controlledNativeReconcileFrameRef.current != null) {
+      cancelAnimationFrame(controlledNativeReconcileFrameRef.current);
+      controlledNativeReconcileFrameRef.current = null;
+    }
+  }, []);
+
+  const scheduleControlledNativeReconcile = React.useCallback(
+    (emittedIndex: number, emittedValue: WheelColumnValue) => {
+      if (!USE_NATIVE_WHEEL_PICKER || !isControlledRef.current) return;
+
+      clearControlledNativeReconcile();
+      controlledNativeReconcileFrameRef.current = requestAnimationFrame(() => {
+        controlledNativeReconcileFrameRef.current = null;
+
+        if (!isControlledRef.current) return;
+
+        const committedIndex = clampNumber(
+          controlledDisplayIndexRef.current,
+          0,
+          maxIndexRef.current
+        );
+        const parentAcceptedSelection =
+          committedIndex === emittedIndex && Object.is(controlledValueRef.current, emittedValue);
+        if (parentAcceptedSelection) return;
+
+        // A native wheel owns its physical position while the user is moving
+        // it, so selectedIndex cannot be forced back during the gesture. Once
+        // the stable change has been offered to the parent, restore both the
+        // optimistic JS refs/state and the physical wheel if the controlled
+        // value was not accepted. The explicit command makes the rollback
+        // immediate; the state update keeps the next React commit consistent.
+        selectedValueRef.current = controlledValueRef.current;
+        displayIndexRef.current = committedIndex;
+        iosSelectedIndexRef.current = committedIndex;
+        setIosSelectedIndex((previous) =>
+          previous === committedIndex ? previous : committedIndex
+        );
+        scrollZKitWheelPickerToIndex(iosPickerRef.current, committedIndex, false);
+      });
+    },
+    [clearControlledNativeReconcile]
   );
 
   const emitSelectedIndex = React.useCallback(
@@ -385,7 +565,10 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
       const sameAsCurrent =
         displayIndexRef.current === nextIndex && Object.is(selectedValueRef.current, option.value);
 
-      if (sameAsCurrent) return;
+      if (sameAsCurrent) {
+        scheduleControlledNativeReconcile(nextIndex, option.value);
+        return;
+      }
 
       selectedValueRef.current = option.value;
       displayIndexRef.current = nextIndex;
@@ -394,6 +577,10 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
         setUncontrolledValue(option.value);
       }
 
+      // Queue this before notifying the parent so a synchronous callback that
+      // unmounts the wheel can cancel the frame in its effect cleanup.
+      scheduleControlledNativeReconcile(nextIndex, option.value);
+
       onChange?.({
         value: option.value,
         index: nextIndex,
@@ -401,7 +588,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
         source,
       });
     },
-    [isControlled, onChange, options, resolveSelectableIndex]
+    [isControlled, onChange, options, resolveSelectableIndex, scheduleControlledNativeReconcile]
   );
 
   const scheduleIOSSettle = React.useCallback(
@@ -422,16 +609,20 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   const scrollToIndex = React.useCallback(
     (index: number, animated = false) => {
       const nextIndex = clampNumber(index, 0, maxIndex);
-      if (Platform.OS === 'ios') {
+      if (USE_NATIVE_WHEEL_PICKER) {
         clearIOSSettleTimer();
         syncIOSSelectedIndex(nextIndex);
+        scrollZKitWheelPickerToIndex(iosPickerRef.current, nextIndex, animated);
         return;
       }
 
+      const distanceFromWindowCenter = Math.abs(nextIndex - renderCenterIndexRef.current);
+      const canAnimateWithinWindow = distanceFromWindowCenter <= VIRTUAL_WINDOW_RADIUS - MAX_FLING_ITEMS;
+      recenterVirtualWindow(nextIndex, !canAnimateWithinWindow);
       const nextOffset = indexToOffset(nextIndex);
       cancelAnimation(offsetY);
       isUserInteracting.value = false;
-      if (animated) {
+      if (animated && canAnimateWithinWindow) {
         offsetY.value = withTiming(nextOffset, {
           duration: getSnapDuration(offsetY.value, nextOffset),
           easing: SNAP_EASING,
@@ -440,7 +631,14 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
       }
       offsetY.value = nextOffset;
     },
-    [clearIOSSettleTimer, isUserInteracting, maxIndex, offsetY, syncIOSSelectedIndex]
+    [
+      clearIOSSettleTimer,
+      isUserInteracting,
+      maxIndex,
+      offsetY,
+      recenterVirtualWindow,
+      syncIOSSelectedIndex,
+    ]
   );
 
   const scrollToValue = React.useCallback(
@@ -455,7 +653,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   const settleToNearest = React.useCallback(
     (animated = false) => {
       const rawIndex =
-        Platform.OS === 'ios'
+        USE_NATIVE_WHEEL_PICKER
           ? iosSelectedIndexRef.current
           : Math.round(clampNumber(offsetY.value, 0, maxOffset) / WHEEL_ITEM_HEIGHT);
       const nextIndex = resolveSelectableIndex(rawIndex, rawIndex - displayIndexRef.current);
@@ -466,26 +664,36 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   );
 
   const syncCurrentSelection = React.useCallback(() => {
-    if (Platform.OS !== 'ios') {
+    if (!USE_NATIVE_WHEEL_PICKER) {
       return Promise.resolve(settleToNearest(false));
     }
 
     clearIOSSettleTimer();
-    resolveIOSSyncRequest(iosSelectedIndexRef.current);
+    rejectNativeSyncRequest('A newer native selection sync superseded the previous request.');
 
-    return new Promise<number>((resolve) => {
-      iosSyncResolverRef.current = resolve;
+    return new Promise<number>((resolve, reject) => {
+      const requestId = ++nativeSyncSequenceRef.current;
+      nativeSyncRequestRef.current = { requestId, resolve, reject };
 
-      if (iosPickerRef.current != null && syncZKitWheelPickerCurrentSelection(iosPickerRef.current)) {
-        iosSyncTimerRef.current = setTimeout(() => {
-          resolveIOSSyncRequest(iosSelectedIndexRef.current);
-        }, IOS_CONFIRM_SYNC_TIMEOUT_MS);
+      const commandSent =
+        iosPickerRef.current != null &&
+        syncZKitWheelPickerCurrentSelection(iosPickerRef.current, requestId);
+      if (!commandSent) {
+        rejectNativeSyncRequest('The native selection sync command is unavailable.');
         return;
       }
 
-      resolveIOSSyncRequest(iosSelectedIndexRef.current);
+      // Never turn an unacknowledged command into a successful confirmation:
+      // the UI/bridge may simply be busy and the cached index can be stale.
+      // Leaving the picker open is safer than committing the wrong value.
+      iosSyncTimerRef.current = setTimeout(() => {
+        const pending = nativeSyncRequestRef.current;
+        if (pending?.requestId === requestId) {
+          rejectNativeSyncRequest('Timed out waiting for the native selection acknowledgement.');
+        }
+      }, NATIVE_SYNC_ACK_TIMEOUT_MS);
     });
-  }, [clearIOSSettleTimer, resolveIOSSyncRequest, settleToNearest]);
+  }, [clearIOSSettleTimer, rejectNativeSyncRequest, settleToNearest]);
 
   React.useImperativeHandle(
     ref,
@@ -496,7 +704,9 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   React.useEffect(() => {
     selectedValueRef.current = resolvedValue;
     displayIndexRef.current = displayIndex;
-  }, [displayIndex, resolvedValue]);
+    previousWindowDisplayIndexRef.current = displayIndex;
+    recenterVirtualWindow(displayIndex, true);
+  }, [displayIndex, recenterVirtualWindow, resolvedValue]);
 
   React.useEffect(() => {
     if (isControlled || !options.length) return;
@@ -509,6 +719,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
 
   React.useEffect(() => {
     if (!options.length) {
+      clearControlledNativeReconcile();
       clearIOSSettleTimer();
       iosSelectedIndexRef.current = 0;
       setIosSelectedIndex(0);
@@ -520,24 +731,69 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     clearIOSSettleTimer();
     syncIOSSelectedIndex(displayIndex);
     scrollToIndex(displayIndex, false);
-  }, [clearIOSSettleTimer, displayIndex, offsetY, options.length, scrollToIndex, syncIOSSelectedIndex]);
+  }, [
+    clearControlledNativeReconcile,
+    clearIOSSettleTimer,
+    displayIndex,
+    offsetY,
+    options.length,
+    scrollToIndex,
+    syncIOSSelectedIndex,
+  ]);
 
   React.useEffect(
     () => () => {
       clearIOSSettleTimer();
-      resolveIOSSyncRequest(iosSelectedIndexRef.current);
+      rejectNativeSyncRequest('The wheel unmounted before native selection sync completed.');
     },
-    [clearIOSSettleTimer, resolveIOSSyncRequest]
+    [clearIOSSettleTimer, rejectNativeSyncRequest]
+  );
+
+  React.useEffect(
+    () => () => {
+      clearControlledNativeReconcile();
+    },
+    [clearControlledNativeReconcile]
   );
 
   const handleIOSChange = React.useCallback(
     (event: { nativeEvent: ZKitWheelPickerChangeEvent }) => {
       const rawIndex = syncIOSSelectedIndex(event.nativeEvent.newIndex);
       const nextIndex = resolveSelectableIndex(rawIndex, rawIndex - displayIndexRef.current);
-      resolveIOSSyncRequest(nextIndex);
+      const rawSyncRequestId = event.nativeEvent.syncRequestId;
+      const syncRequestId =
+        typeof rawSyncRequestId === 'number' && Number.isFinite(rawSyncRequestId)
+          ? Math.trunc(rawSyncRequestId)
+          : null;
+      if (syncRequestId != null) {
+        resolveNativeSyncRequest(syncRequestId, nextIndex);
+      }
+
+      if (disabled) {
+        if (syncRequestId == null) {
+          scrollZKitWheelPickerToIndex(iosPickerRef.current, displayIndexRef.current, false);
+        }
+        return;
+      }
+
+      if (Platform.OS === 'android' || syncRequestId != null) {
+        if (nextIndex !== rawIndex) {
+          syncIOSSelectedIndex(nextIndex);
+          scrollZKitWheelPickerToIndex(iosPickerRef.current, nextIndex, true);
+        }
+        emitSelectedIndex(nextIndex, 'user');
+        return;
+      }
       scheduleIOSSettle(nextIndex);
     },
-    [resolveIOSSyncRequest, resolveSelectableIndex, scheduleIOSSettle, syncIOSSelectedIndex]
+    [
+      disabled,
+      emitSelectedIndex,
+      resolveNativeSyncRequest,
+      resolveSelectableIndex,
+      scheduleIOSSettle,
+      syncIOSSelectedIndex,
+    ]
   );
 
   const startInteraction = React.useCallback(() => {
@@ -548,9 +804,11 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
 
   const updateInteraction = React.useCallback(
     (translationY: number) => {
-      offsetY.value = clampNumber(dragStartOffset.value - translationY, 0, maxOffset);
+      const nextOffset = clampNumber(dragStartOffset.value - translationY, 0, maxOffset);
+      offsetY.value = nextOffset;
+      recenterVirtualWindow(nextOffset / WHEEL_ITEM_HEIGHT);
     },
-    [dragStartOffset, maxOffset, offsetY]
+    [dragStartOffset, maxOffset, offsetY, recenterVirtualWindow]
   );
 
   const finishInteraction = React.useCallback(
@@ -560,6 +818,18 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
       const currentIndex = Math.round(currentOffset / WHEEL_ITEM_HEIGHT);
       const nextIndex = resolveSelectableIndex(rawIndex, rawIndex - currentIndex);
       const nextOffset = indexToOffset(nextIndex);
+      const canAnimateWithinWindow =
+        Math.abs(nextIndex - renderCenterIndexRef.current) <=
+        VIRTUAL_WINDOW_RADIUS - Math.floor(WHEEL_VISIBLE_ITEMS / 2);
+      recenterVirtualWindow(nextIndex, !canAnimateWithinWindow);
+      if (!canAnimateWithinWindow) {
+        requestAnimationFrame(() => {
+          offsetY.value = nextOffset;
+          isUserInteracting.value = false;
+          emitSelectedIndex(nextIndex, 'user');
+        });
+        return;
+      }
       offsetY.value = withTiming(
         nextOffset,
         {
@@ -573,7 +843,15 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
         }
       );
     },
-    [emitSelectedIndex, isUserInteracting, maxIndex, maxOffset, offsetY, resolveSelectableIndex]
+    [
+      emitSelectedIndex,
+      isUserInteracting,
+      maxIndex,
+      maxOffset,
+      offsetY,
+      recenterVirtualWindow,
+      resolveSelectableIndex,
+    ]
   );
 
   const touchStateRef = React.useRef({
@@ -643,57 +921,81 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
       scrollToIndex(nextIndex, true);
       emitSelectedIndex(nextIndex, 'accessibility');
     },
-    [disabled, emitSelectedIndex, options, scrollToIndex]
+    [
+      disabled,
+      emitSelectedIndex,
+      options,
+      scrollToIndex,
+    ]
   );
 
   const contentStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: CENTER_OFFSET - offsetY.value }],
   }));
+  const selectedContentStyle = useAnimatedStyle(() => ({
+    // The selected-color copy is clipped by a one-row viewport positioned at
+    // the wheel centre. Keeping this transform relative to that viewport makes
+    // the color follow the physical centre continuously, including while a
+    // drag or snap animation is in flight.
+    transform: [{ translateY: -offsetY.value }],
+  }));
 
-  const items = React.useMemo(
-    () =>
-      options.map((item, index) => (
-        <View key={`${String(optionKey(item, index))}-${index}`} style={styles.itemContainer}>
-          <Animated.Text
-            accessibilityLabel={item.accessibilityLabel ?? item.label}
-            maxFontSizeMultiplier={getMaxFontSizeMultiplier()}
+  const maxFontSizeMultiplier = getMaxFontSizeMultiplier();
+  const { items, selectedItems } = React.useMemo(() => {
+    if (USE_NATIVE_WHEEL_PICKER) return { items: null, selectedItems: null };
+
+    const visibleOptions = options.slice(virtualRange.startIndex, virtualRange.endIndex);
+    const renderItems = (selectedLayer: boolean) =>
+      visibleOptions.map((item, localIndex) => {
+        const index = virtualRange.startIndex + localIndex;
+        return (
+          <WheelItem
+            key={`${selectedLayer ? 'selected' : 'base'}-${String(optionKey(item, index))}-${index}`}
+            item={item}
+            selected={selectedLayer}
+            maxFontSizeMultiplier={maxFontSizeMultiplier}
             numberOfLines={numberOfLines}
-            style={[
-              styles.itemText,
-              { color: itemTextColor },
-              itemTextStyle,
-              index === displayIndex && [styles.itemTextSelected, { color: selectedTextColor }, selectedItemTextStyle],
-              item.disabled && [styles.itemTextDisabled, { color: disabledTextColor }, disabledItemTextStyle],
-            ]}
-            testID={item.testID}
-          >
-            {item.label}
-          </Animated.Text>
-        </View>
-      )),
-    [
-      disabledItemTextStyle,
-      disabledTextColor,
-      displayIndex,
-      itemTextColor,
-      itemTextStyle,
-      numberOfLines,
-      options,
-      selectedItemTextStyle,
-      selectedTextColor,
-    ]
-  );
+            itemTextColor={itemTextColor}
+            selectedTextColor={selectedTextColor}
+            disabledTextColor={disabledTextColor}
+            itemTextStyle={itemTextStyle}
+            selectedItemTextStyle={selectedItemTextStyle}
+            disabledItemTextStyle={disabledItemTextStyle}
+          />
+        );
+      });
 
-  const nativeItems = React.useMemo(
-    () =>
-      options.map((item, index) => ({
-        label: item.label,
-        value: item.value,
-        textColor: item.disabled ? disabledTextColor : undefined,
-        testID: item.testID ?? `wheel-item-${String(item.value)}-${index}`,
-      })),
-    [disabledTextColor, options]
-  );
+    return {
+      items: renderItems(false),
+      selectedItems: renderItems(true),
+    };
+  }, [
+    disabledItemTextStyle,
+    disabledTextColor,
+    itemTextColor,
+    itemTextStyle,
+    maxFontSizeMultiplier,
+    numberOfLines,
+    options,
+    selectedItemTextStyle,
+    selectedTextColor,
+    virtualRange.endIndex,
+    virtualRange.startIndex,
+  ]);
+
+  const nativeItems = React.useMemo(() => {
+    if (!USE_NATIVE_WHEEL_PICKER) return [];
+
+    return options.map((item) => ({
+      label: item.label,
+      value: item.value,
+      disabled: item.disabled,
+      textColor: item.disabled ? disabledTextColor : undefined,
+      // Avoid allocating and serializing hundreds of synthetic test IDs on
+      // every native date-wheel mount. Explicit IDs remain fully supported.
+      testID: item.testID,
+    }));
+  }, [disabledTextColor, options]);
 
   const selectedOption = options[displayIndex];
   const canInteract = !disabled && options.length > 1 && findNearestEnabledIndex(options, displayIndex) >= 0;
@@ -709,7 +1011,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     [accessibilityState, disabled]
   );
 
-  if (Platform.OS === 'ios') {
+  if (USE_NATIVE_WHEEL_PICKER) {
     return (
       <View
         {...viewProps}
@@ -725,15 +1027,19 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
           ref={iosPickerRef as React.Ref<any>}
           items={nativeItems}
           selectedIndex={iosSelectedIndex}
+          disabled={disabled}
           onChange={handleIOSChange}
           numberOfLines={numberOfLines}
-          rowHeight={IOS_NATIVE_PICKER_ROW_HEIGHT}
-          style={styles.iosPicker}
+          rowHeight={Platform.OS === 'ios' ? IOS_NATIVE_PICKER_ROW_HEIGHT : WHEEL_ITEM_HEIGHT}
+          style={styles.nativePicker}
           fontFamily={nativeFontFamily}
           fontSize={nativeFontSize}
           fontStyle={nativeFontStyle}
           fontWeight={nativeFontWeight}
+          maxFontSizeMultiplier={maxFontSizeMultiplier}
           color={selectedTextColor}
+          itemColor={itemTextColor}
+          disabledColor={disabledTextColor}
         />
       </View>
     );
@@ -754,13 +1060,31 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
       testID={testID}
     >
       <Animated.View
-        style={[styles.content, contentStyle]}
+        style={[
+          styles.content,
+          { top: virtualRange.startIndex * WHEEL_ITEM_HEIGHT },
+          contentStyle,
+        ]}
         pointerEvents="none"
-        renderToHardwareTextureAndroid={Platform.OS === 'android'}
-        shouldRasterizeIOS={false}
       >
         {items}
       </Animated.View>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
+        style={styles.selectedTextWindow}
+      >
+        <Animated.View
+          style={[
+            styles.content,
+            { top: virtualRange.startIndex * WHEEL_ITEM_HEIGHT },
+            selectedContentStyle,
+          ]}
+        >
+          {selectedItems}
+        </Animated.View>
+      </View>
       <View
         style={styles.touchSurface}
         collapsable={false}
@@ -794,12 +1118,21 @@ const styles = StyleSheet.create({
     height: WHEEL_VIEWPORT_HEIGHT,
     overflow: 'hidden',
   },
-  iosPicker: {
+  nativePicker: {
     width: '100%',
-    height: IOS_NATIVE_PICKER_HEIGHT,
+    height: WHEEL_VIEWPORT_HEIGHT,
   },
   content: {
     width: '100%',
+  },
+  selectedTextWindow: {
+    position: 'absolute',
+    top: CENTER_OFFSET,
+    left: 0,
+    right: 0,
+    height: WHEEL_ITEM_HEIGHT,
+    overflow: 'hidden',
+    zIndex: 1,
   },
   touchSurface: {
     ...StyleSheet.absoluteFillObject,
