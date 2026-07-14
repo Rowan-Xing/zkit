@@ -1,6 +1,6 @@
 {
   "name": "zkit-ui",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -198,7 +198,7 @@
     "@vant/area-data": "^2.1.0",
     "dayjs": "^1.11.13",
     "react-native-toast-message": "^2.3.3",
-    "zkit-tools": "workspace:*"
+    "zkit-tools": "1.0.1"
   },
   "peerDependencies": {
     "@expo/vector-icons": "*",
