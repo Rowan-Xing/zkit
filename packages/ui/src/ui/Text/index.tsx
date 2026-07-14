@@ -52,7 +52,7 @@ export interface TextProps extends NativeTextProps {
    */
   variant?: TextVariant;
   /**
-   * Named type scale token, or an unscaled design pixel size that will be resolved through wp(...).
+   * Named type scale token, or a numeric native font size.
    */
   size?: TextSizeValue;
   /**
@@ -313,6 +313,10 @@ function resolveTypographyToken(size: TextSizeValue): TypographyToken {
   };
 }
 
+function shouldScaleTypographyToken(size: TextSizeValue) {
+  return typeof size === 'string' || !isFiniteNumber(size);
+}
+
 function readStyleNumber(style: TextStyle | undefined, key: 'fontSize' | 'lineHeight') {
   const value = style?.[key];
   return isFiniteNumber(value) ? Math.max(0, value) : undefined;
@@ -335,11 +339,12 @@ function resolveTypographyStyle({
 }): TextStyle | undefined {
   const shouldResolveSize = hasExplicitSize || shouldUseVariantDefaults;
   const token = shouldResolveSize ? resolveTypographyToken(size) : undefined;
+  const shouldScaleToken = shouldResolveSize ? shouldScaleTypographyToken(size) : false;
   const nextStyle: TextStyle = {};
   let hasStyle = false;
 
   if (token) {
-    nextStyle.fontSize = wp(token.fontSize);
+    nextStyle.fontSize = shouldScaleToken ? wp(token.fontSize) : token.fontSize;
     hasStyle = true;
   }
 
@@ -348,10 +353,10 @@ function resolveTypographyStyle({
   }
 
   if (isFiniteNumber(explicitLineHeight)) {
-    nextStyle.lineHeight = wp(Math.max(0, explicitLineHeight));
+    nextStyle.lineHeight = Math.max(0, explicitLineHeight);
     hasStyle = true;
   } else if (token && styleFontSize == null) {
-    nextStyle.lineHeight = wp(token.lineHeight);
+    nextStyle.lineHeight = shouldScaleToken ? wp(token.lineHeight) : token.lineHeight;
     hasStyle = true;
   }
 

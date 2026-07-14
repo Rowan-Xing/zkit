@@ -69,8 +69,8 @@ export function Demo() {
   <Text size="2xl">2xl</Text>
   <Text size="3xl">3xl</Text>
   <Text size="4xl">4xl</Text>
-  <Text size={18} lineHeight={26}>
-    自定义设计尺寸
+  <Text size={wp(18)} lineHeight={wp(26)}>
+    自定义原生尺寸
   </Text>
 </>
 ```
@@ -89,7 +89,7 @@ export function Demo() {
 | `3xl` | `wp(30)` | `wp(38)` |
 | `4xl` | `wp(36)` | `wp(44)` |
 
-传入数字 `size` 或 `lineHeight` 时，数字代表未缩放的设计像素，组件内部会统一转换。
+传入数字 `size` 或 `lineHeight` 时，数字代表调用侧已经计算好的原生尺寸，组件内部不会再次 `wp(...)`。
 通过 `style.fontSize` 直接覆盖字号时，调用侧应传入已经计算好的原生字号；如果没有同时传入 `lineHeight` 或 `style.lineHeight`，组件会移除内置 token 行高，避免字号和行高不匹配。
 
 ## 颜色
