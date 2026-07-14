@@ -78,13 +78,3 @@ export const galeriaDemoItems: GaleriaDemoItem[] = [
   },
   imageItem('river', 'River', riverSource, 1400, 980),
 ];
-
-export const galeriaWebItems = galeriaDemoItems.map((item) => ({
-  alt: item.alt,
-  id: item.id,
-  poster: item.posterUri,
-  src: item.uri,
-  type: item.type,
-  width: item.width,
-  height: item.height,
-}));

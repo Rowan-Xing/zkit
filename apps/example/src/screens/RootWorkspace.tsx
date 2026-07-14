@@ -98,7 +98,7 @@ const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
   accordion: '/accordion',
   bottomSheet: '/bottom-sheet',
   linkedScroll: '/linked-scroll',
-  galeria: '/galeria',
+  galeria: '/native-image-preview',
   pickers: '/pickers',
   services: '/services',
   dialogs: '/dialogs',
@@ -143,7 +143,7 @@ function getRouteKeyFromPath(pathname: string): WorkspaceRouteKey {
   if (lastSegment === 'surfaces') return 'accordion';
   if (lastSegment === 'sheet' || lastSegment === 'bottomsheet') return 'bottomSheet';
   if (lastSegment === 'linked' || lastSegment === 'linkedscroll') return 'linkedScroll';
-  if (lastSegment === 'gallery') return 'galeria';
+  if (lastSegment === 'gallery' || lastSegment === 'native-image-preview') return 'galeria';
 
   return (
     WORKSPACE_ROUTE_KEYS.find(

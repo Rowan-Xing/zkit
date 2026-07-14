@@ -1,7 +1,13 @@
 import * as React from 'react';
 import { Image as ExpoImage } from 'expo-image';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { Text, useTheme } from 'zkit-ui';
+import {
+  NativeImagePreview,
+  Text,
+  useI18n,
+  useTheme,
+  type NativeImagePreviewItem,
+} from 'zkit-ui';
 
 import { TabScreenShell } from '../TabScreenShell';
 import { type GaleriaDemoItem, galeriaDemoItems } from './data';
@@ -9,23 +15,24 @@ import { styles } from './styles.native';
 
 const flowerVideoUri = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
 
-type GaleriaNativeItem = {
-  height?: number;
-  id: string;
-  poster?: string;
-  type: GaleriaDemoItem['type'];
-  url: string;
-  width?: number;
-};
-
 type ImageRenderer = 'expo' | 'rn';
 
-const imageRenderers: { label: string; value: ImageRenderer }[] = [
-  { label: 'ExpoImage', value: 'expo' },
-  { label: 'RN Image', value: 'rn' },
-];
+const imageRendererValues: ImageRenderer[] = ['expo', 'rn'];
+const imageRendererLabelKeys: Record<ImageRenderer, string> = {
+  expo: 'example.galeria.renderer.expo',
+  rn: 'example.galeria.renderer.rn',
+};
 
-const nativeItems: GaleriaNativeItem[] = galeriaDemoItems.map((item) => {
+const itemLabelKeys: Record<string, string> = {
+  bunny: 'example.galeria.item.video',
+  mountain: 'example.galeria.item.mountain',
+  portrait: 'example.galeria.item.portrait',
+  river: 'example.galeria.item.river',
+  waterfall: 'example.galeria.item.waterfall',
+  wide: 'example.galeria.item.wide',
+};
+
+const nativeItems: NativeImagePreviewItem[] = galeriaDemoItems.map((item) => {
   const previewUri = Image.resolveAssetSource(item.previewSource).uri;
 
   return {
@@ -38,31 +45,22 @@ const nativeItems: GaleriaNativeItem[] = galeriaDemoItems.map((item) => {
   };
 });
 
-const { Galeria } = require('zkit-galeria/react-native') as {
-  Galeria: React.ComponentType<{
-    children: React.ReactNode;
-    items: GaleriaNativeItem[];
-    theme?: 'dark' | 'light';
-  }> & {
-    Image: React.ComponentType<{
-      children: React.ReactElement;
-      edgeToEdge?: boolean;
-      index: number;
-      style?: unknown;
-    }>;
-  };
-};
-
 function GalleryTile({
   backgroundColor,
   index,
   item,
+  label,
   renderer,
+  selected,
+  videoBadge,
 }: {
   backgroundColor: string;
   index: number;
   item: GaleriaDemoItem;
+  label: string;
   renderer: ImageRenderer;
+  selected: boolean;
+  videoBadge: string;
 }) {
   return (
     <View
@@ -72,7 +70,7 @@ function GalleryTile({
         { backgroundColor },
       ]}
     >
-      <Galeria.Image edgeToEdge index={index} style={StyleSheet.absoluteFill}>
+      <NativeImagePreview.Item index={index} style={StyleSheet.absoluteFill}>
         {renderer === 'expo' ? (
           <ExpoImage
             cachePolicy="memory-disk"
@@ -86,37 +84,62 @@ function GalleryTile({
         ) : (
           <Image resizeMode="cover" source={item.previewSource} style={styles.galleryImage} />
         )}
-      </Galeria.Image>
+      </NativeImagePreview.Item>
       <View pointerEvents="none" style={styles.badge}>
         <Text numberOfLines={1} style={styles.badgeText}>
-          {item.type === 'video' ? 'VIDEO' : item.label}
+          {item.type === 'video' ? videoBadge : label}
         </Text>
       </View>
+      {selected ? <View pointerEvents="none" style={styles.activeRing} /> : null}
     </View>
   );
 }
 
 export function GaleriaGuidePage() {
+  const { t } = useI18n();
   const theme = useTheme();
   const [renderer, setRenderer] = React.useState<ImageRenderer>('expo');
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const activeItem = galeriaDemoItems[activeIndex];
+  const activeLabel = activeItem
+    ? t(itemLabelKeys[activeItem.id] ?? 'example.galeria.apiFallback')
+    : t('example.galeria.apiFallback');
 
   return (
     <TabScreenShell withTopInset={false}>
       <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>Galeria</Text>
-        <Text style={[styles.title, { color: theme.colors.onSurface }]}>Shared transition gallery</Text>
+        <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>
+          {t('example.galeria.eyebrow')}
+        </Text>
+        <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+          {t('example.galeria.title')}
+        </Text>
         <Text style={[styles.subtitle, { color: theme.colors.muted }]}>
-          Native image-source parity surface for pickup, swipe, pinch, pan, video preview, and drag-to-close.
+          {t('example.galeria.subtitle')}
+        </Text>
+      </View>
+
+      <View style={[styles.apiPanel, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+        <View style={styles.apiPanelHeader}>
+          <Text style={[styles.apiPanelTitle, { color: theme.colors.onSurface }]}>
+            {t('example.galeria.apiTitle')}
+          </Text>
+          <Text style={[styles.apiPanelValue, { color: theme.colors.primary }]}>
+            {activeLabel}
+          </Text>
+        </View>
+        <Text style={[styles.apiPanelSubtitle, { color: theme.colors.muted }]}>
+          {t('example.galeria.apiSubtitle')}
         </Text>
       </View>
 
       <View style={styles.rendererSwitch}>
-        {imageRenderers.map((option) => {
-          const selected = renderer === option.value;
+        {imageRendererValues.map((value) => {
+          const selected = renderer === value;
           return (
             <Pressable
-              key={option.value}
-              onPress={() => setRenderer(option.value)}
+              key={value}
+              onPress={() => setRenderer(value)}
               style={[
                 styles.rendererButton,
                 {
@@ -131,14 +154,20 @@ export function GaleriaGuidePage() {
                   { color: selected ? '#FFFFFF' : theme.colors.onSurface },
                 ]}
               >
-                {option.label}
+                {t(imageRendererLabelKeys[value])}
               </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Galeria key={renderer} items={nativeItems} theme="dark">
+      <NativeImagePreview
+        key={renderer}
+        colorScheme="dark"
+        edgeToEdge
+        items={nativeItems}
+        onChange={(value) => setActiveIndex(value)}
+      >
         <View style={styles.galleryGrid}>
           {galeriaDemoItems.map((item, index) => (
             <GalleryTile
@@ -146,11 +175,14 @@ export function GaleriaGuidePage() {
               backgroundColor={theme.colors.secondary}
               index={index}
               item={item}
+              label={t(itemLabelKeys[item.id] ?? 'example.galeria.apiFallback')}
               renderer={renderer}
+              selected={activeIndex === index}
+              videoBadge={t('example.galeria.videoBadge')}
             />
           ))}
         </View>
-      </Galeria>
+      </NativeImagePreview>
     </TabScreenShell>
   );
 }

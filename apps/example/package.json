@@ -38,7 +38,6 @@
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
     "sonner-native": "^0.22.2",
-    "zkit-galeria": "workspace:*",
     "zkit-tools": "workspace:*",
     "zkit-ui": "workspace:*"
   },
