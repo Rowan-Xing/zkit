@@ -159,8 +159,8 @@ importers:
         specifier: ^2.3.3
         version: 2.3.3(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       zkit-tools:
-        specifier: workspace:*
-        version: link:../tools
+        specifier: 1.0.1
+        version: 1.0.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
     devDependencies:
       '@expo/vector-icons':
         specifier: ^15.1.1
@@ -1583,7 +1583,7 @@ packages:
     resolution: {integrity: sha512-kcZ6+W5QzcJ3P1Mt+83OUv/oHFqZHIx8DuxG6eZ5RGMERoLqp4BuGjhHLYGK+Kf5XVkQvqBSmAy/nGWN3qDgEA==}
     engines: {node: '>=14'}
     peerDependencies:
-      typescript: '>=4.9.5'
+      typescript: ~5.9.3
     peerDependenciesMeta:
       typescript:
         optional: true
@@ -2935,8 +2935,8 @@ packages:
   react-native-toast-message@2.3.3:
     resolution: {integrity: sha512-4IIUHwUPvKHu4gjD0Vj2aGQzqPATiblL1ey8tOqsxOWRPGGu52iIbL8M/mCz4uyqecvPdIcMY38AfwRuUADfQQ==}
     peerDependencies:
-      react: '*'
-      react-native: '*'
+      react: 19.1.0
+      react-native: 0.81.5
 
   react-native-web@0.21.2:
     resolution: {integrity: sha512-SO2t9/17zM4iEnFvlu2DA9jqNbzNhoUP+AItkoCOyFmDMOhUnBBznBDCYN92fGdfAkfQlWzPoez6+zLxFNsZEg==}
@@ -3518,6 +3518,14 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zkit-tools@1.0.1:
+    resolution: {integrity: sha512-+3vtPpOe17Pvw9fKiUa+92mUKy+DgeaSQg0KVeCrnOd8t0UGrzUfEkGdISFDRTBrWfA3ZtQ5rgnPtIDr4+KYqQ==}
+    peerDependencies:
+      react-native: '*'
+    peerDependenciesMeta:
+      react-native:
+        optional: true
 
 snapshots:
 
@@ -7493,3 +7501,7 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  zkit-tools@1.0.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)):
+    optionalDependencies:
+      react-native: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)
