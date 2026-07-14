@@ -2,6 +2,8 @@
 
 `ImagePreview` 是全屏图片预览基础件，支持 iOS / Android / Web 的统一声明式使用，也提供 `imagePreview.open()` 作为全局命令式入口。
 
+如果需要从真实缩略图原生共享转场到全屏 viewer，请使用 `NativeImagePreview`。`ImagePreview` 适合普通命令式预览，`NativeImagePreview` 适合相册九宫格、瀑布流和商品图集这类有稳定图片锚点的场景。
+
 ## 设计取舍
 
 - 核心是声明式组件：`open/defaultOpen` 控制显隐，`value/defaultValue/onChange` 控制当前图片索引。
@@ -59,6 +61,23 @@ console.log(result.reason, result.value);
 - `prefetch`：默认 `false`；如图片源稳定且希望切换更快，可设为 `'adjacent'` 或 `'all'`。
 - `renderHeader/renderFooter/renderOverlay`：自定义顶部、底部和覆盖层内容。
 - `onClose`：关闭动画结束后触发，返回最终索引、图片和关闭原因。
+
+## NativeImagePreview 关系
+
+```tsx
+import { NativeImagePreview } from 'zkit-ui/native-image-preview';
+
+<NativeImagePreview items={items} colorScheme="dark">
+  <NativeImagePreview.Item index={0}>
+    <Image source={thumbnailSource} />
+  </NativeImagePreview.Item>
+</NativeImagePreview>;
+```
+
+两者不要混用成同一个本地封装：
+
+- `ImagePreview`：普通全屏预览，支持声明式 `open/value` 和命令式 `imagePreview.open()`。
+- `NativeImagePreview`：原生共享转场预览，需要包住真实缩略图节点，iOS / Android 走原生 viewer。
 
 ## 手动确认点
 

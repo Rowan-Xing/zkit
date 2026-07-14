@@ -238,6 +238,24 @@ export type {
   LinkedScrollSectionRenderContext,
   LinkedScrollValue,
 } from './ui/LinkedScroll/index';
+export { NativeImagePreview } from './ui/NativeImagePreview/index';
+export type {
+  NativeImagePreviewChangeEvent,
+  NativeImagePreviewChangeEventPayload,
+  NativeImagePreviewChangeMeta,
+  NativeImagePreviewChangeReason,
+  NativeImagePreviewColorScheme,
+  NativeImagePreviewComponent,
+  NativeImagePreviewItem,
+  NativeImagePreviewItemDescriptor,
+  NativeImagePreviewItemProps,
+  NativeImagePreviewMediaType,
+  NativeImagePreviewNativeProps,
+  NativeImagePreviewProps,
+  NativeImagePreviewResolvedItem,
+  NativeImagePreviewResolvedColorScheme,
+  NativeImagePreviewSource,
+} from './ui/NativeImagePreview/index';
 export { ThemeProvider } from './theme/ThemeProvider';
 export { useTheme } from './theme/useTheme';
 export type { Theme, ThemeOverride } from './theme/types';

@@ -121,6 +121,7 @@ function Demo() {
 - Sheet：通用方向弹层（H5 bottom/top/left/right 自绘，iOS/Android bottom 内部走原生 TrueSheet）
 - LoadingService：全局加载 HUD 服务（handle 状态模型、Promise 绑定、Android 无 elevation 残影路径）
 - ImagePreview：全屏图片预览（声明式 open/value 状态模型 + 全局 imagePreview.open 服务）
+- NativeImagePreview：原生共享转场图片预览（真实缩略图锚点 + 原生 viewer 手势链路）
 - Picker：底部滚轮选择器（单列/级联、确认提交、iOS 原生 wheel）
 - AddressCascader：省市区级联选择（内置中国数据）
 - DatePicker：年/月/日日期选择（空值、范围、精度与确认提交语义）
@@ -208,6 +209,61 @@ imagePreview.open({ images, index: 0 });
 ```
 
 `ImagePreview` 使用 `open/defaultOpen/onOpenChange` 管理显隐，使用 `value/defaultValue/onChange` 管理当前图片索引。全局 `imagePreview.open()` 返回 handle，可通过 `handle.result` 获取关闭原因和最终索引；`ZKitProvider` 已内置 `ImagePreviewProvider`。
+
+### NativeImagePreview 用法
+
+```tsx
+import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { NativeImagePreview, type NativeImagePreviewItemDescriptor } from 'zkit-ui/native-image-preview';
+
+const items: NativeImagePreviewItemDescriptor[] = [
+  { id: 'cover', source: require('./cover.png'), width: 1200, height: 900 },
+  { id: 'detail', source: 'https://example.com/detail.jpg' },
+  { id: 'clip', type: 'video', url: videoUrl, poster: require('./poster.png') },
+];
+
+function getThumbnailSource(item: NativeImagePreviewItemDescriptor): ImageSourcePropType | undefined {
+  const source = item.poster ?? item.source;
+  return typeof source === 'string' ? { uri: source } : source;
+}
+
+export function DemoNativeImagePreview() {
+  return (
+    <NativeImagePreview items={items} colorScheme="dark" edgeToEdge>
+      <View style={styles.grid}>
+        {items.map((item, index) => {
+          const thumbnailSource = getThumbnailSource(item);
+          if (!thumbnailSource) return null;
+
+          return (
+            <View key={item.id ?? index} style={styles.tile}>
+              <NativeImagePreview.Item index={index} style={StyleSheet.absoluteFill}>
+                <Image source={thumbnailSource} style={styles.thumbnail} />
+              </NativeImagePreview.Item>
+            </View>
+          );
+        })}
+      </View>
+    </NativeImagePreview>
+  );
+}
+
+const styles = StyleSheet.create({
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tile: {
+    aspectRatio: 1,
+    width: '33.333%',
+  },
+  thumbnail: {
+    ...StyleSheet.absoluteFillObject,
+  },
+});
+```
+
+`NativeImagePreview` 不是 `ImagePreview` 的命令式替代品，而是面向真实缩略图锚点的原生共享转场组件。`items` 顺序必须和 `NativeImagePreview.Item index` 对齐，`Item` 内必须渲染真实图片节点；iOS / Android 走原生 viewer，原生模块未注册时不会降级到普通 `ImagePreview`，需要重建 native app。Web 仅渲染子节点，不提供预览能力。
 
 ### 目录与导出
 

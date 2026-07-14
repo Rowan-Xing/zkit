@@ -87,6 +87,11 @@
       "react-native": "./dist/ui/LinkedScroll/index.js",
       "default": "./dist/ui/LinkedScroll/index.js"
     },
+    "./native-image-preview": {
+      "types": "./dist/ui/NativeImagePreview/index.d.ts",
+      "react-native": "./dist/ui/NativeImagePreview/index.js",
+      "default": "./dist/ui/NativeImagePreview/index.js"
+    },
     "./loading-spinner": {
       "types": "./dist/ui/LoadingSpinner/index.d.ts",
       "react-native": "./dist/ui/LoadingSpinner/index.js",
@@ -176,7 +181,9 @@
     "url": "https://github.com/Concur-max/zkit/issues"
   },
   "files": [
+    "android",
     "dist",
+    "expo-module.config.json",
     "src",
     "ios",
     "react-native.config.js",
@@ -197,6 +204,7 @@
   "dependencies": {
     "@vant/area-data": "^2.1.0",
     "dayjs": "^1.11.13",
+    "react-native-is-edge-to-edge": "^1.1.6",
     "react-native-toast-message": "^2.3.3",
     "zkit-tools": "1.0.1"
   },
@@ -204,6 +212,7 @@
     "@expo/vector-icons": "*",
     "@lodev09/react-native-true-sheet": "*",
     "@shopify/flash-list": "*",
+    "expo": "*",
     "expo-image": "*",
     "expo-linear-gradient": "*",
     "lottie-react-native": "*",
@@ -222,6 +231,7 @@
     "@shopify/flash-list": "^2.3.1",
     "@types/react": "~19.1.17",
     "dayjs": "^1.11.13",
+    "expo": "~54.0.31",
     "expo-image": "~3.0.11",
     "expo-linear-gradient": "~15.0.8",
     "lottie-react-native": "7.3.2",
