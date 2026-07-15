@@ -1,5 +1,11 @@
 # zkit-ui
 
+## 2.0.6
+
+### Patch Changes
+
+- Rename the native image preview implementation to NativeImagePreview terminology and add the H5 shared-transition preview bridge.
+
 ## 2.0.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 # NativeImagePreview
 
-`NativeImagePreview` 是强调原生共享转场体验的图片预览组件。它和普通 `ImagePreview` 服务分工不同：`ImagePreview` 适合命令式打开图片；`NativeImagePreview` 适合从真实缩略图自然过渡到全屏 viewer，并在 iOS / Android 上走原生手势、缩放、滑动和拖拽关闭路径。
+`NativeImagePreview` 是强调真实缩略图锚点与共享转场体验的图片预览组件。它和普通 `ImagePreview` 服务分工不同：`ImagePreview` 适合命令式打开图片；`NativeImagePreview` 适合从真实缩略图自然过渡到全屏 viewer，并在 iOS / Android 上走原生手势、缩放、滑动和拖拽关闭路径，在 Web 上走 H5 共享转场 viewer。
 
 ## 适用场景
 
@@ -95,14 +95,14 @@ import { imagePreview } from 'zkit-ui/image-preview';
 imagePreview.open({ images, index: 0 });
 ```
 
-`ImagePreview` 是普通全屏预览服务，适合没有稳定缩略图锚点的命令式场景。`NativeImagePreview` 是声明式共享转场组件，必须就地包住真实图片节点。两者不要混成同一个封装，否则很容易把原生共享转场退化成普通弹层。
+`ImagePreview` 是普通全屏预览服务，适合没有稳定缩略图锚点的命令式场景。`NativeImagePreview` 是声明式共享转场组件，必须就地包住真实图片节点。两者不要混成同一个封装，否则很容易把共享转场退化成普通弹层。
 
 ## 平台行为
 
 - iOS / Android：使用原生 viewer 和真实图片锚点，主打共享转场、缩放、滑动和拖拽关闭。
+- Web：使用 H5 viewer 和真实 DOM 图片锚点，支持共享转场、缩放、滑动、视频播放和拖拽关闭。
 - 首次接入或变更原生依赖后需要重新构建 native app；仅刷新 JS bundle 不会注册新的原生 ViewManager。
 - 原生模块未注册时不会降级到 `ImagePreview`。这是 native 接入或构建错误，需要重新安装依赖并重建 native app。
-- Web：仅保留子节点渲染，不提供预览能力，也不会模拟普通 `ImagePreview`。
 
 ## 手动确认点
 

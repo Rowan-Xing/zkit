@@ -1,0 +1,137 @@
+.native-image-preview-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;
+  width: var(--native-image-preview-vw, 100vw);
+  height: var(--native-image-preview-vh, 100vh);
+  overflow: hidden;
+  color: #fff;
+  contain: layout size paint;
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.native-image-preview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  will-change: opacity;
+}
+
+.native-image-preview-theme-light .native-image-preview-backdrop {
+  background: #fff;
+}
+
+.native-image-preview-viewport {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.native-image-preview-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: var(--native-image-preview-vw, 100vw);
+  height: var(--native-image-preview-vh, 100vh);
+  will-change: transform, opacity;
+}
+
+.native-image-preview-slide {
+  position: relative;
+  display: grid;
+  flex: 0 0 var(--native-image-preview-vw, 100vw);
+  width: var(--native-image-preview-vw, 100vw);
+  height: var(--native-image-preview-vh, 100vh);
+  place-items: center;
+  overflow: hidden;
+}
+
+.native-image-preview-media {
+  display: block;
+  max-width: var(--native-image-preview-vw, 100vw);
+  max-height: var(--native-image-preview-vh, 100vh);
+  object-fit: contain;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.native-image-preview-image {
+  width: auto;
+  height: auto;
+}
+
+.native-image-preview-video {
+  width: auto;
+  height: auto;
+  background: #000;
+}
+
+.native-image-preview-close {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 3;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  font-size: 30px;
+  line-height: 1;
+  backdrop-filter: blur(18px);
+}
+
+.native-image-preview-counter {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 3;
+  min-width: 58px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 720;
+  text-align: center;
+  backdrop-filter: blur(18px);
+}
+
+.native-image-preview-fly-shell {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: 0;
+  pointer-events: none;
+  transform-origin: top left;
+  will-change: transform, width, height;
+}
+
+.native-image-preview-fly-media {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  max-width: none;
+  max-height: none;
+  object-fit: fill;
+  transform-origin: top left;
+  will-change: transform, width, height;
+}
+
+.native-image-preview-fading-out {
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}

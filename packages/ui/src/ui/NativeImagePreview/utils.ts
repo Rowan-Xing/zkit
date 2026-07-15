@@ -56,6 +56,7 @@ function normalizePreviewItem(
       poster,
       width: item.width,
       height: item.height,
+      alt: item.alt,
       raw: item,
     };
   }

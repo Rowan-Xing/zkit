@@ -1,11 +1,11 @@
 {
   "platforms": ["apple", "android"],
   "apple": {
-    "modules": ["GaleriaModule"],
+    "modules": ["NativeImagePreviewModule"],
     "podspecPath": "zkit-ui.podspec",
     "swiftModuleName": "zkit_ui"
   },
   "android": {
-    "modules": ["cn.fontree.zkit.ui.preview.GaleriaModule"]
+    "modules": ["cn.fontree.zkit.ui.preview.NativeImagePreviewModule"]
   }
 }

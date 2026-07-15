@@ -1,0 +1,135 @@
+.native-image-preview-guide-scroll {
+  width: 100%;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.native-image-preview-guide-shell {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 104px 0 56px;
+}
+
+.native-image-preview-guide-hero {
+  max-width: 720px;
+  padding: 28px 0 24px;
+}
+
+.native-image-preview-guide-eyebrow {
+  margin: 0 0 8px;
+  color: #00539f;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.native-image-preview-guide-hero h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 68px;
+  font-weight: 900;
+  line-height: 0.94;
+  letter-spacing: 0;
+}
+
+.native-image-preview-guide-subtitle {
+  max-width: 620px;
+  margin: 16px 0 0;
+  color: #5b6472;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.native-image-preview-guide-grid {
+  display: grid;
+  grid-auto-flow: dense;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.native-image-preview-guide-card {
+  position: relative;
+  display: block;
+  min-height: 220px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #dfe6ef;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  transform: translateZ(0);
+}
+
+.native-image-preview-guide-card-tall {
+  grid-row: span 2;
+  min-height: 452px;
+}
+
+.native-image-preview-guide-card [role='button'] {
+  height: 100%;
+  cursor: zoom-in;
+}
+
+.native-image-preview-guide-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+}
+
+.native-image-preview-guide-card [role='button']:focus-visible {
+  outline: 3px solid #00539f;
+  outline-offset: 3px;
+}
+
+.native-image-preview-guide-badge {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: calc(100% - 20px);
+  padding: 7px 9px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: rgba(17, 24, 39, 0.68);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(14px);
+}
+
+@media (max-width: 760px) {
+  .native-image-preview-guide-shell {
+    width: min(100% - 20px, 540px);
+    padding-top: 92px;
+  }
+
+  .native-image-preview-guide-hero {
+    padding-bottom: 18px;
+  }
+
+  .native-image-preview-guide-hero h1 {
+    font-size: 42px;
+  }
+
+  .native-image-preview-guide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .native-image-preview-guide-card {
+    min-height: 176px;
+  }
+
+  .native-image-preview-guide-card-tall {
+    min-height: 362px;
+  }
+}

@@ -43,7 +43,7 @@ import {
   ToolsGuidePage,
 } from './GuidePages';
 import { ActionDialogsGuidePage } from './ActionDialogsGuidePage';
-import { GaleriaGuidePage } from './GaleriaGuidePage';
+import { NativeImagePreviewGuidePage } from './NativeImagePreviewGuidePage';
 
 type WorkspaceRouteKey =
   | 'overview'
@@ -56,7 +56,7 @@ type WorkspaceRouteKey =
   | 'accordion'
   | 'bottomSheet'
   | 'linkedScroll'
-  | 'galeria'
+  | 'nativeImagePreview'
   | 'pickers'
   | 'services'
   | 'dialogs'
@@ -81,7 +81,7 @@ const WORKSPACE_ROUTE_KEYS: readonly WorkspaceRouteKey[] = [
   'accordion',
   'bottomSheet',
   'linkedScroll',
-  'galeria',
+  'nativeImagePreview',
   'pickers',
   'services',
   'dialogs',
@@ -99,7 +99,7 @@ const WORKSPACE_ROUTE_PATHS: Record<WorkspaceRouteKey, string> = {
   accordion: '/accordion',
   bottomSheet: '/bottom-sheet',
   linkedScroll: '/linked-scroll',
-  galeria: '/native-image-preview',
+  nativeImagePreview: '/native-image-preview',
   pickers: '/pickers',
   services: '/services',
   dialogs: '/dialogs',
@@ -144,7 +144,7 @@ function getRouteKeyFromPath(pathname: string): WorkspaceRouteKey {
   if (lastSegment === 'surfaces') return 'accordion';
   if (lastSegment === 'sheet' || lastSegment === 'bottomsheet') return 'bottomSheet';
   if (lastSegment === 'linked' || lastSegment === 'linkedscroll') return 'linkedScroll';
-  if (lastSegment === 'gallery' || lastSegment === 'native-image-preview') return 'galeria';
+  if (lastSegment === 'native-image-preview') return 'nativeImagePreview';
 
   return (
     WORKSPACE_ROUTE_KEYS.find(
@@ -272,11 +272,11 @@ export function RootWorkspace({
         Screen: LinkedScrollGuidePage,
       },
       {
-        key: 'galeria',
-        title: t('example.page.galeria.title'),
-        caption: t('example.page.galeria.caption'),
+        key: 'nativeImagePreview',
+        title: t('example.page.nativeImagePreview.title'),
+        caption: t('example.page.nativeImagePreview.caption'),
         iconName: 'image',
-        Screen: GaleriaGuidePage,
+        Screen: NativeImagePreviewGuidePage,
       },
       {
         key: 'pickers',

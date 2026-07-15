@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-`NativeImagePreview` 不是 `ImagePreview` 的命令式替代品，而是面向真实缩略图锚点的原生共享转场组件。`items` 顺序必须和 `NativeImagePreview.Item index` 对齐，`Item` 内必须渲染真实图片节点；iOS / Android 走原生 viewer，原生模块未注册时不会降级到普通 `ImagePreview`，需要重建 native app。Web 仅渲染子节点，不提供预览能力。
+`NativeImagePreview` 不是 `ImagePreview` 的命令式替代品，而是面向真实缩略图锚点的共享转场组件。`items` 顺序必须和 `NativeImagePreview.Item index` 对齐，`Item` 内必须渲染真实图片节点；iOS / Android 走原生 viewer，原生模块未注册时不会降级到普通 `ImagePreview`，需要重建 native app；Web 走 H5 viewer，支持共享转场、缩放、滑动、视频播放和拖拽关闭。
 
 ### 目录与导出
 

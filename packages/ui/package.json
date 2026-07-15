@@ -1,6 +1,6 @@
 {
   "name": "zkit-ui",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -170,7 +170,10 @@
     "./assets/*": "./dist/assets/*",
     "./package.json": "./package.json"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css",
+    "**/*.css"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Concur-max/zkit.git",
@@ -181,7 +184,8 @@
     "url": "https://github.com/Concur-max/zkit/issues"
   },
   "files": [
-    "android",
+    "android/build.gradle",
+    "android/src",
     "dist",
     "expo-module.config.json",
     "src",

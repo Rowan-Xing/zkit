@@ -77,7 +77,7 @@ import { NativeImagePreview } from 'zkit-ui/native-image-preview';
 两者不要混用成同一个本地封装：
 
 - `ImagePreview`：普通全屏预览，支持声明式 `open/value` 和命令式 `imagePreview.open()`。
-- `NativeImagePreview`：原生共享转场预览，需要包住真实缩略图节点，iOS / Android 走原生 viewer。
+- `NativeImagePreview`：共享转场预览，需要包住真实缩略图节点，iOS / Android 走原生 viewer，Web 走 H5 viewer。
 
 ## 手动确认点
 

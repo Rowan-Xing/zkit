@@ -15,6 +15,7 @@ export type NativeImagePreviewSource = ImageSourcePropType | string;
 
 export type NativeImagePreviewItemDescriptor = {
   id?: string;
+  alt?: string;
   type?: NativeImagePreviewMediaType;
   url?: string;
   source?: NativeImagePreviewSource;
@@ -34,6 +35,7 @@ export type NativeImagePreviewResolvedItem = {
   poster?: string;
   width?: number;
   height?: number;
+  alt?: string;
   raw: NativeImagePreviewItem;
 };
 
@@ -46,7 +48,7 @@ export type NativeImagePreviewNativeItem = {
   height?: number;
 };
 
-export type NativeImagePreviewChangeReason = 'swipe';
+export type NativeImagePreviewChangeReason = 'api' | 'swipe';
 
 export type NativeImagePreviewChangeEventPayload = {
   currentIndex: number;

@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
+const sourceDir = path.join(rootDir, 'src');
 const sourceAssetsDir = path.join(rootDir, 'src', 'assets');
 const distAssetsDir = path.join(distDir, 'assets');
 
@@ -26,6 +27,26 @@ function copyDirectory(from, to) {
   }
 }
 
+function copyFilesByExtension(from, to, extensions) {
+  if (!fs.existsSync(from)) return;
+  fs.mkdirSync(to, { recursive: true });
+
+  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+    const sourcePath = path.join(from, entry.name);
+    const targetPath = path.join(to, entry.name);
+
+    if (entry.isDirectory()) {
+      copyFilesByExtension(sourcePath, targetPath, extensions);
+      continue;
+    }
+
+    if (entry.isFile() && extensions.has(path.extname(entry.name))) {
+      fs.copyFileSync(sourcePath, targetPath);
+    }
+  }
+}
+
 fs.rmSync(distDir, { recursive: true, force: true });
 execFileSync('tsc', ['-p', 'tsconfig.json'], { cwd: rootDir, stdio: 'inherit' });
 copyDirectory(sourceAssetsDir, distAssetsDir);
+copyFilesByExtension(sourceDir, distDir, new Set(['.css']));

@@ -8,7 +8,7 @@ import type {
 } from './types';
 
 export type NativeImagePreviewContextValue = {
-  galleryId: string;
+  previewGroupId: string;
   items: readonly NativeImagePreviewResolvedItem[];
   nativeItems: readonly NativeImagePreviewNativeItem[];
   colorScheme: NativeImagePreviewResolvedColorScheme;

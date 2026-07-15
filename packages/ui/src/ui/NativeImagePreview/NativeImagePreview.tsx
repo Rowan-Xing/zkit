@@ -25,7 +25,7 @@ type NativePreviewViewProps = {
   children: React.ReactElement;
   index: number;
   style?: StyleProp<ViewStyle>;
-  galleryId: string;
+  previewGroupId: string;
   items: readonly NativeImagePreviewNativeItem[];
   theme: 'dark' | 'light';
   edgeToEdge: boolean;
@@ -39,7 +39,7 @@ const NativePreviewView = requireNativeView<NativePreviewViewProps>(
 
 const ANDROID_EDGE_TO_EDGE = Platform.OS === 'android' ? isEdgeToEdge() : false;
 
-function createGalleryId() {
+function createPreviewGroupId() {
   return `zkit-native-image-preview-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 10)}`;
@@ -55,9 +55,9 @@ const NativeImagePreviewRoot = React.memo(function NativeImagePreview({
   onChange,
 }: NativeImagePreviewProps) {
   const systemColorScheme = useColorScheme();
-  const galleryIdRef = React.useRef<string | null>(null);
-  if (galleryIdRef.current == null) {
-    galleryIdRef.current = createGalleryId();
+  const previewGroupIdRef = React.useRef<string | null>(null);
+  if (previewGroupIdRef.current == null) {
+    previewGroupIdRef.current = createPreviewGroupId();
   }
 
   const resolvedItems = React.useMemo(
@@ -71,7 +71,7 @@ const NativeImagePreviewRoot = React.memo(function NativeImagePreview({
   const resolvedColorScheme = resolveNativeImagePreviewColorScheme(colorScheme, systemColorScheme);
   const contextValue = React.useMemo(
     () => ({
-      galleryId: galleryIdRef.current!,
+      previewGroupId: previewGroupIdRef.current!,
       items: resolvedItems,
       nativeItems,
       colorScheme: resolvedColorScheme,
@@ -129,7 +129,7 @@ const NativeImagePreviewItem = React.memo(function NativeImagePreviewItem({
     <NativePreviewView
       closeIconName={context.nativeProps?.iosCloseIconName}
       edgeToEdge={resolvedEdgeToEdge}
-      galleryId={context.galleryId}
+      previewGroupId={context.previewGroupId}
       index={clampPreviewIndex(index, context.nativeItems.length)}
       items={context.nativeItems}
       onIndexChange={handleIndexChange}

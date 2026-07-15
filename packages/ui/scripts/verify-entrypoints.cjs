@@ -93,8 +93,15 @@ for (const exportKey of requiredPackageExports) {
   }
 }
 
-if (packageJson.sideEffects !== false) {
-  errors.push('package.json should declare sideEffects=false so modern bundlers can drop unused subpaths.');
+const sideEffects = packageJson.sideEffects;
+const hasOnlyCssSideEffects =
+  Array.isArray(sideEffects) &&
+  sideEffects.length === 2 &&
+  sideEffects.includes('*.css') &&
+  sideEffects.includes('**/*.css');
+
+if (sideEffects !== false && !hasOnlyCssSideEffects) {
+  errors.push('package.json sideEffects should be false or only whitelist CSS files.');
 }
 
 if (errors.length > 0) {
