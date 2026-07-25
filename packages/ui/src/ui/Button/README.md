@@ -186,5 +186,5 @@ export function Demo() {
 
 - `disabled` 会禁用交互并进入禁用视觉；`loading` 只禁用交互，不强制置灰
 - 显式传入 `hitSlop` 时以调用侧为准；否则小尺寸和 `link` 会自动补足触控热区
-- `accessibilityRole` 固定为 `button`
+- Native 端 `accessibilityRole` 固定为 `button`；Web 端根节点不设置 `button` role，避免 RN Web 将 Button 渲染为真实 `<button>` 后产生嵌套按钮问题
 - `iconOnly` 必须提供可读的 `accessibilityLabel`，除非 children 是可作为标签的文本

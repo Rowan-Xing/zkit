@@ -1,5 +1,11 @@
 # zkit-ui
 
+## 2.0.10
+
+### Patch Changes
+
+- Fix Checkbox indicator animations so Reanimated worklets only capture serializable shared values.
+
 ## 2.0.6
 
 ### Patch Changes

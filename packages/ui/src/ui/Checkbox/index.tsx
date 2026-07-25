@@ -1017,31 +1017,39 @@ export type CheckboxIndicatorProps = {
 };
 
 export function CheckboxIndicator({ children, style }: CheckboxIndicatorProps) {
-  const context = useCheckboxIndicatorContext();
-  const customIndicator = children ?? context.customIndicator;
+  const {
+    boxSize,
+    checkedSv,
+    customIndicator: contextCustomIndicator,
+    defaultIcon,
+    indeterminateIndicatorColor,
+    indeterminateSv,
+    slot,
+  } = useCheckboxIndicatorContext();
+  const customIndicator = children ?? contextCustomIndicator;
 
   const checkedIconAnimatedStyle = useAnimatedStyle(() => {
-    const opacity = context.checkedSv.value * (1 - context.indeterminateSv.value);
-    const scale = interpolate(context.checkedSv.value, [0, 1], [0.78, 1]);
+    const opacity = checkedSv.value * (1 - indeterminateSv.value);
+    const scale = interpolate(checkedSv.value, [0, 1], [0.78, 1]);
     return { opacity, transform: [{ scale }] };
   });
 
   const indeterminateAnimatedStyle = useAnimatedStyle(() => {
-    const opacity = context.checkedSv.value * context.indeterminateSv.value;
-    const scale = interpolate(context.indeterminateSv.value, [0, 1], [0.82, 1]);
+    const opacity = checkedSv.value * indeterminateSv.value;
+    const scale = interpolate(indeterminateSv.value, [0, 1], [0.82, 1]);
     return { opacity, transform: [{ scale }] };
   });
 
   const customIndicatorAnimatedStyle = useAnimatedStyle(() => {
-    const opacity = context.checkedSv.value;
-    const scale = interpolate(context.checkedSv.value, [0, 1], [0.78, 1]);
+    const opacity = checkedSv.value;
+    const scale = interpolate(checkedSv.value, [0, 1], [0.78, 1]);
     return { opacity, transform: [{ scale }] };
   });
 
-  const indeterminateWidth = Math.max(wp(8), Math.round(context.boxSize * 0.56));
-  const indeterminateHeight = Math.max(wp(2), Math.round(context.boxSize * 0.11));
+  const indeterminateWidth = Math.max(wp(8), Math.round(boxSize * 0.56));
+  const indeterminateHeight = Math.max(wp(2), Math.round(boxSize * 0.11));
   const resolvedCustomIndicator = isIndicatorRenderProp(customIndicator)
-    ? customIndicator(context.slot)
+    ? customIndicator(slot)
     : customIndicator;
 
   return (
@@ -1050,8 +1058,8 @@ export function CheckboxIndicator({ children, style }: CheckboxIndicatorProps) {
       style={[
         styles.indicatorLayer,
         {
-          width: context.boxSize,
-          height: context.boxSize,
+          width: boxSize,
+          height: boxSize,
         },
         style,
       ]}
@@ -1066,12 +1074,12 @@ export function CheckboxIndicator({ children, style }: CheckboxIndicatorProps) {
                 width: indeterminateWidth,
                 height: indeterminateHeight,
                 borderRadius: indeterminateHeight / 2,
-                backgroundColor: context.indeterminateIndicatorColor,
+                backgroundColor: indeterminateIndicatorColor,
               }}
             />
           </Animated.View>
           <Animated.View style={[styles.iconLayer, checkedIconAnimatedStyle]}>
-            {context.defaultIcon}
+            {defaultIcon}
           </Animated.View>
         </>
       )}

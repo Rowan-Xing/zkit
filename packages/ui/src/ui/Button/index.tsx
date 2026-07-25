@@ -108,7 +108,7 @@ export type ButtonColors = {
 
 type NativePressableProps = Omit<
   React.ComponentPropsWithoutRef<typeof Pressable>,
-  'accessibilityRole' | 'accessibilityState' | 'children' | 'disabled' | 'style'
+  'accessibilityRole' | 'accessibilityState' | 'children' | 'disabled' | 'role' | 'style'
 >;
 
 export type ButtonRef = React.ComponentRef<typeof Pressable>;
@@ -352,6 +352,10 @@ function colorToRgba(color: string, alpha: number) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+function resolveBoxShadowColor(color: string, opacity: number) {
+  return colorToRgba(color, opacity) ?? color;
+}
+
 function resolveColorToken(input: string | undefined, fallback: string, theme: Theme) {
   if (input == null) return fallback;
 
@@ -484,13 +488,24 @@ function resolveShadowStyle(
 
   if (typeof shadow === 'object') {
     const radius = Math.max(0, shadow.radius ?? wp(10));
+    const color = shadow.color ?? '#000000';
+    const offsetX = shadow.offsetX ?? 0;
+    const offsetY = shadow.offsetY ?? wp(3);
+    const opacity = shadow.opacity ?? (scheme === 'dark' ? 0.28 : 0.14);
+
+    if (Platform.OS === 'web') {
+      return {
+        boxShadow: `${offsetX}px ${offsetY}px ${radius}px ${resolveBoxShadowColor(color, opacity)}`,
+      } as ViewStyle;
+    }
+
     return {
-      shadowColor: shadow.color ?? '#000000',
+      shadowColor: color,
       shadowOffset: {
-        width: shadow.offsetX ?? 0,
-        height: shadow.offsetY ?? wp(3),
+        width: offsetX,
+        height: offsetY,
       },
-      shadowOpacity: shadow.opacity ?? (scheme === 'dark' ? 0.28 : 0.14),
+      shadowOpacity: opacity,
       shadowRadius: radius,
       elevation: shadow.elevation ?? Math.max(0, Math.round(radius * 0.55)),
     };
@@ -500,10 +515,19 @@ function resolveShadowStyle(
   if (level <= 0) return undefined;
 
   const radius = wp(level * 5 + 3);
+  const offsetY = wp(level + 1);
+  const opacity = scheme === 'dark' ? 0.26 : 0.14;
+
+  if (Platform.OS === 'web') {
+    return {
+      boxShadow: `0px ${offsetY}px ${radius}px ${resolveBoxShadowColor('#000000', opacity)}`,
+    } as ViewStyle;
+  }
+
   return {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: wp(level + 1) },
-    shadowOpacity: scheme === 'dark' ? 0.26 : 0.14,
+    shadowOffset: { width: 0, height: offsetY },
+    shadowOpacity: opacity,
     shadowRadius: radius,
     elevation: Math.max(0, Math.round(radius * 0.55)),
   };
@@ -839,6 +863,24 @@ function resolveWebCursorStyle(disabled: boolean): ViewStyle | undefined {
   return { cursor: disabled ? 'not-allowed' : 'pointer' } as ViewStyle;
 }
 
+const nativeNonePointerEvents = Platform.OS === 'web' ? undefined : 'none';
+const webNonePointerEventsStyle =
+  Platform.OS === 'web' ? ({ pointerEvents: 'none' } as ViewStyle) : undefined;
+
+function resolveRootAccessibilityRole() {
+  return Platform.OS === 'web' ? undefined : 'button';
+}
+
+function resolveRootPressableProps<T extends object>(props: T): T {
+  if (Platform.OS !== 'web') return props;
+
+  const { accessibilityRole: _accessibilityRole, role: _role, ...rest } = props as T & {
+    accessibilityRole?: unknown;
+    role?: unknown;
+  };
+  return rest as T;
+}
+
 function requiresAnimatedPressEffect(effect: ButtonPressEffect | undefined) {
   return (
     effect === 'scale' ||
@@ -1161,6 +1203,8 @@ function ButtonStaticImpl(
     },
     [interactionDisabled, onPress]
   );
+  const rootAccessibilityRole = resolveRootAccessibilityRole();
+  const rootPressableProps = resolveRootPressableProps(pressableProps);
   const pressOpacityEnabled = !interactionDisabled && (pressEffect === 'auto' || pressEffect === 'opacity');
   const rootStyle = React.useCallback(
     ({ pressed }: PressableStateCallbackType) => [
@@ -1186,10 +1230,10 @@ function ButtonStaticImpl(
 
   return (
     <Pressable
-      {...pressableProps}
+      {...rootPressableProps}
       ref={ref}
       accessibilityLabel={resolvedAccessibilityLabel}
-      accessibilityRole="button"
+      accessibilityRole={rootAccessibilityRole}
       accessibilityState={{
         ...accessibilityState,
         busy: Boolean(loading || accessibilityState?.busy),
@@ -1202,9 +1246,10 @@ function ButtonStaticImpl(
       testID={testID}
     >
       <View
-        pointerEvents="none"
+        pointerEvents={nativeNonePointerEvents}
         style={[
           styles.content,
+          webNonePointerEventsStyle,
           contentSizeStyle,
           paddingStyle,
           radiusStyle,
@@ -1215,11 +1260,11 @@ function ButtonStaticImpl(
       >
         {LinearGradientComponent && gradientCfg ? (
           <LinearGradientComponent
-            pointerEvents="none"
+            pointerEvents={nativeNonePointerEvents}
             colors={gradientCfg.colors}
             start={gradientCfg.start}
             end={gradientCfg.end}
-            style={[StyleSheet.absoluteFillObject, radiusStyle]}
+            style={[StyleSheet.absoluteFillObject, webNonePointerEventsStyle, radiusStyle]}
           />
         ) : null}
 
@@ -1398,13 +1443,15 @@ function ButtonPressAnimatedImpl(
     },
     [interactionDisabled, onPressOut, pressSv, resolvedPressEffect]
   );
+  const rootAccessibilityRole = resolveRootAccessibilityRole();
+  const rootPressableProps = resolveRootPressableProps(pressableProps);
 
   return (
     <AnimatedPressable
-      {...pressableProps}
+      {...rootPressableProps}
       ref={ref}
       accessibilityLabel={resolvedAccessibilityLabel}
-      accessibilityRole="button"
+      accessibilityRole={rootAccessibilityRole}
       accessibilityState={{
         ...accessibilityState,
         busy: Boolean(loading || accessibilityState?.busy),
@@ -1419,9 +1466,10 @@ function ButtonPressAnimatedImpl(
       testID={testID}
     >
       <View
-        pointerEvents="none"
+        pointerEvents={nativeNonePointerEvents}
         style={[
           styles.content,
+          webNonePointerEventsStyle,
           contentSizeStyle,
           paddingStyle,
           radiusStyle,
@@ -1432,19 +1480,20 @@ function ButtonPressAnimatedImpl(
       >
         {LinearGradientComponent && gradientCfg ? (
           <LinearGradientComponent
-            pointerEvents="none"
+            pointerEvents={nativeNonePointerEvents}
             colors={gradientCfg.colors}
             start={gradientCfg.start}
             end={gradientCfg.end}
-            style={[StyleSheet.absoluteFillObject, radiusStyle]}
+            style={[StyleSheet.absoluteFillObject, webNonePointerEventsStyle, radiusStyle]}
           />
         ) : null}
 
         {pressHighlightEnabled ? (
           <Animated.View
-            pointerEvents="none"
+            pointerEvents={nativeNonePointerEvents}
             style={[
               StyleSheet.absoluteFillObject,
+              webNonePointerEventsStyle,
               radiusStyle,
               { backgroundColor: pressOverlay.color },
               overlayAnimatedStyle,
@@ -1736,13 +1785,15 @@ function ButtonAnimatedImpl(
     },
     [interactionDisabled, onPressOut, pressSv, resolvedPressEffect]
   );
+  const rootAccessibilityRole = resolveRootAccessibilityRole();
+  const rootPressableProps = resolveRootPressableProps(pressableProps);
 
   return (
     <AnimatedPressable
-      {...pressableProps}
+      {...rootPressableProps}
       ref={ref}
       accessibilityLabel={resolvedAccessibilityLabel}
-      accessibilityRole="button"
+      accessibilityRole={rootAccessibilityRole}
       accessibilityState={{
         ...accessibilityState,
         busy: Boolean(loading || accessibilityState?.busy),
@@ -1757,9 +1808,10 @@ function ButtonAnimatedImpl(
       testID={testID}
     >
       <View
-        pointerEvents="none"
+        pointerEvents={nativeNonePointerEvents}
         style={[
           styles.content,
+          webNonePointerEventsStyle,
           contentSizeStyle,
           paddingStyle,
           radiusStyle,
@@ -1770,18 +1822,19 @@ function ButtonAnimatedImpl(
       >
         {LinearGradientComponent && gradientCfg ? (
           <LinearGradientComponent
-            pointerEvents="none"
+            pointerEvents={nativeNonePointerEvents}
             colors={gradientCfg.colors}
             start={gradientCfg.start}
             end={gradientCfg.end}
-            style={[StyleSheet.absoluteFillObject, radiusStyle]}
+            style={[StyleSheet.absoluteFillObject, webNonePointerEventsStyle, radiusStyle]}
           />
         ) : null}
 
         <Animated.View
-          pointerEvents="none"
+          pointerEvents={nativeNonePointerEvents}
           style={[
             StyleSheet.absoluteFillObject,
+            webNonePointerEventsStyle,
             radiusStyle,
             { backgroundColor: pressOverlay.color },
             overlayAnimatedStyle,

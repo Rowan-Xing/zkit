@@ -28,6 +28,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
 import { Button } from '../../ui/Button/index';
 import { Text } from '../../ui/Text';
+import { createShadowStyle } from '../../utils/shadow';
 import {
   ACTION_DIALOG_DEFAULT_COLORS,
   ACTION_DIALOG_DEFAULT_Z_INDEX,
@@ -712,11 +713,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(16),
   },
   dialog: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: wp(14) },
-    shadowOpacity: 0.18,
-    shadowRadius: wp(28),
-    elevation: wp(10),
+    ...createShadowStyle({
+      color: '#000000',
+      elevation: wp(10),
+      offsetY: wp(14),
+      opacity: 0.18,
+      radius: wp(28),
+    }),
   },
   surface: {
     overflow: 'hidden',
