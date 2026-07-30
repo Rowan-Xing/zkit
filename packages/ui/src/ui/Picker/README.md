@@ -188,4 +188,4 @@ Accessor props:
 
 - `label/defaultLabel/onLabelChange` 不再作为 Picker 状态。label 是由已确认 `value + options` 推导出的展示结果，业务需要自定义显示时使用 `formatLabel` 或 trigger render context。
 - `onChange` 表示最终表单值变化，和 TextInput、Radio、CheckboxGroup 的状态事件保持一致。
-- iOS 保留原生 `UIPickerView`，Android/Web 继续走自绘 wheel。Picker 层只处理级联状态和弹层生命周期，不把额外 JS 工作塞进滚轮关键帧。
+- iOS 保留原生 `UIPickerView`，Android 使用原生虚拟化滚动，Web 使用自绘 wheel。Picker 层只处理级联状态和弹层生命周期，不把额外 JS 工作塞进滚轮关键帧。
