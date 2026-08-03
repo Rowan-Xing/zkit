@@ -483,7 +483,6 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
               disabled={actionDisabled}
               loading={actionLoading}
               onPress={() => void pressAction(action.key)}
-              pressEffect="highlight"
               shape="square"
               size="md"
               layout={BAR_ACTION_BUTTON_LAYOUT}
@@ -510,7 +509,6 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
             }
             loading={actionLoading}
             onPress={() => void pressAction(action.key)}
-            pressEffect="highlight"
             shape="rounded"
             size="md"
             testID={action.testID}

@@ -1,5 +1,11 @@
 # zkit-ui
 
+## 2.0.16
+
+### Patch Changes
+
+- Make ActionDialog footer actions use Button's immediate opacity press feedback so quick confirm and dismiss actions remain visibly responsive.
+
 ## 2.0.15
 
 ### Patch Changes
