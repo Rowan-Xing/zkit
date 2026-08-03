@@ -1,5 +1,17 @@
 # zkit-ui
 
+## 2.0.11
+
+### Patch Changes
+
+- Fix Android wheel gestures inside native sheets and reduce large-wheel opening latency with native virtualized scrolling, while keeping rows clipped to the wheel viewport.
+
+## 2.0.10
+
+### Patch Changes
+
+- Fix Checkbox indicator animations so Reanimated worklets only capture serializable shared values.
+
 ## 2.0.6
 
 ### Patch Changes

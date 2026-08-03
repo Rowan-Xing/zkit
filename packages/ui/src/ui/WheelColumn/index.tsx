@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
   Platform,
   StyleSheet,
+  Text as NativeText,
   View,
   type AccessibilityActionEvent,
   type ColorValue,
@@ -17,9 +18,11 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import { getMaxFontSizeMultiplier, sp, wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
+import { AndroidVirtualizedWheel, type AndroidVirtualizedWheelHandle } from './AndroidVirtualizedWheel';
 import {
   ZKitWheelPicker,
   syncZKitWheelPickerCurrentSelection,
@@ -29,7 +32,7 @@ export { WHEEL_SELECTION_BACKGROUND_COLOR } from './constants';
 
 export const WHEEL_VISIBLE_ITEMS = 5;
 
-// iOS 走系统 UIPickerView，Android/Web 走自绘 transform 路径。
+// iOS 走系统 UIPickerView，Android 走原生虚拟列表，Web 走自绘 transform 路径。
 // 这些尺寸是当前 app 端多轮调校后的稳定观感，保留为默认公共规格。
 const IOS_CONFIRM_SYNC_TIMEOUT_MS = 64;
 const IOS_NATIVE_PICKER_HEIGHT = wp(260);
@@ -42,10 +45,11 @@ export const WHEEL_VIEWPORT_HEIGHT = Platform.OS === 'ios' ? IOS_NATIVE_PICKER_H
 export const WHEEL_AREA_HEIGHT =
   Platform.OS === 'ios' ? Math.max(IOS_NATIVE_PICKER_HEIGHT, BASE_WHEEL_AREA_HEIGHT) : BASE_WHEEL_AREA_HEIGHT;
 export const WHEEL_AREA_VERTICAL_INSET = Math.max(0, WHEEL_AREA_HEIGHT - WHEEL_VIEWPORT_HEIGHT) / 2;
-export const WHEEL_ITEM_HEIGHT =
+const INTERNAL_WHEEL_ITEM_HEIGHT =
   Platform.OS === 'ios' ? IOS_NATIVE_PICKER_HEIGHT / WHEEL_VISIBLE_ITEMS : BASE_WHEEL_ITEM_HEIGHT;
+export const WHEEL_ITEM_HEIGHT = INTERNAL_WHEEL_ITEM_HEIGHT;
 
-const CENTER_OFFSET = WHEEL_ITEM_HEIGHT * Math.floor(WHEEL_VISIBLE_ITEMS / 2);
+const CENTER_OFFSET = INTERNAL_WHEEL_ITEM_HEIGHT * Math.floor(WHEEL_VISIBLE_ITEMS / 2);
 const IOS_SETTLE_DELAY_MS = 90;
 
 const SNAP_DURATION_MIN = 140;
@@ -56,9 +60,14 @@ const RELEASE_VELOCITY_DEADZONE = 220;
 const RELEASE_LOCK_DISTANCE_ITEMS = 0.1;
 const RELEASE_LOCK_MAX_VELOCITY = 380;
 const MAX_FLING_ITEMS = 7;
-const ANDROID_VELOCITY_WINDOW_MS = 90;
+const PAN_ACTIVATION_OFFSET = wp(3);
 
 const SNAP_EASING = Easing.bezier(0.22, 1, 0.36, 1);
+// tsc 输出 CommonJS 后，worklet 若直接引用导入命名空间会把整个原生模块放进闭包。
+// 先保存具体函数引用，消费端 worklet 插件即可只序列化函数本身。
+const cancelAnimationOnUI = cancelAnimation;
+const withTimingOnUI = withTiming;
+const scheduleOnRNFromUI = scheduleOnRN;
 
 export type WheelColumnValue = string | number;
 
@@ -115,10 +124,11 @@ function clampNumber(n: number, min: number, max: number) {
 
 function indexToOffset(index: number) {
   'worklet';
-  return index * WHEEL_ITEM_HEIGHT;
+  return index * INTERNAL_WHEEL_ITEM_HEIGHT;
 }
 
 function getReleaseDeltaItems(velocityY: number) {
+  'worklet';
   const speed = Math.abs(velocityY);
   if (speed < RELEASE_VELOCITY_DEADZONE) return 0;
   const projected = Math.pow(speed / 1400, 1.05) * 3.6;
@@ -126,7 +136,8 @@ function getReleaseDeltaItems(velocityY: number) {
 }
 
 function getTargetIndexFromRelease(offset: number, velocityY: number, maxIndex: number) {
-  const currentIndexFloat = offset / WHEEL_ITEM_HEIGHT;
+  'worklet';
+  const currentIndexFloat = offset / INTERNAL_WHEEL_ITEM_HEIGHT;
   const nearestIndex = Math.round(currentIndexFloat);
   const distanceToNearest = Math.abs(currentIndexFloat - nearestIndex);
   const speed = Math.abs(velocityY);
@@ -155,7 +166,8 @@ function getTargetIndexFromRelease(offset: number, velocityY: number, maxIndex: 
 }
 
 function getSnapDuration(fromOffset: number, toOffset: number) {
-  const distanceItems = Math.abs(toOffset - fromOffset) / WHEEL_ITEM_HEIGHT;
+  'worklet';
+  const distanceItems = Math.abs(toOffset - fromOffset) / INTERNAL_WHEEL_ITEM_HEIGHT;
   return clampNumber(
     Math.round(SNAP_DURATION_MIN + distanceItems * SNAP_DURATION_PER_ITEM),
     SNAP_DURATION_MIN,
@@ -211,6 +223,50 @@ function findNearestEnabledIndex<TValue extends WheelColumnValue>(
 
     const next = clampedIndex + distance;
     if (next < options.length && !options[next]?.disabled) return next;
+  }
+
+  return -1;
+}
+
+function findNearestEnabledFlagIndex(enabledFlags: readonly boolean[], index: number, direction = 0) {
+  'worklet';
+  if (!enabledFlags.length) return -1;
+
+  const clampedIndex = clampNumber(Math.round(index), 0, enabledFlags.length - 1);
+  if (enabledFlags[clampedIndex]) return clampedIndex;
+
+  const walkForward = () => {
+    'worklet';
+    for (let i = clampedIndex + 1; i < enabledFlags.length; i += 1) {
+      if (enabledFlags[i]) return i;
+    }
+    return -1;
+  };
+
+  const walkBackward = () => {
+    'worklet';
+    for (let i = clampedIndex - 1; i >= 0; i -= 1) {
+      if (enabledFlags[i]) return i;
+    }
+    return -1;
+  };
+
+  if (direction > 0) {
+    const next = walkForward();
+    return next >= 0 ? next : walkBackward();
+  }
+
+  if (direction < 0) {
+    const previous = walkBackward();
+    return previous >= 0 ? previous : walkForward();
+  }
+
+  for (let distance = 1; distance < enabledFlags.length; distance += 1) {
+    const previous = clampedIndex - distance;
+    if (previous >= 0 && enabledFlags[previous]) return previous;
+
+    const next = clampedIndex + distance;
+    if (next < enabledFlags.length && enabledFlags[next]) return next;
   }
 
   return -1;
@@ -292,6 +348,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
   const isUserInteracting = useSharedValue(false);
 
   const iosPickerRef = React.useRef<unknown>(null);
+  const androidWheelRef = React.useRef<AndroidVirtualizedWheelHandle>(null);
   const iosSelectedIndexRef = React.useRef(displayIndex);
   const iosSettleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const iosSyncTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -320,8 +377,8 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     typeof flattenedSelectedItemTextStyle.fontSize === 'number'
       ? flattenedSelectedItemTextStyle.fontSize
       : typeof flattenedItemTextStyle.fontSize === 'number'
-        ? flattenedItemTextStyle.fontSize
-        : IOS_NATIVE_PICKER_FONT_SIZE;
+      ? flattenedItemTextStyle.fontSize
+      : IOS_NATIVE_PICKER_FONT_SIZE;
   const nativeFontWeight =
     normalizeFontWeight(flattenedSelectedItemTextStyle.fontWeight) ??
     normalizeFontWeight(flattenedItemTextStyle.fontWeight) ??
@@ -382,8 +439,7 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
       const option = options[nextIndex];
       if (!option || option.disabled) return;
 
-      const sameAsCurrent =
-        displayIndexRef.current === nextIndex && Object.is(selectedValueRef.current, option.value);
+      const sameAsCurrent = displayIndexRef.current === nextIndex && Object.is(selectedValueRef.current, option.value);
 
       if (sameAsCurrent) return;
 
@@ -428,6 +484,11 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
         return;
       }
 
+      if (Platform.OS === 'android') {
+        androidWheelRef.current?.scrollToIndex(nextIndex, animated);
+        return;
+      }
+
       const nextOffset = indexToOffset(nextIndex);
       cancelAnimation(offsetY);
       isUserInteracting.value = false;
@@ -454,6 +515,10 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
 
   const settleToNearest = React.useCallback(
     (animated = false) => {
+      if (Platform.OS === 'android') {
+        return androidWheelRef.current?.settleToNearest(animated) ?? resolveSelectableIndex(displayIndexRef.current);
+      }
+
       const rawIndex =
         Platform.OS === 'ios'
           ? iosSelectedIndexRef.current
@@ -489,7 +554,12 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
 
   React.useImperativeHandle(
     ref,
-    () => ({ scrollToIndex, scrollToValue, settleToNearest, syncCurrentSelection }),
+    () => ({
+      scrollToIndex,
+      scrollToValue,
+      settleToNearest,
+      syncCurrentSelection,
+    }),
     [scrollToIndex, scrollToValue, settleToNearest, syncCurrentSelection]
   );
 
@@ -540,95 +610,6 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     [resolveIOSSyncRequest, resolveSelectableIndex, scheduleIOSSettle, syncIOSSelectedIndex]
   );
 
-  const startInteraction = React.useCallback(() => {
-    cancelAnimation(offsetY);
-    isUserInteracting.value = true;
-    dragStartOffset.value = offsetY.value;
-  }, [dragStartOffset, isUserInteracting, offsetY]);
-
-  const updateInteraction = React.useCallback(
-    (translationY: number) => {
-      offsetY.value = clampNumber(dragStartOffset.value - translationY, 0, maxOffset);
-    },
-    [dragStartOffset, maxOffset, offsetY]
-  );
-
-  const finishInteraction = React.useCallback(
-    (velocityY: number) => {
-      const currentOffset = clampNumber(offsetY.value, 0, maxOffset);
-      const rawIndex = getTargetIndexFromRelease(currentOffset, velocityY, maxIndex);
-      const currentIndex = Math.round(currentOffset / WHEEL_ITEM_HEIGHT);
-      const nextIndex = resolveSelectableIndex(rawIndex, rawIndex - currentIndex);
-      const nextOffset = indexToOffset(nextIndex);
-      offsetY.value = withTiming(
-        nextOffset,
-        {
-          duration: getSnapDuration(currentOffset, nextOffset),
-          easing: SNAP_EASING,
-        },
-        (finished) => {
-          if (!finished) return;
-          isUserInteracting.value = false;
-          scheduleOnRN(emitSelectedIndex, nextIndex, 'user');
-        }
-      );
-    },
-    [emitSelectedIndex, isUserInteracting, maxIndex, maxOffset, offsetY, resolveSelectableIndex]
-  );
-
-  const touchStateRef = React.useRef({
-    startPageY: 0,
-    samples: [] as Array<{ pageY: number; timestamp: number }>,
-  });
-
-  const beginTouch = React.useCallback(
-    (pageY: number, timestamp?: number) => {
-      const ts = typeof timestamp === 'number' ? timestamp : Date.now();
-      touchStateRef.current = {
-        startPageY: pageY,
-        samples: [{ pageY, timestamp: ts }],
-      };
-      startInteraction();
-    },
-    [startInteraction]
-  );
-
-  const recordTouchSample = React.useCallback((pageY: number, timestamp?: number) => {
-    const ts = typeof timestamp === 'number' ? timestamp : Date.now();
-    const { samples } = touchStateRef.current;
-    samples.push({ pageY, timestamp: ts });
-
-    while (samples.length > 6) {
-      samples.shift();
-    }
-
-    const minTs = ts - ANDROID_VELOCITY_WINDOW_MS;
-    while (samples.length > 2 && samples[0]?.timestamp < minTs) {
-      samples.shift();
-    }
-  }, []);
-
-  const moveTouch = React.useCallback(
-    (pageY: number, timestamp?: number) => {
-      updateInteraction(pageY - touchStateRef.current.startPageY);
-      recordTouchSample(pageY, timestamp);
-    },
-    [recordTouchSample, updateInteraction]
-  );
-
-  const endTouch = React.useCallback(
-    (pageY: number, timestamp?: number) => {
-      recordTouchSample(pageY, timestamp);
-      const { samples } = touchStateRef.current;
-      const firstSample = samples[0];
-      const lastSample = samples[samples.length - 1];
-      const deltaY = (lastSample?.pageY ?? pageY) - (firstSample?.pageY ?? pageY);
-      const deltaT = Math.max(1, (lastSample?.timestamp ?? Date.now()) - (firstSample?.timestamp ?? Date.now()));
-      finishInteraction((deltaY / deltaT) * 1000);
-    },
-    [finishInteraction, recordTouchSample]
-  );
-
   const handleAccessibilityAction = React.useCallback(
     (event: AccessibilityActionEvent) => {
       if (disabled) return;
@@ -646,31 +627,42 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     [disabled, emitSelectedIndex, options, scrollToIndex]
   );
 
+  const handleAndroidSelectIndex = React.useCallback(
+    (nextIndex: number) => emitSelectedIndex(nextIndex, 'user'),
+    [emitSelectedIndex]
+  );
+
   const contentStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: CENTER_OFFSET - offsetY.value }],
   }));
 
-  const items = React.useMemo(
+  const webItems = React.useMemo(
     () =>
-      options.map((item, index) => (
-        <View key={`${String(optionKey(item, index))}-${index}`} style={styles.itemContainer}>
-          <Animated.Text
-            accessibilityLabel={item.accessibilityLabel ?? item.label}
-            maxFontSizeMultiplier={getMaxFontSizeMultiplier()}
-            numberOfLines={numberOfLines}
-            style={[
-              styles.itemText,
-              { color: itemTextColor },
-              itemTextStyle,
-              index === displayIndex && [styles.itemTextSelected, { color: selectedTextColor }, selectedItemTextStyle],
-              item.disabled && [styles.itemTextDisabled, { color: disabledTextColor }, disabledItemTextStyle],
-            ]}
-            testID={item.testID}
-          >
-            {item.label}
-          </Animated.Text>
-        </View>
-      )),
+      Platform.OS === 'web'
+        ? options.map((item, index) => (
+            <View key={`${String(optionKey(item, index))}-${index}`} style={styles.itemContainer}>
+              <NativeText
+                accessibilityLabel={item.accessibilityLabel ?? item.label}
+                maxFontSizeMultiplier={getMaxFontSizeMultiplier()}
+                numberOfLines={numberOfLines}
+                style={[
+                  styles.itemText,
+                  { color: itemTextColor },
+                  itemTextStyle,
+                  index === displayIndex && [
+                    styles.itemTextSelected,
+                    { color: selectedTextColor },
+                    selectedItemTextStyle,
+                  ],
+                  item.disabled && [styles.itemTextDisabled, { color: disabledTextColor }, disabledItemTextStyle],
+                ]}
+                testID={item.testID}
+              >
+                {item.label}
+              </NativeText>
+            </View>
+          ))
+        : null,
     [
       disabledItemTextStyle,
       disabledTextColor,
@@ -686,17 +678,88 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
 
   const nativeItems = React.useMemo(
     () =>
-      options.map((item, index) => ({
-        label: item.label,
-        value: item.value,
-        textColor: item.disabled ? disabledTextColor : undefined,
-        testID: item.testID ?? `wheel-item-${String(item.value)}-${index}`,
-      })),
+      Platform.OS === 'ios'
+        ? options.map((item, index) => ({
+            label: item.label,
+            value: item.value,
+            textColor: item.disabled ? disabledTextColor : undefined,
+            testID: item.testID ?? `wheel-item-${String(item.value)}-${index}`,
+          }))
+        : [],
     [disabledTextColor, options]
   );
 
   const selectedOption = options[displayIndex];
   const canInteract = !disabled && options.length > 1 && findNearestEnabledIndex(options, displayIndex) >= 0;
+  const enabledFlags = React.useMemo(
+    () => (Platform.OS === 'web' ? options.map((option) => !option.disabled) : []),
+    [options]
+  );
+  const panGesture = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(Platform.OS === 'web' && canInteract)
+        .activeOffsetY([-PAN_ACTIVATION_OFFSET, PAN_ACTIVATION_OFFSET])
+        .averageTouches(true)
+        .onStart(() => {
+          'worklet';
+          cancelAnimationOnUI(offsetY);
+          isUserInteracting.value = true;
+          dragStartOffset.value = offsetY.value;
+        })
+        .onUpdate((event) => {
+          'worklet';
+          offsetY.value = clampNumber(dragStartOffset.value - event.translationY, 0, maxOffset);
+        })
+        .onEnd((event) => {
+          'worklet';
+          const currentOffset = clampNumber(offsetY.value, 0, maxOffset);
+          const currentIndex = Math.round(currentOffset / INTERNAL_WHEEL_ITEM_HEIGHT);
+          const rawIndex = getTargetIndexFromRelease(currentOffset, event.velocityY, maxIndex);
+          const direction = rawIndex - currentIndex;
+          const enabledIndex = findNearestEnabledFlagIndex(enabledFlags, rawIndex, direction);
+          const nextIndex = enabledIndex >= 0 ? enabledIndex : clampNumber(rawIndex, 0, maxIndex);
+          const nextOffset = indexToOffset(nextIndex);
+
+          offsetY.value = withTimingOnUI(
+            nextOffset,
+            {
+              duration: getSnapDuration(currentOffset, nextOffset),
+              easing: SNAP_EASING,
+            },
+            (finished) => {
+              if (!finished) return;
+              isUserInteracting.value = false;
+              scheduleOnRNFromUI(emitSelectedIndex, nextIndex, 'user');
+            }
+          );
+        })
+        .onFinalize((_event, success) => {
+          'worklet';
+          if (success || !isUserInteracting.value) return;
+
+          const currentOffset = clampNumber(offsetY.value, 0, maxOffset);
+          const currentIndex = Math.round(currentOffset / INTERNAL_WHEEL_ITEM_HEIGHT);
+          const direction = currentOffset - dragStartOffset.value;
+          const enabledIndex = findNearestEnabledFlagIndex(enabledFlags, currentIndex, direction);
+          const nextIndex = enabledIndex >= 0 ? enabledIndex : clampNumber(currentIndex, 0, maxIndex);
+          const nextOffset = indexToOffset(nextIndex);
+
+          offsetY.value = withTimingOnUI(
+            nextOffset,
+            {
+              duration: getSnapDuration(currentOffset, nextOffset),
+              easing: SNAP_EASING,
+            },
+            (finished) => {
+              if (!finished) return;
+              isUserInteracting.value = false;
+              scheduleOnRNFromUI(emitSelectedIndex, nextIndex, 'user');
+            }
+          );
+        }),
+    [canInteract, dragStartOffset, emitSelectedIndex, enabledFlags, isUserInteracting, maxIndex, maxOffset, offsetY]
+  );
   const columnStyle = React.useMemo(
     () => [styles.column, width != null && { width }, resolveWebInteractionStyle(disabled), style],
     [disabled, style, width]
@@ -739,51 +802,62 @@ const WheelColumnBase = React.forwardRef<WheelColumnHandle, WheelColumnProps>(fu
     );
   }
 
-  return (
-    <View
-      {...viewProps}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      accessibilityHint={accessibilityHint}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="adjustable"
-      accessibilityState={resolvedAccessibilityState}
-      accessibilityValue={{ text: selectedOption?.label ?? '' }}
-      collapsable={false}
-      onAccessibilityAction={handleAccessibilityAction}
-      style={columnStyle}
-      testID={testID}
-    >
-      <Animated.View
-        style={[styles.content, contentStyle]}
-        pointerEvents="none"
-        renderToHardwareTextureAndroid={Platform.OS === 'android'}
-        shouldRasterizeIOS={false}
-      >
-        {items}
-      </Animated.View>
+  if (Platform.OS === 'android') {
+    return (
       <View
-        style={styles.touchSurface}
+        {...viewProps}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        accessibilityHint={accessibilityHint}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="adjustable"
+        accessibilityState={resolvedAccessibilityState}
+        accessibilityValue={{ text: selectedOption?.label ?? '' }}
+        onAccessibilityAction={handleAccessibilityAction}
+        style={columnStyle}
+        testID={testID}
+      >
+        <AndroidVirtualizedWheel
+          ref={androidWheelRef}
+          options={options}
+          selectedIndex={displayIndex}
+          canInteract={canInteract}
+          itemHeight={WHEEL_ITEM_HEIGHT}
+          visibleItems={WHEEL_VISIBLE_ITEMS}
+          itemTextColor={itemTextColor}
+          selectedTextColor={selectedTextColor}
+          disabledTextColor={disabledTextColor}
+          itemTextStyle={itemTextStyle}
+          selectedItemTextStyle={selectedItemTextStyle}
+          disabledItemTextStyle={disabledItemTextStyle}
+          numberOfLines={numberOfLines}
+          resolveSelectableIndex={resolveSelectableIndex}
+          onSelectIndex={handleAndroidSelectIndex}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <GestureDetector gesture={panGesture} touchAction="none" userSelect="none">
+      <View
+        {...viewProps}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        accessibilityHint={accessibilityHint}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="adjustable"
+        accessibilityState={resolvedAccessibilityState}
+        accessibilityValue={{ text: selectedOption?.label ?? '' }}
         collapsable={false}
-        pointerEvents="box-only"
-        onStartShouldSetResponder={() => canInteract}
-        onStartShouldSetResponderCapture={() => canInteract}
-        onMoveShouldSetResponder={() => canInteract}
-        onMoveShouldSetResponderCapture={() => canInteract}
-        onResponderTerminationRequest={() => false}
-        onResponderGrant={(event) => {
-          beginTouch(event.nativeEvent.pageY, event.nativeEvent.timestamp);
-        }}
-        onResponderMove={(event) => {
-          moveTouch(event.nativeEvent.pageY, event.nativeEvent.timestamp);
-        }}
-        onResponderRelease={(event) => {
-          endTouch(event.nativeEvent.pageY, event.nativeEvent.timestamp);
-        }}
-        onResponderTerminate={(event) => {
-          endTouch(event.nativeEvent.pageY, event.nativeEvent.timestamp);
-        }}
-      />
-    </View>
+        onAccessibilityAction={handleAccessibilityAction}
+        style={columnStyle}
+        testID={testID}
+      >
+        <Animated.View style={[styles.content, contentStyle]} pointerEvents="none">
+          {webItems}
+        </Animated.View>
+        <View style={styles.touchSurface} collapsable={false} pointerEvents="box-only" />
+      </View>
+    </GestureDetector>
   );
 });
 
