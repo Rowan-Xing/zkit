@@ -20,6 +20,7 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { wp } from 'zkit-tools';
 import { Text } from '../../ui/Text';
+import { createShadowStyle } from '../../utils/shadow';
 
 /** 内置支持的权限用途类型 */
 export type PermissionPurpose =
@@ -424,11 +425,13 @@ const styles = StyleSheet.create({
     maxWidth: '94%',
     borderRadius: wp(12),
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOpacity: 0.12,
-    shadowOffset: { width: wp(0), height: wp(4) },
-    shadowRadius: wp(12),
-    elevation: 8,
+    ...createShadowStyle({
+      color: '#000000',
+      elevation: 8,
+      offsetY: wp(4),
+      opacity: 0.12,
+      radius: wp(12),
+    }),
   },
   content: {
     paddingHorizontal: wp(16),

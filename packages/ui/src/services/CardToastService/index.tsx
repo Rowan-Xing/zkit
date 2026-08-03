@@ -30,6 +30,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { wp } from 'zkit-tools';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui/Text';
+import { createShadowStyle } from '../../utils/shadow';
 
 // ============================================================================
 // Public Types
@@ -1208,20 +1209,25 @@ const styles = StyleSheet.create({
     width: wp(320),
     maxWidth: '92%',
     alignSelf: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: wp(0), height: wp(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: wp(8),
-    elevation: wp(3),
+    ...createShadowStyle({
+      color: '#000000',
+      elevation: wp(3),
+      offsetY: wp(2),
+      opacity: 0.1,
+      radius: wp(8),
+    }),
   },
   toastSurface: {
     borderRadius: wp(10),
   },
   toastIOS: {
     borderRadius: wp(10),
-    shadowOffset: { width: wp(0), height: wp(10) },
-    shadowOpacity: 0.16,
-    shadowRadius: wp(20),
+    ...createShadowStyle({
+      color: '#000000',
+      offsetY: wp(10),
+      opacity: 0.16,
+      radius: wp(20),
+    }),
   },
   toastContent: {
     borderRadius: wp(10),

@@ -24,6 +24,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { wp } from 'zkit-tools';
 import { useI18n } from '../../i18n/useI18n';
 import { useTheme } from '../../theme/useTheme';
+import { createShadowStyle } from '../../utils/shadow';
 import { Text } from '../Text';
 
 const DEFAULT_CHALLENGE_WIDTH = 320;
@@ -177,10 +178,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: CARD_HORIZONTAL_PADDING,
     paddingTop: wp(18),
     paddingBottom: wp(20),
-    shadowOffset: { width: 0, height: wp(10) },
-    shadowOpacity: 0.1,
-    shadowRadius: wp(20),
-    elevation: 10,
   },
   titleRow: {
     flexDirection: 'row',
@@ -202,10 +199,6 @@ const styles = StyleSheet.create({
     borderRadius: wp(14),
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: wp(2) },
-    shadowOpacity: 0.08,
-    shadowRadius: wp(4),
-    elevation: 3,
   },
   headerActionSpacing: {
     marginLeft: wp(8),
@@ -268,10 +261,6 @@ const styles = StyleSheet.create({
     borderRadius: SLIDER_THUMB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: wp(2) },
-    shadowOpacity: 0.15,
-    shadowRadius: wp(4),
-    elevation: 3,
     borderWidth: wp(0.5),
   },
 });
@@ -370,6 +359,39 @@ export function SliderCaptcha<TChallenge extends SliderCaptchaChallenge = Slider
 
   const backgroundImageUri = normalizeImageUri(challenge?.backgroundImage ?? '');
   const blockImageUri = normalizeImageUri(challenge?.blockImage ?? '');
+  const cardShadowStyle = React.useMemo(
+    () =>
+      createShadowStyle({
+        color: theme.colors.onSurface,
+        elevation: 10,
+        offsetY: wp(10),
+        opacity: 0.1,
+        radius: wp(20),
+      }),
+    [theme.colors.onSurface]
+  );
+  const headerActionShadowStyle = React.useMemo(
+    () =>
+      createShadowStyle({
+        color: theme.colors.onSurface,
+        elevation: 3,
+        offsetY: wp(2),
+        opacity: 0.08,
+        radius: wp(4),
+      }),
+    [theme.colors.onSurface]
+  );
+  const sliderThumbShadowStyle = React.useMemo(
+    () =>
+      createShadowStyle({
+        color: theme.colors.onSurface,
+        elevation: 3,
+        offsetY: wp(2),
+        opacity: 0.15,
+        radius: wp(4),
+      }),
+    [theme.colors.onSurface]
+  );
 
   const requestChallenge = React.useCallback(
     async (reason: SliderCaptchaLoadReason) => {
@@ -674,8 +696,8 @@ export function SliderCaptcha<TChallenge extends SliderCaptchaChallenge = Slider
               {
                 maxWidth: maxCardWidth,
                 backgroundColor: theme.colors.surface,
-                shadowColor: theme.colors.onSurface,
               },
+              cardShadowStyle,
               cardStyle,
             ]}
             onPress={() => {}}
@@ -696,8 +718,8 @@ export function SliderCaptcha<TChallenge extends SliderCaptchaChallenge = Slider
                       backgroundColor: theme.colors.surface,
                       borderColor: theme.colors.border,
                       borderWidth: wp(0.5),
-                      shadowColor: theme.colors.onSurface,
                     },
+                    headerActionShadowStyle,
                   ]}
                   onPress={handleRefresh}
                   disabled={!visible || isBusy}
@@ -715,8 +737,8 @@ export function SliderCaptcha<TChallenge extends SliderCaptchaChallenge = Slider
                     styles.headerActionSpacing,
                     {
                       backgroundColor: theme.colors.secondary,
-                      shadowColor: theme.colors.onSurface,
                     },
+                    headerActionShadowStyle,
                   ]}
                   onPress={handleRequestClose}
                   disabled={!visible}
@@ -797,8 +819,8 @@ export function SliderCaptcha<TChallenge extends SliderCaptchaChallenge = Slider
                   {
                     backgroundColor: theme.colors.primary,
                     borderColor: 'rgba(0,0,0,0.04)',
-                    shadowColor: theme.colors.onSurface,
                   },
+                  sliderThumbShadowStyle,
                 ]}
               >
                 {isBusy ? (

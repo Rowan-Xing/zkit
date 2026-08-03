@@ -29,6 +29,7 @@ import Animated, {
 import { wp } from 'zkit-tools';
 import type { Theme } from '../../theme/types';
 import { useTheme } from '../../theme/useTheme';
+import { createShadowStyle } from '../../utils/shadow';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { Text } from '../Text';
 
@@ -619,13 +620,14 @@ function SwitchImpl(
     [metrics.minTouchTarget, trackHeight, trackWidth]
   );
   const thumbShadowStyle = React.useMemo<ViewStyle>(
-    () => ({
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: wp(1) },
-      shadowOpacity: disabled ? 0 : scheme === 'dark' ? 0.28 : 0.14,
-      shadowRadius: disabled ? 0 : wp(4),
-      elevation: disabled ? 0 : wp(1),
-    }),
+    () =>
+      createShadowStyle({
+        color: '#000000',
+        elevation: disabled ? 0 : wp(1),
+        offsetY: wp(1),
+        opacity: disabled ? 0 : scheme === 'dark' ? 0.28 : 0.14,
+        radius: disabled ? 0 : wp(4),
+      }),
     [disabled, scheme]
   );
   const webCursorStyle = React.useMemo(
