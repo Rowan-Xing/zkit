@@ -104,6 +104,9 @@ const BAR_ACTION_BUTTON_LAYOUT: React.ComponentProps<typeof Button>['layout'] = 
   minHeight: BAR_FOOTER_HEIGHT,
   paddingVertical: 0,
 };
+// tsc emits CommonJS namespace imports. Capturing that namespace in a worklet
+// also captures the native Worklets module, which is not serializable.
+const scheduleOnRNFromUI = scheduleOnRN;
 
 function getKeyboardTopInWindow(event: KeyboardEvent) {
   const windowHeight = Dimensions.get('window').height;
@@ -288,7 +291,7 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
     cardScale.value = withTiming(motion === 'scale' ? CARD_EXIT_SCALE : 1, EXIT_CARD_TIMING);
     cardOpacity.value = withTiming(0, EXIT_CARD_TIMING, (finished) => {
       if (finished) {
-        scheduleOnRN(finishDismiss);
+        scheduleOnRNFromUI(finishDismiss);
       }
     });
   }, [actualOpen, backdropProgress, cardOpacity, cardScale, finishDismiss, motion]);
@@ -570,7 +573,7 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
         }}
         pointerEvents={actualOpen ? 'auto' : 'none'}
         style={[
-          hostMode === 'inline' ? styles.inlineRoot : styles.modalRoot,
+          hostMode === 'inline' ? StyleSheet.absoluteFill : styles.modalRoot,
           {
             elevation: Platform.OS === 'android' ? layer?.zIndex ?? ACTION_DIALOG_DEFAULT_Z_INDEX : 0,
             zIndex: layer?.zIndex ?? ACTION_DIALOG_DEFAULT_Z_INDEX,
@@ -581,7 +584,11 @@ const ActionDialogRoot = React.forwardRef<ActionDialogRef, ActionDialogProps>(fu
         <Pressable accessible={false} onPress={handleOverlayPress} style={StyleSheet.absoluteFill}>
           <Animated.View
             pointerEvents="none"
-            style={[styles.backdrop, { backgroundColor: resolvedColors.backdrop }, overlayStyle]}
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: resolvedColors.backdrop },
+              overlayStyle,
+            ]}
           />
         </Pressable>
 
@@ -699,12 +706,6 @@ export const ActionDialog = React.memo(ActionDialogRoot);
 const styles = StyleSheet.create({
   modalRoot: {
     flex: 1,
-  },
-  inlineRoot: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
   },
   center: {
     alignItems: 'center',

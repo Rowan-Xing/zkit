@@ -7,6 +7,12 @@ const packageJsonPath = path.join(packageRoot, 'package.json');
 const rootEntryPath = path.join(distRoot, 'index.js');
 const rootTypesPath = path.join(distRoot, 'index.d.ts');
 const allEntryPath = path.join(distRoot, 'all.js');
+const actionDialogPath = path.join(
+  distRoot,
+  'services',
+  'ActionDialogService',
+  'ActionDialog.js'
+);
 
 function readFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -18,6 +24,7 @@ function readFile(filePath) {
 const rootEntry = readFile(rootEntryPath);
 const rootTypes = readFile(rootTypesPath);
 const allEntry = readFile(allEntryPath);
+const actionDialog = readFile(actionDialogPath);
 const packageJson = JSON.parse(readFile(packageJsonPath));
 
 const forbiddenRootRuntimeImports = [
@@ -102,6 +109,30 @@ const hasOnlyCssSideEffects =
 
 if (sideEffects !== false && !hasOnlyCssSideEffects) {
   errors.push('package.json sideEffects should be false or only whitelist CSS files.');
+}
+
+if (!actionDialog.includes('const scheduleOnRNFromUI = react_native_worklets_1.scheduleOnRN;')) {
+  errors.push(
+    'ActionDialog must capture scheduleOnRN without the CommonJS namespace so Worklets can serialize its animation callback.'
+  );
+}
+
+if (actionDialog.includes('(0, react_native_worklets_1.scheduleOnRN)(finishDismiss)')) {
+  errors.push(
+    'ActionDialog animation callback must not capture the react-native-worklets CommonJS namespace.'
+  );
+}
+
+if (actionDialog.includes('StyleSheet.absoluteFillObject')) {
+  errors.push(
+    'ActionDialog must not use StyleSheet.absoluteFillObject because React Native 0.86 no longer exports it at runtime.'
+  );
+}
+
+if (!actionDialog.includes("hostMode === 'inline' ? react_native_1.StyleSheet.absoluteFill")) {
+  errors.push(
+    'ActionDialog inline host must use the React Native 0.86-compatible StyleSheet.absoluteFill style.'
+  );
 }
 
 if (errors.length > 0) {

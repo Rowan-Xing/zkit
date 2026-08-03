@@ -1,5 +1,23 @@
 # zkit-ui
 
+## 2.0.15
+
+### Patch Changes
+
+- Restore the React Native 0.86-compatible ActionDialog backdrop and Worklets closure handling from 2.0.12 after both regressed in later package output.
+
+## 2.0.14
+
+### Patch Changes
+
+- Prevent ActionDialog's Reanimated close callback from capturing the non-serializable Worklets CommonJS namespace.
+
+## 2.0.13
+
+### Patch Changes
+
+- Hide the high-level TextInput placeholder while focused by default so Android cursors no longer overlap native hint text. Preserve the placeholder-derived accessibility label and allow native behavior with `hidePlaceholderOnFocus={false}`.
+
 ## 2.0.11
 
 ### Patch Changes

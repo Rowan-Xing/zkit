@@ -95,6 +95,7 @@ export interface TextInputProps extends NativeTextInputProps {
   readOnly?: boolean;
   required?: boolean;
   invalid?: boolean;
+  hidePlaceholderOnFocus?: boolean;
 
   variant?: TextInputVariant;
   tone?: TextInputTone;
@@ -439,6 +440,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
     readOnly = false,
     required = false,
     invalid,
+    hidePlaceholderOnFocus = true,
     variant = 'outline',
     tone = 'primary',
     status = 'default',
@@ -484,6 +486,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
     maxLength,
     multiline = false,
     numberOfLines,
+    placeholder,
     testID,
     underlineColorAndroid,
     ...nativeProps
@@ -498,6 +501,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
   const currentValueRef = React.useRef(isControlled ? value ?? '' : initialValueRef.current);
   const shouldTrackValue = clearable || showCount || renderCount != null;
   const hasSyncedUncontrolledValueRef = React.useRef(false);
+  const [isFocused, setIsFocused] = React.useState(false);
   const [, scheduleValueRender] = React.useReducer((revision: number) => revision + 1, 0);
 
   if (isControlled) {
@@ -655,7 +659,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
     [finalCursorColor]
   );
   const computedAccessibilityLabel =
-    accessibilityLabel ?? extractReadableText(label) ?? nativeProps.placeholder;
+    accessibilityLabel ?? extractReadableText(label) ?? placeholder;
   const computedAccessibilityHint =
     accessibilityHint ??
     extractReadableText(resolvedStatus === 'error' ? error : description);
@@ -688,6 +692,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
 
   const handleFocus = React.useCallback(
     (event: Parameters<NonNullable<TextInputPrimitiveProps['onFocus']>>[0]) => {
+      setIsFocused(true);
       onFocus?.(event);
     },
     [onFocus]
@@ -695,6 +700,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
 
   const handleBlur = React.useCallback(
     (event: Parameters<NonNullable<TextInputPrimitiveProps['onBlur']>>[0]) => {
+      setIsFocused(false);
       onBlur?.(event);
     },
     [onBlur]
@@ -811,6 +817,7 @@ const TextInputBase = React.forwardRef<TextInputRef, TextInputProps>(function Te
           onChangeText={handleChangeText}
           onFocus={handleFocus}
           onSubmitEditing={handleSubmitEditing}
+          placeholder={hidePlaceholderOnFocus && isFocused ? undefined : placeholder}
           placeholderTextColor={placeholderTextColor ?? visualColors.placeholderColor}
           readOnly={readOnly || disabled}
           selectionColor={finalSelectionColor}

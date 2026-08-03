@@ -9,6 +9,7 @@
 - 对外统一使用 `value / defaultValue / onChange`，`onChange` 直接返回字符串
 - 非受控输入默认不在每次键入时触发内部 re-render；只有 `clearable / showCount / renderCount` 需要同步 UI 时才追踪值
 - `disabled` 与 `readOnly` 分离：禁用会进入禁用视觉，只读保持普通信息层级但不可编辑
+- 默认在聚焦时隐藏 placeholder，避免 Android 原生 hint 与空输入光标重叠；需要保留原生行为时使用 `hidePlaceholderOnFocus={false}`
 - 原生键盘能力继续作为顶层 props 透传，例如 `keyboardType / inputMode / autoComplete / enterKeyHint / submitBehavior`
 - 焦点态不额外高亮边框；边框颜色只表达默认、禁用和显式状态反馈
 - `style` 作用于根容器，原生输入样式使用 `inputStyle`
@@ -149,6 +150,7 @@ export function Demo() {
 - `readOnly?: boolean`
 - `required?: boolean`
 - `invalid?: boolean`
+- `hidePlaceholderOnFocus?: boolean`
 - `variant?: 'outline' | 'filled' | 'plain'`
 - `tone?: 'primary' | 'neutral' | 'success' | 'warning' | 'danger' | 'info'`
 - `status?: 'default' | 'success' | 'warning' | 'error'`
@@ -193,5 +195,6 @@ export function Demo() {
 
 - Android 默认设置 `underlineColorAndroid="transparent"`，避免系统下划线破坏组件视觉
 - 高级 `TextInput` 会清零原生输入层 padding，由外层 Field 统一管理间距，避免 Android 默认输入内边距被圆角容器裁切
+- 高级 `TextInput` 默认在聚焦时移除原生 placeholder，避免空输入光标与 hint 首字符重叠；原始 placeholder 仍用于自动推导无障碍标签
 - 光标、选区和选择手柄默认使用主题强调色；Android 会按光标色设置稳定 key，规避部分 OEM/Fabric 下光标颜色首次提交不稳定的问题
 - Web 会移除输入框默认 outline，焦点态不额外改变组件边框颜色
