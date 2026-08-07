@@ -13,6 +13,12 @@ const actionDialogPath = path.join(
   'ActionDialogService',
   'ActionDialog.js'
 );
+const loadingServicePath = path.join(
+  distRoot,
+  'services',
+  'LoadingService',
+  'index.js'
+);
 
 function readFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -25,6 +31,7 @@ const rootEntry = readFile(rootEntryPath);
 const rootTypes = readFile(rootTypesPath);
 const allEntry = readFile(allEntryPath);
 const actionDialog = readFile(actionDialogPath);
+const loadingService = readFile(loadingServicePath);
 const packageJson = JSON.parse(readFile(packageJsonPath));
 
 const forbiddenRootRuntimeImports = [
@@ -123,6 +130,18 @@ if (actionDialog.includes('(0, react_native_worklets_1.scheduleOnRN)(finishDismi
   );
 }
 
+if (!loadingService.includes('const scheduleOnRNFromUI = react_native_worklets_1.scheduleOnRN;')) {
+  errors.push(
+    'LoadingService must capture scheduleOnRN without the CommonJS namespace so Worklets can serialize its animation callback.'
+  );
+}
+
+if (loadingService.includes('(0, react_native_worklets_1.scheduleOnRN)(onExited')) {
+  errors.push(
+    'LoadingService animation callback must not capture the react-native-worklets CommonJS namespace.'
+  );
+}
+
 if (actionDialog.includes('StyleSheet.absoluteFillObject')) {
   errors.push(
     'ActionDialog must not use StyleSheet.absoluteFillObject because React Native 0.86 no longer exports it at runtime.'
@@ -132,6 +151,18 @@ if (actionDialog.includes('StyleSheet.absoluteFillObject')) {
 if (!actionDialog.includes("hostMode === 'inline' ? react_native_1.StyleSheet.absoluteFill")) {
   errors.push(
     'ActionDialog inline host must use the React Native 0.86-compatible StyleSheet.absoluteFill style.'
+  );
+}
+
+if (loadingService.includes('StyleSheet.absoluteFillObject')) {
+  errors.push(
+    'LoadingService must not use StyleSheet.absoluteFillObject because React Native 0.86 no longer exports it at runtime.'
+  );
+}
+
+if (!loadingService.includes('react_native_1.StyleSheet.absoluteFill')) {
+  errors.push(
+    'LoadingService host and backdrop must use the React Native 0.86-compatible StyleSheet.absoluteFill style.'
   );
 }
 

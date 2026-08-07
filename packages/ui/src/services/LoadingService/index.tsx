@@ -25,6 +25,10 @@ import { useTheme } from '../../theme/useTheme';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { Text } from '../../ui/Text';
 
+// tsc emits CommonJS namespace imports. Capturing that namespace in a worklet
+// also captures the native Worklets module, which is not serializable.
+const scheduleOnRNFromUI = scheduleOnRN;
+
 // ============================================================================
 // Public Types
 // ============================================================================
@@ -236,7 +240,7 @@ const TITLE_MAX_WIDTH = wp(214);
 const IOS_SHADOW_OFFSET_Y = wp(9);
 const IOS_SHADOW_RADIUS = wp(22);
 const CONTENT_ENTER_OFFSET = wp(3);
-const HOST_BACKDROP = 'transparent';
+const HOST_BACKDROP = 'rgba(17, 24, 39, 0.48)';
 
 const IS_IOS = Platform.OS === 'ios';
 const IS_ANDROID = Platform.OS === 'android';
@@ -825,7 +829,7 @@ function LoadingHost({ item, onExited }: LoadingHostProps) {
   return (
     <View
       pointerEvents={pointerEvents}
-      style={styles.host}
+      style={[StyleSheet.absoluteFill, styles.host]}
       accessibilityElementsHidden={!item.open}
       importantForAccessibility={item.open ? 'yes' : 'no-hide-descendants'}
       collapsable={false}
@@ -902,7 +906,7 @@ function LoadingCard({ item, onExited }: LoadingCardProps) {
         reduceMotion: ReduceMotion.System,
       },
       (finished) => {
-        if (finished) scheduleOnRN(onExited, item.id);
+        if (finished) scheduleOnRNFromUI(onExited, item.id);
       }
     );
     scale.value = withTiming(0.965, {
@@ -949,7 +953,7 @@ function LoadingCard({ item, onExited }: LoadingCardProps) {
     <>
       <Animated.View
         pointerEvents="none"
-        style={[styles.backdrop, { backgroundColor: colors.backdrop }, backdropStyle]}
+        style={[StyleSheet.absoluteFill, styles.backdrop, { backgroundColor: colors.backdrop }, backdropStyle]}
       />
       <Animated.View
         pointerEvents={item.open && item.blocking ? 'auto' : 'none'}
@@ -1062,14 +1066,11 @@ function renderDefaultIcon(item: LoadingItem, colors: ResolvedColors) {
 
 const styles = StyleSheet.create({
   host: {
-    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: HOST_Z_INDEX,
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
+  backdrop: {},
   frame: {
     alignSelf: 'center',
     borderRadius: HUD_RADIUS,

@@ -1,5 +1,17 @@
 # zkit-ui
 
+## 2.0.19
+
+### Patch Changes
+
+- 修复 LoadingService 在 React Native 0.86 下未铺满屏幕、HUD 跑到页面底部且缺少默认蒙层的问题。
+
+## 2.0.18
+
+### Patch Changes
+
+- 修复 LoadingService 在 Android Worklets 退出动画回调中的崩溃。
+
 ## 2.0.17
 
 ### Patch Changes

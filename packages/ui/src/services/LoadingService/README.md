@@ -8,6 +8,7 @@
 - 全局只展示一个 HUD；新请求默认替换旧请求，并向旧请求派发 `replace`
 - `loading.promise()` 绑定异步任务，成功/失败结果只会更新当前仍活跃的 handle
 - `loading` 默认 15s 超时自动关闭，`success/error` 默认短暂停留后关闭
+- blocking loading 默认使用全屏蒙层并将 HUD 居中显示；可通过 `colors.backdrop` 自定义蒙层颜色
 - Android 不使用 `elevation` 或额外阴影层；iOS/Web 阴影跟随同一动画层，退出完成后卸载，避免残影
 - 默认文案来自 i18n，可通过 `ZKitProvider loading` 或 `LoadingProvider defaults` 覆盖
 
