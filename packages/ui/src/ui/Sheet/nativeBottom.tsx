@@ -92,6 +92,7 @@ export type NativeBottomSheetProps = {
 };
 
 type NativePhase = 'idle' | 'presenting' | 'presented' | 'dismissing';
+type ManualModalPhase = 'hidden' | 'showing' | 'shown' | 'hiding';
 type ResolvedBackdrop = Required<SheetBackdropConfig>;
 
 const DEFAULT_DETENTS: readonly SheetDetent[] = ['content'];
@@ -272,7 +273,7 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     const [shellMounted, setShellMounted] = React.useState(isOpen);
 
     const nativeRef = React.useRef<TrueSheet>(null);
-    const phaseRef = React.useRef<NativePhase>(isOpen ? 'presenting' : 'idle');
+    const phaseRef = React.useRef<NativePhase>('idle');
     const pendingDismissRef = React.useRef(false);
     const activeLifecycleRef = React.useRef(isOpen);
     const isOpenRef = React.useRef(isOpen);
@@ -282,8 +283,18 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     const presentAnimatedRef = React.useRef(true);
     const dismissAnimatedRef = React.useRef(true);
     const closeReasonRef = React.useRef<SheetCloseReason>('system');
+    const hasRequestedCloseReasonRef = React.useRef(false);
+    const nativeOperationIdRef = React.useRef(0);
     const backdropConfig = React.useMemo(() => resolveBackdrop(backdrop), [backdrop]);
     const usesManualBackdrop = Platform.OS === 'ios' && backdropConfig.visible;
+    // The outer RN Modal owns a separate native presentation lifecycle on iOS.
+    // Keep it mounted through onDismiss so a rapid reopen cannot overlap that dismissal.
+    const [manualModalVisible, setManualModalVisible] = React.useState(usesManualBackdrop && isOpen);
+    const [manualModalReady, setManualModalReady] = React.useState(false);
+    const manualModalPhaseRef = React.useRef<ManualModalPhase>(
+      usesManualBackdrop && isOpen ? 'showing' : 'hidden'
+    );
+    const manualCloseShouldSyncRef = React.useRef(false);
     const backdropOpacity = React.useRef(
       new Animated.Value(usesManualBackdrop && isOpen ? backdropConfig.opacity : 0)
     ).current;
@@ -300,44 +311,6 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     React.useEffect(() => {
       currentDetentIndexRef.current = currentDetentIndex;
     }, [currentDetentIndex]);
-
-    React.useEffect(() => {
-      if (isOpen) {
-        activeLifecycleRef.current = true;
-        requestedOpenIndexRef.current = controlledDetentIndex ?? requestedOpenIndexRef.current;
-        if (!shellMounted) setShellMounted(true);
-        return;
-      }
-
-      if (shellMounted) {
-        requestDismiss('system');
-      }
-    }, [controlledDetentIndex, isOpen, shellMounted]);
-
-    React.useEffect(() => {
-      if (!isOpen || !shellMounted) return undefined;
-
-      const rafId = requestAnimationFrame(() => {
-        if (!isOpenRef.current) return;
-        if (phaseRef.current !== 'idle' && phaseRef.current !== 'presenting') return;
-
-        const sheet = nativeRef.current;
-        if (!sheet) return;
-
-        const targetIndex = normalizeDetentIndex(
-          controlledDetentIndex ?? requestedOpenIndexRef.current,
-          nativeDetents.length
-        );
-
-        pendingDismissRef.current = false;
-        phaseRef.current = 'presenting';
-        setSheetState('opening');
-        setCurrentDetentIndex(targetIndex);
-        silentlyCatchPromise(sheet.present(targetIndex, presentAnimatedRef.current));
-      });
-
-      return () => cancelAnimationFrame(rafId);
-    }, [controlledDetentIndex, isOpen, nativeDetents.length, shellMounted]);
 
     React.useEffect(() => {
       if (controlledDetentIndex == null) return;
@@ -399,12 +372,14 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
           presentAnimatedRef.current = true;
           activeLifecycleRef.current = true;
           pendingDismissRef.current = false;
+          hasRequestedCloseReasonRef.current = false;
           if (!isOpenControlled) setInnerOpen(true);
           emitOpenChange(true, 'api', requestedOpenIndexRef.current);
           return;
         }
 
         closeReasonRef.current = reason === 'api' ? 'api' : reason;
+        hasRequestedCloseReasonRef.current = true;
         if (!isOpenControlled) setInnerOpen(false);
         emitOpenChange(false, reason, currentDetentIndexRef.current);
       },
@@ -412,11 +387,13 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     );
 
     const finishClosedLifecycle = React.useCallback(
-      (shouldSyncOpenState: boolean) => {
+      (shouldSyncOpenState: boolean, keepShellMounted = false) => {
+        nativeOperationIdRef.current += 1;
         phaseRef.current = 'idle';
         pendingDismissRef.current = false;
         presentAnimatedRef.current = true;
         dismissAnimatedRef.current = true;
+        setManualModalReady(false);
         setSheetState('closed');
 
         if (shouldSyncOpenState) {
@@ -424,7 +401,9 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
           emitOpenChange(false, closeReasonRef.current, currentDetentIndexRef.current);
         }
 
-        setShellMounted(false);
+        if (!keepShellMounted) {
+          setShellMounted(false);
+        }
 
         if (activeLifecycleRef.current) {
           activeLifecycleRef.current = false;
@@ -437,35 +416,195 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
       [emitOpenChange, isOpenControlled, onCloseComplete]
     );
 
-    function requestDismiss(reason: SheetCloseReason) {
-      const phase = phaseRef.current;
-      closeReasonRef.current = reason;
+    const startManualModalDismiss = React.useCallback(
+      (shouldSyncOpenState: boolean) => {
+        manualCloseShouldSyncRef.current =
+          manualCloseShouldSyncRef.current || shouldSyncOpenState;
+        nativeOperationIdRef.current += 1;
+        phaseRef.current = 'idle';
+        pendingDismissRef.current = false;
+        setManualModalReady(false);
+        setSheetState('closing');
 
-      if (phase === 'dismissing') return;
-
-      if (phase === 'presenting') {
-        pendingDismissRef.current = true;
-        return;
-      }
-
-      if (phase === 'presented') {
-        const sheet = nativeRef.current;
-        if (!sheet) {
-          finishClosedLifecycle(false);
+        if (manualModalPhaseRef.current === 'hidden') {
+          finishClosedLifecycle(manualCloseShouldSyncRef.current);
+          manualCloseShouldSyncRef.current = false;
           return;
         }
 
-        pendingDismissRef.current = false;
-        phaseRef.current = 'dismissing';
-        setSheetState('closing');
-        silentlyCatchPromise(sheet.dismiss(dismissAnimatedRef.current));
+        if (manualModalPhaseRef.current !== 'hiding') {
+          manualModalPhaseRef.current = 'hiding';
+          setManualModalVisible(false);
+        }
+      },
+      [finishClosedLifecycle]
+    );
+
+    const recoverNativeOperation = React.useCallback(
+      (operation: 'present' | 'dismiss') => {
+        if (operation === 'present') {
+          closeReasonRef.current = 'system';
+        }
+        const shouldSyncOpenState = isOpenRef.current;
+
+        if (usesManualBackdrop) {
+          startManualModalDismiss(shouldSyncOpenState);
+          return;
+        }
+
+        finishClosedLifecycle(shouldSyncOpenState);
+      },
+      [finishClosedLifecycle, startManualModalDismiss, usesManualBackdrop]
+    );
+
+    const requestDismiss = React.useCallback(
+      (reason: SheetCloseReason) => {
+        const phase = phaseRef.current;
+
+        if (
+          phase === 'dismissing' ||
+          (usesManualBackdrop && manualModalPhaseRef.current === 'hiding')
+        ) {
+          return;
+        }
+
+        if (phase === 'presenting') {
+          if (!pendingDismissRef.current) {
+            closeReasonRef.current = reason;
+          }
+          pendingDismissRef.current = true;
+          return;
+        }
+
+        closeReasonRef.current = reason;
+
+        if (phase === 'presented') {
+          const sheet = nativeRef.current;
+          if (!sheet) {
+            if (usesManualBackdrop) {
+              startManualModalDismiss(false);
+            } else {
+              finishClosedLifecycle(false);
+            }
+            return;
+          }
+
+          pendingDismissRef.current = false;
+          phaseRef.current = 'dismissing';
+          setSheetState('closing');
+          const operationId = ++nativeOperationIdRef.current;
+          void sheet.dismiss(dismissAnimatedRef.current).catch(() => {
+            if (
+              operationId !== nativeOperationIdRef.current ||
+              phaseRef.current !== 'dismissing'
+            ) {
+              return;
+            }
+            recoverNativeOperation('dismiss');
+          });
+          return;
+        }
+
+        if (!activeLifecycleRef.current) return;
+
+        if (usesManualBackdrop) {
+          startManualModalDismiss(false);
+        } else {
+          finishClosedLifecycle(false);
+        }
+      },
+      [
+        finishClosedLifecycle,
+        recoverNativeOperation,
+        startManualModalDismiss,
+        usesManualBackdrop,
+      ]
+    );
+
+    React.useEffect(() => {
+      if (isOpen) {
+        activeLifecycleRef.current = true;
+        requestedOpenIndexRef.current = controlledDetentIndex ?? requestedOpenIndexRef.current;
+
+        if (!shellMounted) {
+          setShellMounted(true);
+        }
+
+        if (usesManualBackdrop && manualModalPhaseRef.current === 'hidden') {
+          manualCloseShouldSyncRef.current = false;
+          manualModalPhaseRef.current = 'showing';
+          setManualModalReady(false);
+          setManualModalVisible(true);
+        }
         return;
       }
 
-      if (activeLifecycleRef.current) {
-        finishClosedLifecycle(false);
+      if (shellMounted) {
+        const reason = hasRequestedCloseReasonRef.current ? closeReasonRef.current : 'system';
+        hasRequestedCloseReasonRef.current = false;
+        requestDismiss(reason);
       }
-    }
+    }, [
+      controlledDetentIndex,
+      isOpen,
+      requestDismiss,
+      shellMounted,
+      usesManualBackdrop,
+    ]);
+
+    React.useEffect(() => {
+      if (!isOpen || !shellMounted) return undefined;
+      if (usesManualBackdrop && !manualModalReady) return undefined;
+
+      const present = () => {
+        if (!isOpenRef.current || phaseRef.current !== 'idle') return;
+        if (
+          usesManualBackdrop &&
+          manualModalPhaseRef.current !== 'shown'
+        ) {
+          return;
+        }
+
+        const sheet = nativeRef.current;
+        if (!sheet) return;
+
+        const targetIndex = normalizeDetentIndex(
+          controlledDetentIndex ?? requestedOpenIndexRef.current,
+          nativeDetents.length
+        );
+
+        pendingDismissRef.current = false;
+        phaseRef.current = 'presenting';
+        setSheetState('opening');
+        setCurrentDetentIndex(targetIndex);
+        const operationId = ++nativeOperationIdRef.current;
+        void sheet.present(targetIndex, presentAnimatedRef.current).catch(() => {
+          if (
+            operationId !== nativeOperationIdRef.current ||
+            phaseRef.current !== 'presenting'
+          ) {
+            return;
+          }
+          recoverNativeOperation('present');
+        });
+      };
+
+      if (usesManualBackdrop) {
+        present();
+        return undefined;
+      }
+
+      const rafId = requestAnimationFrame(present);
+      return () => cancelAnimationFrame(rafId);
+    }, [
+      controlledDetentIndex,
+      isOpen,
+      manualModalReady,
+      nativeDetents.length,
+      recoverNativeOperation,
+      shellMounted,
+      usesManualBackdrop,
+    ]);
 
     const openSheet = React.useCallback(
       async (options?: SheetOpenOptions) => {
@@ -541,7 +680,7 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
           requestDismiss(closeReasonRef.current);
         }
       },
-      [nativeDetents, onOpenComplete, semanticDetents]
+      [nativeDetents, onOpenComplete, requestDismiss, semanticDetents]
     );
 
     const handleDidDismiss = React.useCallback(() => {
@@ -550,7 +689,48 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
       if (shouldSyncOpenState) {
         closeReasonRef.current = closeReasonRef.current === 'system' ? 'gesture' : closeReasonRef.current;
       }
-      finishClosedLifecycle(shouldSyncOpenState);
+
+      if (usesManualBackdrop) {
+        startManualModalDismiss(shouldSyncOpenState);
+      } else {
+        finishClosedLifecycle(shouldSyncOpenState);
+      }
+    }, [finishClosedLifecycle, startManualModalDismiss, usesManualBackdrop]);
+
+    const handleManualModalShow = React.useCallback(() => {
+      if (manualModalPhaseRef.current !== 'showing') return;
+
+      if (!isOpenRef.current) {
+        startManualModalDismiss(false);
+        return;
+      }
+
+      manualModalPhaseRef.current = 'shown';
+      // onShow is the native readiness barrier for presenting the nested TrueSheet.
+      setManualModalReady(true);
+    }, [startManualModalDismiss]);
+
+    const handleManualModalDismiss = React.useCallback(() => {
+      const shouldSyncOpenState = manualCloseShouldSyncRef.current;
+      const shouldReopen = isOpenRef.current && !shouldSyncOpenState;
+      const reopenAnimated = presentAnimatedRef.current;
+
+      manualModalPhaseRef.current = 'hidden';
+      manualCloseShouldSyncRef.current = false;
+      setManualModalReady(false);
+      setManualModalVisible(false);
+      // Only onDismiss guarantees that UIKit has removed the outer presenter.
+      finishClosedLifecycle(shouldSyncOpenState, shouldReopen);
+
+      if (!shouldReopen) return;
+
+      activeLifecycleRef.current = true;
+      hasRequestedCloseReasonRef.current = false;
+      presentAnimatedRef.current = reopenAnimated;
+      phaseRef.current = 'idle';
+      manualModalPhaseRef.current = 'showing';
+      setSheetState('opening');
+      setManualModalVisible(true);
     }, [finishClosedLifecycle]);
 
     const handleDetentChange = React.useCallback(
@@ -638,11 +818,13 @@ export const NativeBottomSheet = React.forwardRef<NativeBottomSheetRef, NativeBo
     if (usesManualBackdrop) {
       return (
         <Modal
-          visible
+          visible={manualModalVisible}
           transparent
           animationType="none"
           statusBarTranslucent
           presentationStyle="overFullScreen"
+          onShow={handleManualModalShow}
+          onDismiss={handleManualModalDismiss}
           onRequestClose={handleBackdropPress}
         >
           <View style={styles.modalRoot} pointerEvents="box-none">

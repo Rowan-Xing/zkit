@@ -1,5 +1,11 @@
 # zkit-ui
 
+## 2.0.17
+
+### Patch Changes
+
+- Serialize the iOS Sheet backdrop modal and native TrueSheet lifecycles so closing and immediately reopening cannot leave an invisible modal layer intercepting touches.
+
 ## 2.0.16
 
 ### Patch Changes
